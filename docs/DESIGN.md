@@ -37,8 +37,25 @@ weights, monster level range, boss id, reward id, unlock requirement (previous l
 - Level-gap modifier (`gap = monsterLevel − playerLevel`):
   - damage dealt by player × `clamp(1 − 0.1 × gap, 0.3, 1.2)`
   - damage taken × `clamp(1 + 0.15 × gap, 0.7, 2.5)`
-- Drops: per-enemy loot table (weighted), rarity tiers Common/Rare/Epic; items = potions, coins,
-  stat charms (+dmg, +speed, +HP).
+- Drops: each enemy def references a loot table (`content/lootTables.ts`): `rolls` independent rolls, each picks
+  one entry (or nothing) by weight (per-mille). `rollDrops(table, rng, luck)` in `logic/loot.ts`; luck inflates rare/epic weights.
+  Rarity: common (coins), rare (potions), epic (charms). Rates per roll: slime ~62% coins, 11% potion, 2% charm;
+  bat 60% coin, 10% potion, 2% charm; cyclops 60% coins/piles, 20% potion (7% large), 5% charm.
+- Items (`content/items.ts`): coin (1), coin pile (5), health potion small/large (+25/+60 HP, at full HP converts to 2 coins),
+  Charm of Power (+5% weapon dmg), Swiftness (+4% move speed), Vitality (+10 max HP); charms stack permanently.
+  `computePlayerStats(level, charms)` gives maxHp, moveSpeed, damageMultiplier (weapon damage modifier).
+- Pickups pop out of dead enemies, magnet to the player within 40px, auto-collect on overlap, blink then despawn after 20s.
+
+### Save & run state
+`logic/save.ts` (pure): `{version, progress{level,xp}, coins, charms, weapons{owned,equipped}, levels{cleared,bestTimes}}`;
+`parseSave` never throws and repairs junk field by field. `SaveSystem` wraps `localStorage` (failures swallowed, in-memory fallback).
+Saved on level-up, charm pickup, level clear, quit to menu and death (progress only). Level/XP persist across deaths; coins
+collected during the run are discarded on death and banked on quit/clear.
+
+### Menus
+MainMenu -> LevelSelect (2x2 cards, Back) -> Game {levelId}; GameOver (Retry / Level select); Pause overlay (Resume / Quit).
+`ui/MenuList` provides focus navigation for all menus: pointer tap, keyboard (arrows/WASD, Enter/Space, Esc), gamepad
+(D-pad/left stick, A, B/Start = back). `ui/MenuScene` rebuilds a menu on resize.
 
 ## 5. Controls
 
@@ -48,7 +65,7 @@ weights, monster level range, boss id, reward id, unlock requirement (previous l
 | Aim + fire | Mouse + LMB | Right virtual stick (fires past ~50% deflection) | Right stick (auto-fires past ~50%) or RT |
 | Alt fire (Fireball) | RMB | Button | LT |
 | Dash | Space | Button | A |
-| Pause | Esc | Button | Start (not wired yet) |
+| Pause | Esc | Button (top right) | Start |
 
 Touch (`TouchSource`): floating twin sticks. A touch starting in the left half spawns the move stick, the right half the
 aim stick (radius ~50 game px at 640x360, scaled with screen). Dash and Alt fire buttons sit on the right edge above the

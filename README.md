@@ -21,7 +21,8 @@ npm run typecheck
 | Fire | Left mouse button | Right stick past ~50% | RT or right stick past ~50% |
 | Alt fire | Right mouse button (not wired to a weapon yet) | Star button, right edge | LT |
 | Dash | Space | Arrow button, right edge | A |
-| Retry (game over) | Click | Tap | A or Start |
+| Pause | Esc | Pause button, top right | Start |
+| Menus | Mouse / arrows or WASD + Enter, Esc = back | Tap | D-pad / left stick + A, B = back |
 | Fullscreen | Top-right button | Top-right button | - |
 
 Touch controls appear after the first touch and hide on mouse, keyboard or gamepad use. The canvas expands from a
@@ -39,3 +40,12 @@ KENNEY_DIR="D:\path\to\Kenney Game Assets All-in-1 3.0.0" npm run copy-assets
 ```
 
 Frame indices for the Tiny Dungeon sheet are documented in `src/content/assetKeys.ts`.
+
+## Game flow, saves and loot
+
+Main menu -> level select (cards: locked / cleared / red "Under-levelled!" when player level < recommended - 1) -> game.
+Pause offers Resume or Quit to level select. Levels are data in `src/content/levels/`; `GameScene` starts from `{ levelId }`.
+Progress (level, XP), charms, owned weapons and cleared levels are saved in `localStorage` (`samuels-game-save`, versioned,
+tolerant parsing in `src/logic/save.ts`). Coins picked up in a run are banked on quit/clear and lost on death.
+You start with the Apprentice Staff; Broken Wand is the Ruins reward. Enemies drop coins, potions and permanent charms
+(`src/content/lootTables.ts`). To reset: `localStorage.removeItem('samuels-game-save')`.

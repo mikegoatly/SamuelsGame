@@ -19,7 +19,7 @@ export class PreloadScene extends Phaser.Scene {
   }
 
   create(): void {
-    this.scene.start('Game');
+    this.scene.start('MainMenu');
   }
 
   private drawLoadingBar(): void {

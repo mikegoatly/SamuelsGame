@@ -15,6 +15,7 @@ export interface TouchMetrics {
   stickRadius: number;
   buttons: ButtonZone[];
   fullscreen: Circle;
+  pause: Circle;
 }
 
 export interface StickReading {
@@ -52,12 +53,13 @@ export function touchMetrics(width: number, height: number): TouchMetrics {
       { id: 'altFire', x, y: dashY - Math.round(r * 2.5), r },
     ],
     fullscreen: { x: width - 22, y: 22, r: 14 },
+    pause: { x: width - 22, y: 58, r: 14 },
   };
 }
 
 /** Which control a touch starting at `point` belongs to; null for HUD-owned areas. */
 export function classifyTouch(point: Stick, width: number, metrics: TouchMetrics): TouchRole | null {
-  if (isInCircle(point, metrics.fullscreen, BUTTON_HIT_SLOP)) return null;
+  if (isInCircle(point, metrics.fullscreen, BUTTON_HIT_SLOP) || isInCircle(point, metrics.pause, BUTTON_HIT_SLOP)) return null;
   const button = metrics.buttons.find((b) => isInCircle(point, b, BUTTON_HIT_SLOP));
   if (button) return button.id;
   return point.x < width / 2 ? 'move' : 'aim';

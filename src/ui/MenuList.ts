@@ -1,0 +1,118 @@
+import Phaser from 'phaser';
+import { moveFocus, stickDirection, type Direction } from '../logic/menuNav';
+
+export interface MenuItem {
+  /** Interactive hit area; also what the pointer focuses and taps. */
+  readonly area: Phaser.GameObjects.Rectangle;
+  setFocused(focused: boolean): void;
+  activate(): void;
+}
+
+export interface MenuListOptions {
+  columns?: number;
+  initialFocus?: number;
+  /** Esc / B / Start. */
+  onBack?: () => void;
+}
+
+const BUTTON_A = 0;
+const BUTTON_B = 1;
+const BUTTON_START = 9;
+
+const KEY_DIRECTIONS: Record<string, Direction> = {
+  ArrowUp: 'up',
+  KeyW: 'up',
+  ArrowDown: 'down',
+  KeyS: 'down',
+  ArrowLeft: 'left',
+  KeyA: 'left',
+  ArrowRight: 'right',
+  KeyD: 'right',
+};
+
+interface PadSnapshot {
+  direction: Direction | null;
+  confirm: boolean;
+  back: boolean;
+}
+
+/** Focus navigation shared by every menu: mouse/touch tap, keyboard, and gamepad (D-pad/stick + A). */
+export class MenuList {
+  focusIndex: number;
+  private pressed = -1;
+  private pad: PadSnapshot = { direction: null, confirm: false, back: false };
+  private readonly columns: number;
+  private readonly onKey = (event: KeyboardEvent): void => this.handleKey(event);
+
+  constructor(
+    private readonly scene: Phaser.Scene,
+    private readonly items: readonly MenuItem[],
+    private readonly options: MenuListOptions = {},
+  ) {
+    this.columns = options.columns ?? 1;
+    this.focusIndex = Phaser.Math.Clamp(options.initialFocus ?? 0, 0, Math.max(0, items.length - 1));
+    items.forEach((item, index) => this.wirePointer(item, index));
+    scene.input.keyboard?.on('keydown', this.onKey);
+    this.pad = this.readPad();
+    this.setFocus(this.focusIndex);
+  }
+
+  setFocus(index: number): void {
+    this.focusIndex = index;
+    this.items.forEach((item, i) => item.setFocused(i === index));
+  }
+
+  /** Poll the gamepad; call from the scene's update. */
+  update(): void {
+    const now = this.readPad();
+    const before = this.pad;
+    this.pad = now;
+    if (now.direction && now.direction !== before.direction) this.move(now.direction);
+    if (now.confirm && !before.confirm) this.items[this.focusIndex]?.activate();
+    if (now.back && !before.back) this.options.onBack?.();
+  }
+
+  destroy(): void {
+    this.scene.input.keyboard?.off('keydown', this.onKey);
+    for (const item of this.items) item.area.off('pointerover').off('pointerdown').off('pointerup').off('pointerout');
+  }
+
+  private wirePointer(item: MenuItem, index: number): void {
+    item.area.setInteractive({ useHandCursor: true });
+    item.area.on('pointerover', () => this.setFocus(index));
+    item.area.on('pointerdown', () => {
+      this.pressed = index;
+      this.setFocus(index);
+    });
+    item.area.on('pointerout', () => {
+      if (this.pressed === index) this.pressed = -1;
+    });
+    item.area.on('pointerup', () => {
+      const wasPressed = this.pressed === index;
+      this.pressed = -1;
+      if (wasPressed) item.activate();
+    });
+  }
+
+  private handleKey(event: KeyboardEvent): void {
+    const direction = KEY_DIRECTIONS[event.code];
+    if (direction) this.move(direction);
+    else if (event.code === 'Enter' || event.code === 'Space' || event.code === 'NumpadEnter') this.items[this.focusIndex]?.activate();
+    else if (event.code === 'Escape' || event.code === 'Backspace') this.options.onBack?.();
+  }
+
+  private move(direction: Direction): void {
+    this.setFocus(moveFocus(this.focusIndex, this.items.length, direction, this.columns));
+  }
+
+  private readPad(): PadSnapshot {
+    const pad = this.scene.input.gamepad?.gamepads.find((p) => p?.connected);
+    if (!pad) return { direction: null, confirm: false, back: false };
+    const dpad: Direction | null = pad.up ? 'up' : pad.down ? 'down' : pad.left ? 'left' : pad.right ? 'right' : null;
+    return {
+      direction: dpad ?? stickDirection(pad.leftStick.x, pad.leftStick.y),
+      confirm: pad.buttons[BUTTON_A]?.pressed ?? false,
+      back: (pad.buttons[BUTTON_B]?.pressed ?? false) || (pad.buttons[BUTTON_START]?.pressed ?? false),
+    };
+  }
+}

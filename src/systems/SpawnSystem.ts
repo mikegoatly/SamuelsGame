@@ -1,9 +1,11 @@
 import Phaser from 'phaser';
 import { TILE_SIZE } from '../content/assetKeys';
-import { enemies as enemyDefs } from '../content/enemies';
+import { getEnemy } from '../content/enemies';
+import type { LevelConfig } from '../content/levels';
 import { Enemy } from '../entities/Enemy';
 import type { Player } from '../entities/Player';
 import { pickSpawnPoint } from '../logic/spawnPoints';
+import { pickWeighted } from '../logic/weighted';
 import { waveEnemyLevels } from '../logic/waves';
 import { ROOM_COLS, ROOM_ROWS } from '../scenes/RoomBuilder';
 import type { GameEvents } from './GameEvents';
@@ -21,6 +23,7 @@ export class SpawnSystem {
     private readonly player: Player,
     private readonly group: Phaser.Physics.Arcade.Group,
     private readonly events: GameEvents,
+    private readonly level: LevelConfig,
   ) {
     events.on('enemy-died', () => this.onEnemyDied());
   }
@@ -36,14 +39,14 @@ export class SpawnSystem {
   private startWave(wave: number): void {
     if (this.stopped) return;
     this.wave = wave;
-    const levels = waveEnemyLevels(wave);
+    const levels = waveEnemyLevels(wave, this.level.monsterLevelRange);
     this.remaining = levels.length;
     this.events.emit('wave-started', wave);
     for (const level of levels) this.spawn(level);
   }
 
   private spawn(level: number): void {
-    const def = Phaser.Utils.Array.GetRandom(enemyDefs);
+    const def = getEnemy(pickWeighted(this.level.enemyPool, Math.random)?.enemyId ?? '');
     const grid = { cols: ROOM_COLS, rows: ROOM_ROWS, tileSize: TILE_SIZE };
     const { x, y } = pickSpawnPoint(grid, this.player, MIN_SPAWN_DISTANCE, Math.random);
     const enemy = new Enemy(this.scene, x, y, def, level, this.player, this.events);

@@ -1,10 +1,14 @@
 import Phaser from 'phaser';
-import { ControlFrame, FONT, Tex } from '../content/assetKeys';
+import { ControlFrame, FONT, Frame, Tex } from '../content/assetKeys';
+import { items } from '../content/items';
 import type { Player } from '../entities/Player';
 import type { PlayerProgress } from '../logic/progression';
+import type { CharmId, Charms } from '../logic/stats';
 import type { GameEvents } from '../systems/GameEvents';
+import type { LootSystem } from '../systems/LootSystem';
 import type { ProgressionSystem } from '../systems/ProgressionSystem';
 import type { SpawnSystem } from '../systems/SpawnSystem';
+import { saveSystem } from '../systems/SaveSystem';
 import { TouchControlsView } from '../ui/TouchControlsView';
 
 export interface HudData {
@@ -12,12 +16,15 @@ export interface HudData {
   progression: ProgressionSystem;
   player: Player;
   spawner: SpawnSystem;
+  loot: LootSystem;
 }
 
 const BAR_X = 10;
 const BAR_WIDTH = 140;
 const FULLSCREEN_SIZE = 28;
 const FULLSCREEN_MARGIN = 8;
+const PAUSE_Y = 58;
+const CHARM_ITEMS: Record<CharmId, string> = { power: 'charmOfPower', swiftness: 'charmOfSwiftness', vitality: 'charmOfVitality' };
 
 export class HudScene extends Phaser.Scene {
   private bars!: Phaser.GameObjects.Graphics;
@@ -26,6 +33,9 @@ export class HudScene extends Phaser.Scene {
   private waveText!: Phaser.GameObjects.Text;
   private hp = { value: 1, max: 1 };
   private fullscreenButton!: Phaser.GameObjects.Image;
+  private pauseButton!: Phaser.GameObjects.Container;
+  private coinText!: Phaser.GameObjects.Text;
+  private charmIcons!: Phaser.GameObjects.Container;
   private touchView!: TouchControlsView;
   private xpRatio = 0;
 
@@ -34,12 +44,18 @@ export class HudScene extends Phaser.Scene {
   }
 
   create(data: HudData): void {
-    const { events, progression, player, spawner } = data;
+    const { events, progression, player, spawner, loot } = data;
     this.bars = this.add.graphics();
     this.levelText = this.makeText(BAR_X, 4, '#ffffff', 16);
     this.hpText = this.makeText(BAR_X + 4, 27, '#ffffff', 8);
     this.waveText = this.makeText(0, 4, '#d8d8e8', 16).setOrigin(1, 0);
     this.createFullscreenButton();
+    this.createPauseButton(events);
+    this.add.image(BAR_X + 5, 55, Tex.tiles, Frame.coin).setTint(0xffd84a);
+    this.coinText = this.makeText(BAR_X + 16, 49, '#ffe066', 10);
+    this.charmIcons = this.add.container(BAR_X, 70);
+    this.showCoins(loot.totalCoins);
+    this.showCharms(saveSystem.data.charms);
     this.touchView = new TouchControlsView(this);
     this.layout();
     this.scale.on('resize', this.layout, this);
@@ -54,6 +70,8 @@ export class HudScene extends Phaser.Scene {
       this.drawBars();
     });
     events.on('xp-changed', (progress) => this.showProgress(progress, progression.xpForNextLevel));
+    events.on('coins-changed', (total) => this.showCoins(total));
+    events.on('charms-changed', (charms) => this.showCharms(charms));
     events.on('wave-started', (wave) => this.waveText.setText(`Wave ${wave}`));
   }
 
@@ -65,6 +83,7 @@ export class HudScene extends Phaser.Scene {
     const half = FULLSCREEN_SIZE / 2;
     this.fullscreenButton.setPosition(this.scale.width - FULLSCREEN_MARGIN - half, FULLSCREEN_MARGIN + half);
     this.waveText.setX(this.fullscreenButton.x - half - 6);
+    this.pauseButton.setPosition(this.fullscreenButton.x, PAUSE_Y);
   }
 
   private createFullscreenButton(): void {
@@ -82,6 +101,31 @@ export class HudScene extends Phaser.Scene {
         /* unsupported */
       }
     });
+  }
+
+  private createPauseButton(events: GameEvents): void {
+    const bg = this.add.circle(0, 0, FULLSCREEN_SIZE / 2, 0x14121c, 0.6).setStrokeStyle(2, 0xd8d8e8, 0.8);
+    const bars = this.add.graphics().fillStyle(0xd8d8e8, 1).fillRect(-5, -6, 3, 12).fillRect(2, -6, 3, 12);
+    this.pauseButton = this.add.container(0, PAUSE_Y, [bg, bars]).setAlpha(0.7);
+    bg.setInteractive({ useHandCursor: true });
+    bg.on('pointerdown', () => events.emit('pause-requested'));
+  }
+
+  private showCoins(total: number): void {
+    this.coinText.setText(String(total));
+  }
+
+  private showCharms(charms: Charms): void {
+    this.charmIcons.removeAll(true);
+    let x = 0;
+    for (const id of Object.keys(CHARM_ITEMS) as CharmId[]) {
+      if (charms[id] <= 0) continue;
+      const item = items[CHARM_ITEMS[id]]!;
+      const icon = this.add.image(x + 5, 0, Tex.tiles, item.frame).setTint(item.tint ?? 0xffffff);
+      const count = this.makeText(x + 13, -5, '#ffffff', 8).setText(`x${charms[id]}`);
+      this.charmIcons.add([icon, count]);
+      x += 34;
+    }
   }
 
   private showProgress(progress: PlayerProgress, needed: number): void {

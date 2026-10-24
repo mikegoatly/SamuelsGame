@@ -3,9 +3,14 @@ import { xpReward, xpToNextLevel } from '../logic/xp';
 import type { GameEvents } from './GameEvents';
 
 export class ProgressionSystem {
-  private current: PlayerProgress = { level: 1, xp: 0 };
+  private current: PlayerProgress;
 
-  constructor(private readonly events: GameEvents) {}
+  constructor(
+    private readonly events: GameEvents,
+    initial: PlayerProgress = { level: 1, xp: 0 },
+  ) {
+    this.current = initial;
+  }
 
   get progress(): PlayerProgress {
     return this.current;

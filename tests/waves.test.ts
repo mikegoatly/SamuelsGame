@@ -21,6 +21,20 @@ describe('waveEnemyLevels', () => {
   });
 });
 
+describe('waveEnemyLevels with a level range', () => {
+  it.each([
+    [1, [5, 5, 6]],
+    [3, [6, 6, 7, 6, 6]],
+  ])('desert wave %i => %j', (wave, expected) => {
+    expect(waveEnemyLevels(wave, [5, 9])).toEqual(expected);
+  });
+
+  it('never exceeds the range maximum', () => {
+    expect(Math.max(...waveEnemyLevels(99, [5, 9]))).toBe(9);
+    expect(Math.max(...waveEnemyLevels(2, [1, 1]))).toBe(1);
+  });
+});
+
 describe('pickSpawnPoint', () => {
   const grid = { cols: 10, rows: 10, tileSize: 16 };
 

@@ -52,6 +52,7 @@ describe('classifyTouch', () => {
     ['dash button', dash.x, dash.y, 'dash'],
     ['alt button', alt.x, alt.y, 'altFire'],
     ['fullscreen button', metrics.fullscreen.x, metrics.fullscreen.y, null],
+    ['pause button', metrics.pause.x, metrics.pause.y, null],
   ])('%s', (_name, x, y, expected) => {
     expect(classifyTouch({ x, y }, width, metrics)).toBe(expected);
   });

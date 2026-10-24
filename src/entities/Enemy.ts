@@ -98,7 +98,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     this.alive = false;
     this.disableBody();
     this.label.destroy();
-    this.events.emit('enemy-died', this.level, this.x, this.y);
+    this.events.emit('enemy-died', this.level, this.x, this.y, this.def.lootTableId);
     this.puff();
     this.scene.tweens.killTweensOf(this);
     this.scene.tweens.add({

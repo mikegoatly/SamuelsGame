@@ -1,12 +1,16 @@
 import Phaser from 'phaser';
 import type { PlayerProgress } from '../logic/progression';
+import type { Charms } from '../logic/stats';
 
 export interface GameEventMap {
   'xp-changed': [progress: PlayerProgress];
   'level-up': [level: number];
   'hp-changed': [hp: number, maxHp: number];
   'wave-started': [wave: number];
-  'enemy-died': [level: number, x: number, y: number];
+  'enemy-died': [level: number, x: number, y: number, lootTableId: string];
+  'coins-changed': [total: number];
+  'charms-changed': [charms: Charms];
+  'pause-requested': [];
   'player-died': [];
 }
 
