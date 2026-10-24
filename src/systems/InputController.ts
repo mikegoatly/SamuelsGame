@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { GamepadSource } from './GamepadSource';
 import { KeyboardMouseSource } from './KeyboardMouseSource';
 
 export interface InputSource {
@@ -11,6 +12,7 @@ export interface InputSource {
   readonly fire: boolean;
   readonly altFire: boolean;
   readonly dash: boolean;
+  rumble?(durationMs: number, weak: number, strong: number): void;
 }
 
 /** Merges all input sources into one device-agnostic view for game code. */
@@ -25,7 +27,11 @@ export class InputController {
   private readonly sources: InputSource[];
 
   constructor(scene: Phaser.Scene, sources?: InputSource[]) {
-    this.sources = sources ?? [new KeyboardMouseSource(scene)];
+    this.sources = sources ?? [new KeyboardMouseSource(scene), new GamepadSource()];
+  }
+
+  rumble(durationMs: number, weak: number, strong: number): void {
+    for (const source of this.sources) source.rumble?.(durationMs, weak, strong);
   }
 
   update(scene: Phaser.Scene, origin: Phaser.Math.Vector2): void {

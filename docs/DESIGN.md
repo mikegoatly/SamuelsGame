@@ -42,13 +42,13 @@ weights, monster level range, boss id, reward id, unlock requirement (previous l
 
 ## 5. Controls
 
-| Action | Keyboard/mouse | Touch (tablet) | Gamepad (later) |
+| Action | Keyboard/mouse | Touch (tablet) | Gamepad |
 |---|---|---|---|
-| Move | WASD | Left virtual stick | Left stick |
-| Aim + fire | Mouse + LMB | Right virtual stick (fires while held) | Right stick + RT |
+| Move | WASD | Left virtual stick | Left stick / D-pad |
+| Aim + fire | Mouse + LMB | Right virtual stick (fires while held) | Right stick (auto-fires past ~50%) or RT |
 | Alt fire (Fireball) | RMB | Button | LT |
 | Dash | Space | Button | A |
-| Pause | Esc | Button | Start |
+| Pause | Esc | Button | Start (not wired yet) |
 
 Input abstraction (`InputController`) emits `moveVector`, `aimVector`, `fire`, `altFire`, `dash` so game
 code never reads devices directly.

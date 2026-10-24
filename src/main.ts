@@ -15,6 +15,7 @@ new Phaser.Game({
   backgroundColor: '#14121c',
   pixelArt: true,
   roundPixels: true,
+  input: { gamepad: true },
   physics: { default: 'arcade', arcade: { gravity: { x: 0, y: 0 } } },
   scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH },
   scene: [BootScene, PreloadScene, GameScene, HudScene, GameOverScene],

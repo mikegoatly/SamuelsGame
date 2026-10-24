@@ -8,6 +8,8 @@ export interface GameOverData {
 }
 
 const RETRY_DELAY_MS = 600;
+const BUTTON_A = 0;
+const BUTTON_START = 9;
 
 export class GameOverScene extends Phaser.Scene {
   constructor() {
@@ -20,12 +22,16 @@ export class GameOverScene extends Phaser.Scene {
     this.cameras.main.fadeIn(300);
     this.text(cx, cy - 50, 'You fell', 48, '#ff6b6b');
     this.text(cx, cy + 4, `Reached level ${data.level} - wave ${data.wave}`, 20, '#ffffff');
-    const prompt = this.text(cx, cy + 56, 'Click / tap to retry', 20, '#b48cff').setAlpha(0);
+    const prompt = this.text(cx, cy + 56, 'Click / tap / press A to retry', 20, '#b48cff').setAlpha(0);
 
     this.time.delayedCall(RETRY_DELAY_MS, () => {
       prompt.setAlpha(1);
       this.tweens.add({ targets: prompt, alpha: 0.4, yoyo: true, repeat: -1, duration: 700 });
-      this.input.once('pointerdown', () => this.scene.start('Game'));
+      const retry = (): void => void this.scene.start('Game');
+      this.input.once('pointerdown', retry);
+      this.input.gamepad?.on('down', (_pad: Phaser.Input.Gamepad.Gamepad, button: Phaser.Input.Gamepad.Button) => {
+        if (button.index === BUTTON_A || button.index === BUTTON_START) retry();
+      });
     });
   }
 

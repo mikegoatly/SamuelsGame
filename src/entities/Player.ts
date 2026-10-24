@@ -64,6 +64,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this.invulnerableUntil = this.scene.time.now + Player.IFRAMES_MS;
     this.scene.sound.play(Sfx.hit, { volume: 0.5, rate: 0.7 });
     this.scene.cameras.main.shake(100, 0.004);
+    this.controls.rumble(150, 0.4, 0.7);
     const away = new Phaser.Math.Vector2(this.x - fromX, this.y - fromY).normalize().scale(120);
     this.setVelocity(away.x, away.y);
     this.knockbackUntil = this.scene.time.now + Player.KNOCKBACK_MS;

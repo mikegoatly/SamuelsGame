@@ -16,11 +16,12 @@ npm run typecheck
 
 | Action | Input |
 |---|---|
-| Move | WASD / arrow keys |
-| Aim | Mouse |
-| Fire | Left mouse button |
-| Alt fire | Right mouse button (not wired to a weapon yet) |
-| Dash | Space |
+| Move | WASD / arrow keys, or left stick / D-pad |
+| Aim | Mouse, or right stick (last-used device wins) |
+| Fire | Left mouse button, RT, or right stick past ~50% |
+| Alt fire | Right mouse button or LT (not wired to a weapon yet) |
+| Dash | Space or A |
+| Retry (game over) | Click / tap, A or Start |
 
 ## Assets
 
