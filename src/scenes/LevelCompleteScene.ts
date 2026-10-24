@@ -1,6 +1,7 @@
 import { Tex } from '../content/assetKeys';
 import type { Reward } from '../content/rewards';
 import { formatTime } from '../logic/format';
+import { playSfx } from '../systems/sfx';
 import { MenuButton } from '../ui/MenuButton';
 import { MenuList } from '../ui/MenuList';
 import { menuText } from '../ui/menuText';
@@ -28,6 +29,11 @@ export class LevelCompleteScene extends MenuScene {
 
   init(data: LevelCompleteData): void {
     this.result = data;
+  }
+
+  override create(): void {
+    super.create();
+    playSfx(this, 'victory');
   }
 
   protected build(): void {

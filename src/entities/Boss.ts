@@ -1,10 +1,12 @@
 import Phaser from 'phaser';
-import { Sfx, Tex } from '../content/assetKeys';
+import { Tex } from '../content/assetKeys';
 import type { EnemyDef } from '../content/enemies';
 import { damageToPlayer } from '../logic/combat';
 import { spiralVolley } from '../logic/aim';
 import { spreadDirections } from '../logic/enemyAi';
 import { bossPhase, newBossState, stepBoss, summonCount, type BossAction, type BossBrainConfig, type BossState } from '../logic/bossBrain';
+import { feel } from '../systems/feel';
+import { playSfx } from '../systems/sfx';
 import { Enemy, type EnemyContext } from './Enemy';
 import type { Player } from './Player';
 
@@ -93,7 +95,8 @@ export class Boss extends Enemy {
     this.clearTelegraph();
     this.stopDust();
     this.shots.clear();
-    this.scene.cameras.main.shake(500, 0.012);
+    feel.shake(500, 0.012);
+    playSfx(this.scene, 'bossRoar');
     super.die();
     this.events.emit('boss-hp', 0, this.maxHp);
     this.events.emit('boss-died', this.x, this.y);
@@ -131,7 +134,7 @@ export class Boss extends Enemy {
     this.scene.tweens.add({ targets: fill, scale: 1, duration: durationMs, ease: 'Quad.easeIn' });
     this.telegraph = [ring, fill];
     if (rising) this.stopDust();
-    this.scene.sound.play(Sfx.shoot, { volume: 0.3, rate: 0.5 });
+    playSfx(this.scene, 'enemyShot', { rate: 0.75, volume: 1.6 });
   }
 
   /** The hidden boss pops up beside where the player stands when the warning starts, inside the arena and off any wall. */
@@ -158,14 +161,14 @@ export class Boss extends Enemy {
     this.telegraph = [lane, fill];
     this.forcedTint = LUNGE_TINT;
     this.setTint(LUNGE_TINT);
-    this.scene.sound.play(Sfx.shoot, { volume: 0.3, rate: 0.45 });
+    playSfx(this.scene, 'enemyShot', { rate: 0.65, volume: 1.6 });
   }
 
   private startLunge(speed: number): void {
     this.clearTelegraph();
     this.lungeResolved = false;
     this.setVelocity(this.lungeDirection.x * speed, this.lungeDirection.y * speed);
-    this.scene.sound.play(Sfx.hit, { volume: 0.5, rate: 0.8 });
+    playSfx(this.scene, 'slam', { volume: 0.7 });
   }
 
   private endLunge(): void {
@@ -178,7 +181,7 @@ export class Boss extends Enemy {
     this.conceal(true);
     this.setVelocity(0, 0);
     this.puff();
-    this.scene.sound.play(Sfx.shoot, { volume: 0.35, rate: 0.35 });
+    playSfx(this.scene, 'enemyShot', { rate: 0.5, volume: 1.8 });
   }
 
   /** Reappears on the throne and sends out a shockwave the player must be clear of. */
@@ -193,7 +196,7 @@ export class Boss extends Enemy {
     for (const bolt of spiralVolley(count, turns, this.burstSpin, this.def.boltSpeed ?? 90)) {
       this.shots.fire(this.x, this.y, bolt.x, bolt.y, bolt.speed, damage, BOLT_RANGE);
     }
-    this.scene.sound.play(Sfx.shoot, { volume: 0.3, rate: 0.5 });
+    playSfx(this.scene, 'enemyShot', { rate: 0.7, volume: 1.6 });
   }
 
   private strikeArea(emerging: boolean): void {
@@ -204,8 +207,8 @@ export class Boss extends Enemy {
     const wave = this.scene.add.circle(x, y, radius, magic ? MAGIC : emerging ? 0xf0d090 : 0xffffff, 0.35).setStrokeStyle(3, 0xffd0a0, 1).setDepth(7);
     this.scene.tweens.add({ targets: wave, scale: 1.25, alpha: 0, duration: 260, onComplete: () => wave.destroy() });
     if (emerging && !magic) this.sandBurst(x, y);
-    this.scene.cameras.main.shake(200, 0.01);
-    this.scene.sound.play(Sfx.hit, { volume: 0.7, rate: 0.5 });
+    feel.shake(200, 0.01);
+    playSfx(this.scene, 'slam');
     if (Phaser.Math.Distance.Between(x, y, this.target.x, this.target.y) <= radius + 4) {
       this.target.takeDamage(damageToPlayer(this.def.slamDamage ?? 20, this.level, this.target.level), x, y);
     }
@@ -213,7 +216,7 @@ export class Boss extends Enemy {
 
   private burrow(): void {
     this.conceal(true);
-    this.scene.sound.play(Sfx.hit, { volume: 0.4, rate: 0.7 });
+    playSfx(this.scene, 'slam', { volume: 0.6, rate: 0.8 });
     this.sandBurst(this.x, this.y);
     this.dust = this.scene.add
       .particles(0, 0, Tex.puff, { follow: this, frequency: 35, lifespan: 600, speed: { min: 4, max: 22 }, scale: { start: 1.6, end: 0 }, alpha: { start: 0.8, end: 0 }, tint: DUST })
@@ -242,7 +245,7 @@ export class Boss extends Enemy {
       const angle = this.burstSpin + (i * Math.PI * 2) / count;
       this.shots.fire(this.x, this.y, Math.cos(angle), Math.sin(angle), this.def.boltSpeed ?? 90, damage, BOLT_RANGE);
     }
-    this.scene.sound.play(Sfx.shoot, { volume: 0.3, rate: 0.7 });
+    playSfx(this.scene, 'enemyShot', { volume: 1.6 });
   }
 
   private spit(count: number, arc: number): void {
@@ -253,7 +256,7 @@ export class Boss extends Enemy {
     for (const d of spreadDirections(dx, dy, count, arc, this.lastAim)) {
       this.shots.fire(this.x, this.y, d.x, d.y, this.def.boltSpeed ?? 90, damage, BOLT_RANGE);
     }
-    this.scene.sound.play(Sfx.shoot, { volume: 0.3, rate: 0.6 });
+    playSfx(this.scene, 'enemyShot', { volume: 1.6 });
   }
 
   private summon(count: number, minion: string, levelDrop: number, maxAlive: number): void {
@@ -266,8 +269,10 @@ export class Boss extends Enemy {
 
   private enrage(): void {
     this.scene.tweens.add({ targets: this, scale: this.scale * 1.15, duration: 160, yoyo: true });
-    this.scene.cameras.main.shake(300, 0.008);
-    this.scene.sound.play(Sfx.hit, { volume: 0.6, rate: 0.4 });
+    feel.shake(300, 0.01);
+    feel.flash(200);
+    playSfx(this.scene, 'bossPhase');
+    playSfx(this.scene, 'bossRoar', { delay: 0.1 });
   }
 
   private clearTelegraph(): void {

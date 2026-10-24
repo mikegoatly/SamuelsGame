@@ -7,11 +7,20 @@ Top-down twin-stick action game (Phaser 3 + TypeScript + Vite). See `docs/DESIGN
 ```
 npm install
 npm run dev        # http://localhost:5173
-npm run build      # typecheck + production build into dist/
+npm run build      # typecheck + production build into dist/ (relative base: works from any static host or subfolder)
+npm run preview    # serve dist/ locally (vite preview, http://localhost:4173)
 npm test           # Vitest (pure logic in src/logic)
 npm run typecheck
+npm run favicon    # regenerate public/favicon.png from the wizard sprite (tools/make-favicon.ts)
 npm run gen-maps   # regenerate public/assets/maps/*.tmj (ruins, desert, palace) from tools/mapThemes.ts (deterministic seeds)
 ```
+
+## Features
+
+Three levels (Ruins, Desert, Palace) with bosses, loot, charms and permanent saves; Apprentice Staff, Broken Wand + Fireball, Golden Sword;
+keyboard/mouse, gamepad and touch; title screen, How to Play (highlights the device you used last) and Settings (music and effects volume
+in 10% steps, master mute, "Reduce shake / flashes"); Kenney sound effects with random variants and pitch, menu music and a victory jingle;
+hit-stop, budgeted screen shake, hurt and low-HP vignettes, death particles, dust and muzzle flashes; boss intro banners.
 
 ## Controls
 
@@ -85,3 +94,16 @@ royal archers (lead their shots), dark mages (blink away when you get close, the
 The Mad King (Lv 16) lunges along a red lane, fires spinning blade rings, calls guards and, below 50% HP, teleports between thrones and fires spirals.
 Reward: the Golden Sword, a melee weapon (~100 degree swing, hits everything in the arc once, strong knockback, swats enemy bolts). Cycle weapons with Q / wheel / Y / swap button;
 the fireball only works with the wand. After clearing the palace a locked "???" card teases the next chapter. Music: `palace.mp3` and `boss-palace.mp3` (copied by `copy-assets`).
+
+## Adding a new level
+
+1. Theme: add a `MapTheme` to `tools/mapThemes.ts` (tiles, cover, encounter curve, seed) and a `LayoutPreset` in `src/logic/layoutPresets.ts`; run `npm run gen-maps`.
+2. Config: add `src/content/levels/<id>.ts` (name, `mapKey`, music, enemy pool, monster levels, `bossId`, `bossLevel`, reward, `unlockedBy`) and register it in `levels/index.ts`; add the map key to `MapKey`/`Environment` and a tint in `ENVIRONMENT_TINT`.
+3. Enemies and boss: new `EnemyDef`s in `src/content/enemies.ts` (plus a `DEATH_TINTS` colour and loot table), boss attacks as a `BossBrainConfig` in `src/content/bosses.ts`.
+4. Music: add the files to `tools/copy-assets.ts` and `MUSIC_FILES`, then `npm run copy-assets`.
+5. Tests: extend the content/layout tests and add balance checks in `tests/balance.test.ts`.
+
+## Settings and audio
+
+Volumes and the shake toggle live in the save (`settings`, save v4). Effects go through `playSfx(scene, id)` (`src/systems/sfx.ts`, definitions in
+`src/content/sfxDefs.ts`); music through the game-wide `MusicPlayer` (`musicOf(game)`), which crossfades and follows the music volume.

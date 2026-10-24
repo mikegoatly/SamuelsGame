@@ -13,7 +13,7 @@ const FIRST_GID = 1;
 export function buildTiledMap(scene: Phaser.Scene, level: LevelConfig): LevelMap {
   const map = scene.make.tilemap({ key: level.mapKey });
   const tileset = map.addTilesetImage(TILESET_NAME, Tex.tiles, TILE_SIZE, TILE_SIZE, 0, 0)!;
-  const ground = map.createLayer('ground', tileset, 0, 0)!;
+  const ground = map.createLayer('ground', level.environment === 'palace' ? palaceTileset(scene) : tileset, 0, 0)!;
   const walls = map.createLayer('walls', tileset, 0, 0)!;
   walls.setCollisionByExclusion([-1]);
   const doorTiles = map.createBlankLayer('doors', tileset, 0, 0, map.width, map.height)!.setDepth(1);
@@ -28,6 +28,12 @@ export function buildTiledMap(scene: Phaser.Scene, level: LevelConfig): LevelMap
   for (const rect of slowZones) drawQuicksand(scene, rect);
   for (const throne of world.thrones) drawThrone(scene, throne.x, throne.y);
   return { walls, solid: [doorTiles], playerStart: world.playerStart, world, doors, slowZones, spikes: world.hazards.filter((h) => h.kind === 'spikes') };
+}
+
+/** Same tile layout as the shared tileset but drawn from the purple-floored copy of the sheet. */
+function palaceTileset(scene: Phaser.Scene): Phaser.Tilemaps.Tileset {
+  const tileset = new Phaser.Tilemaps.Tileset(TILESET_NAME, FIRST_GID, TILE_SIZE, TILE_SIZE, 0, 0);
+  return tileset.setImage(scene.textures.get(Tex.palaceTiles));
 }
 
 /** A gilded seat on the floor; the Mad King teleports between these. */

@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { Tex } from '../content/assetKeys';
 import type { ItemDef } from '../content/items';
+import type { GameClock } from '../systems/GameClock';
 import { isPickupExpired, isPickupVisible } from '../logic/pickups';
 
 const POP_MS = 380;
@@ -20,11 +21,12 @@ export class Pickup extends Phaser.Physics.Arcade.Sprite {
     private readonly def: ItemDef,
     private readonly target: Phaser.GameObjects.Components.Transform,
     private readonly onCollect: (def: ItemDef) => void,
+    private readonly clock: GameClock,
   ) {
     super(scene, x, y, Tex.tiles, def.frame);
     scene.add.existing(this);
     scene.physics.add.existing(this);
-    this.bornAt = scene.time.now;
+    this.bornAt = clock.now;
     this.setSize(10, 10).setOffset(3, 3).setDepth(4).setScale(def.scale ?? 1);
     if (def.tint !== undefined) this.setTint(def.tint);
     this.pop(x, y);
@@ -40,7 +42,7 @@ export class Pickup extends Phaser.Physics.Arcade.Sprite {
   override preUpdate(time: number, delta: number): void {
     super.preUpdate(time, delta);
     if (this.collected) return;
-    const age = time - this.bornAt;
+    const age = this.clock.now - this.bornAt;
     if (isPickupExpired(age)) {
       this.destroy();
       return;

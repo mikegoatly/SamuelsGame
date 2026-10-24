@@ -16,14 +16,15 @@ export class PauseScene extends MenuScene {
     const cx = width / 2;
     const game = this.scene.get('Game') as GameScene;
     this.add.rectangle(cx, height / 2, width, height, 0x14121c, 0.7);
-    menuText(this, cx, height * 0.28, 'Paused', 32, '#b48cff');
-    const resume = new MenuButton(this, cx, height * 0.5, 200, 34, 'Resume', () => game.resumeGame());
-    const sound = new MenuButton(this, cx, height * 0.5 + 44, 200, 34, soundLabel(saveSystem.data.settings.muted), () => toggleMute(this.game));
+    menuText(this, cx, height * 0.24, 'Paused', 32, '#b48cff');
+    const resume = new MenuButton(this, cx, height * 0.42, 200, 34, 'Resume', () => game.resumeGame());
+    const sound = new MenuButton(this, cx, height * 0.42 + 44, 200, 34, soundLabel(saveSystem.data.settings.muted), () => toggleMute(this.game));
     const refresh = (muted: boolean): void => sound.setLabel(soundLabel(muted));
     this.game.events.on(MUTE_EVENT, refresh);
     this.events.once('shutdown', () => this.game.events.off(MUTE_EVENT, refresh));
-    const quit = new MenuButton(this, cx, height * 0.5 + 88, 200, 34, 'Quit to level select', () => game.quitToLevelSelect());
-    this.menu = new MenuList(this, [resume, sound, quit], { onBack: () => game.resumeGame() });
+    const settings = new MenuButton(this, cx, height * 0.42 + 88, 200, 34, 'Settings', () => this.scene.start('Settings', { back: 'Pause' }));
+    const quit = new MenuButton(this, cx, height * 0.42 + 132, 200, 34, 'Quit to level select', () => game.quitToLevelSelect());
+    this.menu = new MenuList(this, [resume, sound, settings, quit], { onBack: () => game.resumeGame() });
   }
 }
 

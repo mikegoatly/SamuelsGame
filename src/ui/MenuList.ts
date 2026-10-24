@@ -1,11 +1,15 @@
 import Phaser from 'phaser';
 import { moveFocus, stickDirection, type Direction } from '../logic/menuNav';
+import { playSfx } from '../systems/sfx';
 
 export interface MenuItem {
   /** Interactive hit area; also what the pointer focuses and taps. */
   readonly area: Phaser.GameObjects.Rectangle;
   setFocused(focused: boolean): void;
-  activate(): void;
+  /** `pointerX` is the screen x of the tap when activated by pointer. */
+  activate(pointerX?: number): void;
+  /** Left/right while focused (sliders). Items without it let the arrows move focus instead. */
+  adjust?(direction: 1 | -1): void;
 }
 
 export interface MenuListOptions {
@@ -68,8 +72,8 @@ export class MenuList {
     const before = this.pad;
     this.pad = now;
     if (now.direction && now.direction !== before.direction) this.move(now.direction);
-    if (now.confirm && !before.confirm) this.items[this.focusIndex]?.activate();
-    if (now.back && !before.back) this.options.onBack?.();
+    if (now.confirm && !before.confirm) this.confirm();
+    if (now.back && !before.back) this.back();
   }
 
   destroy(): void {
@@ -87,22 +91,43 @@ export class MenuList {
     item.area.on('pointerout', () => {
       if (this.pressed === index) this.pressed = -1;
     });
-    item.area.on('pointerup', () => {
+    item.area.on('pointerup', (pointer: Phaser.Input.Pointer) => {
       const wasPressed = this.pressed === index;
       this.pressed = -1;
-      if (wasPressed) item.activate();
+      if (wasPressed) this.confirm(pointer.x);
     });
   }
 
   private handleKey(event: KeyboardEvent): void {
     const direction = KEY_DIRECTIONS[event.code];
     if (direction) this.move(direction);
-    else if (event.code === 'Enter' || event.code === 'Space' || event.code === 'NumpadEnter') this.items[this.focusIndex]?.activate();
-    else if (event.code === 'Escape' || event.code === 'Backspace') this.options.onBack?.();
+    else if (event.code === 'Enter' || event.code === 'Space' || event.code === 'NumpadEnter') this.confirm();
+    else if (event.code === 'Escape' || event.code === 'Backspace') this.back();
+  }
+
+  private confirm(pointerX?: number): void {
+    const item = this.items[this.focusIndex];
+    if (!item) return;
+    playSfx(this.scene, 'uiConfirm');
+    item.activate(pointerX);
+  }
+
+  private back(): void {
+    if (!this.options.onBack) return;
+    playSfx(this.scene, 'uiBack');
+    this.options.onBack();
   }
 
   private move(direction: Direction): void {
+    const item = this.items[this.focusIndex];
+    if (item?.adjust && (direction === 'left' || direction === 'right')) {
+      item.adjust(direction === 'left' ? -1 : 1);
+      playSfx(this.scene, 'uiMove');
+      return;
+    }
+    const before = this.focusIndex;
     this.setFocus(moveFocus(this.focusIndex, this.items.length, direction, this.columns));
+    if (this.focusIndex !== before) playSfx(this.scene, 'uiMove');
   }
 
   private readPad(): PadSnapshot {

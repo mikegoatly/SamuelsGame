@@ -1,5 +1,7 @@
+import { Music } from '../content/assetKeys';
 import { getLevel, levels } from '../content/levels';
 import { isLevelUnlocked, visibleLevels } from '../logic/levelRules';
+import { musicOf } from '../systems/MusicPlayer';
 import { saveSystem } from '../systems/SaveSystem';
 import { LevelCard } from '../ui/LevelCard';
 import { MenuButton } from '../ui/MenuButton';
@@ -22,6 +24,7 @@ export class LevelSelectScene extends MenuScene {
     const { width, height } = this.scale;
     const { progress, coins, levels: levelSave } = saveSystem.data;
     const cx = width / 2;
+    musicOf(this.game).crossfadeTo(Music.menu);
     menuText(this, cx, 20, 'Choose a level', 24, '#b48cff');
     menuText(this, cx, 44, `Level ${progress.level}   -   ${coins} coins`, 16, '#d8d8e8');
 

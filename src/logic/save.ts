@@ -2,9 +2,20 @@ import { MAX_LEVEL, type PlayerProgress } from './progression';
 import { xpToNextLevel } from './xp';
 import { noCharms, type CharmId, type Charms } from './stats';
 
-/** v2: added `settings`; v3: added `powers`. Older saves load through the same tolerant parse. */
-export const SAVE_VERSION = 3;
+/** v2: added `settings`; v3: added `powers`; v4: volumes + reduceShake. Older saves load through the same tolerant parse. */
+export const SAVE_VERSION = 4;
 export const STARTING_WEAPON = 'apprenticeStaff';
+
+export interface Settings {
+  muted: boolean;
+  /** 0-100, steps of 10. */
+  musicVolume: number;
+  sfxVolume: number;
+  /** Accessibility: no screen shake, softer flashes. */
+  reduceShake: boolean;
+}
+
+export const defaultSettings = (): Settings => ({ muted: false, musicVolume: 70, sfxVolume: 100, reduceShake: false });
 
 export interface SaveData {
   version: typeof SAVE_VERSION;
@@ -13,7 +24,7 @@ export interface SaveData {
   charms: Charms;
   weapons: { owned: string[]; equipped: string };
   levels: { cleared: string[]; bestTimes?: Record<string, number> };
-  settings: { muted: boolean };
+  settings: Settings;
   powers: { unlocked: string[] };
 }
 
@@ -25,7 +36,7 @@ export function defaultSave(): SaveData {
     charms: noCharms(),
     weapons: { owned: [STARTING_WEAPON], equipped: STARTING_WEAPON },
     levels: { cleared: [] },
-    settings: { muted: false },
+    settings: defaultSettings(),
     powers: { unlocked: [] },
   };
 }
@@ -76,10 +87,20 @@ export function parseSave(json: string | null | undefined): SaveData {
       save.levels.bestTimes = times;
     }
   }
-  if (isRecord(raw.settings)) save.settings = { muted: raw.settings.muted === true };
+  if (isRecord(raw.settings)) {
+    const fallback = defaultSettings();
+    save.settings = {
+      muted: raw.settings.muted === true,
+      musicVolume: wholeNumber(raw.settings.musicVolume, fallback.musicVolume, 0, 100),
+      sfxVolume: wholeNumber(raw.settings.sfxVolume, fallback.sfxVolume, 0, 100),
+      reduceShake: raw.settings.reduceShake === true,
+    };
+  }
   if (isRecord(raw.powers)) save.powers = { unlocked: strings(raw.powers.unlocked) };
   return save;
 }
+
+export const withSettings = (save: SaveData, change: Partial<Settings>): SaveData => ({ ...save, settings: { ...save.settings, ...change } });
 
 export const withMuted = (save: SaveData, muted: boolean): SaveData => ({ ...save, settings: { ...save.settings, muted } });
 

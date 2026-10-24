@@ -1,5 +1,4 @@
 import Phaser from 'phaser';
-import { Sfx } from '../content/assetKeys';
 import { items, RARITY_COLOR, type ItemDef } from '../content/items';
 import { lootTables } from '../content/lootTables';
 import { Pickup } from '../entities/Pickup';
@@ -7,8 +6,10 @@ import type { Player } from '../entities/Player';
 import { rollDrops } from '../logic/loot';
 import { resolvePotion } from '../logic/pickups';
 import { addCharm } from '../logic/save';
+import type { GameClock } from './GameClock';
 import type { GameEvents } from './GameEvents';
 import { floatText } from './floatText';
+import { playSfx } from './sfx';
 import type { SaveSystem } from './SaveSystem';
 
 /** Coins collected this run; banked on clear/quit, discarded on death. */
@@ -25,6 +26,7 @@ export class LootSystem {
     private readonly events: GameEvents,
     private readonly run: RunState,
     private readonly save: SaveSystem,
+    private readonly clock: GameClock,
     private readonly rng: () => number = Math.random,
   ) {
     this.group = scene.physics.add.group({ allowGravity: false });
@@ -45,7 +47,7 @@ export class LootSystem {
   spawn(itemId: string, x: number, y: number): void {
     const def = items[itemId];
     if (!def) return;
-    this.group.add(new Pickup(this.scene, x, y, def, this.player, (picked) => this.apply(picked)));
+    this.group.add(new Pickup(this.scene, x, y, def, this.player, (picked) => this.apply(picked), this.clock));
   }
 
   private apply(def: ItemDef): void {
@@ -55,7 +57,7 @@ export class LootSystem {
     if (def.kind === 'coin') {
       this.addCoins(def.value);
       at(`+${def.value} ${def.value === 1 ? 'coin' : 'coins'}`, color);
-      this.chirp(1.6 + Math.min(def.value, 5) * 0.05);
+      playSfx(this.scene, 'coin', { rate: 1 + Math.min(def.value, 5) * 0.03 });
     } else if (def.kind === 'heal') {
       const result = resolvePotion(player.hp, player.maxHp, def.heal);
       player.heal(result.healed);
@@ -65,22 +67,17 @@ export class LootSystem {
       } else {
         at(`+${result.healed} HP`, '#ff8a8a');
       }
-      this.chirp(1.2);
+      playSfx(this.scene, 'potion');
     } else {
       this.save.update((save) => addCharm(save, def.charm));
       this.events.emit('charms-changed', this.save.data.charms);
       at(`${def.name}!`, color);
-      this.chirp(2.2);
-      this.scene.time.delayedCall(120, () => this.chirp(2.8));
+      playSfx(this.scene, 'charm');
     }
   }
 
   private addCoins(amount: number): void {
     this.run.coins += amount;
     this.events.emit('coins-changed', this.totalCoins);
-  }
-
-  private chirp(rate: number): void {
-    this.scene.sound.play(Sfx.shoot, { volume: 0.25, rate });
   }
 }

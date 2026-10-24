@@ -1,5 +1,4 @@
 import Phaser from 'phaser';
-import { Sfx } from '../content/assetKeys';
 import { getEnemy } from '../content/enemies';
 import type { LevelConfig } from '../content/levels';
 import type { Player } from '../entities/Player';
@@ -13,6 +12,8 @@ import type { EnemyFactory } from './EnemyFactory';
 import type { GameEvents } from './GameEvents';
 import type { LevelDirector } from './LevelDirector';
 import { floatText } from './floatText';
+import { feel } from './feel';
+import { playSfx } from './sfx';
 
 const TRIGGER_INSET = 16;
 const SPAWN_INSET = 24;
@@ -106,7 +107,7 @@ export class RoomFlowSystem implements LevelDirector {
     this.o.doors.open(room.order);
     this.o.events.emit('room-cleared', room.order, this.totalRooms);
     floatText(this.o.scene, this.o.player.x, this.o.player.y - 20, 'Room cleared!', '#7dffb0', 12, 20, 1200);
-    this.o.scene.sound.play(Sfx.shoot, { volume: 0.4, rate: 1.4 });
+    playSfx(this.o.scene, 'doorOpen');
   }
 
   private startBoss(): void {
@@ -130,7 +131,7 @@ export class RoomFlowSystem implements LevelDirector {
 
   private sealDoors(order: number): void {
     this.o.doors.close(order);
-    this.o.scene.cameras.main.shake(140, 0.005);
-    this.o.scene.sound.play(Sfx.hit, { volume: 0.6, rate: 0.45 });
+    feel.shake(140, 0.005);
+    playSfx(this.o.scene, 'doorClose');
   }
 }

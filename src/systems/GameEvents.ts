@@ -19,6 +19,7 @@ export interface GameEventMap {
   'pause-requested': [];
   'weapon-cycle': [direction: 1 | -1];
   'weapon-changed': [weaponId: string];
+  'player-hurt': [];
   'player-died': [];
 }
 

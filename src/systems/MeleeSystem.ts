@@ -1,5 +1,4 @@
 import Phaser from 'phaser';
-import { Sfx } from '../content/assetKeys';
 import type { WeaponDef } from '../content/weapons';
 import { GOD_DAMAGE_MULTIPLIER, GOD_MODE } from '../debug';
 import type { Enemy } from '../entities/Enemy';
@@ -7,6 +6,8 @@ import type { EnemyProjectile, EnemyProjectiles } from '../entities/EnemyProject
 import type { Player } from '../entities/Player';
 import { damageToEnemy } from '../logic/combat';
 import { lineClear } from '../logic/lineOfSight';
+import { feel } from './feel';
+import { playSfx } from './sfx';
 import { inCone, meleeHits, type MeleeCone } from '../logic/melee';
 
 const DEFLECT_PADDING = 6;
@@ -41,8 +42,12 @@ export class MeleeSystem {
     }
     const deflected = this.deflect(origin, aim, { ...cone, reach: cone.reach + DEFLECT_PADDING });
     this.slash(x, y, aim, melee.arc, melee.reach, melee.swingMs);
-    scene.sound.play(Sfx.shoot, { volume: 0.35, rate: hits.length > 0 || deflected ? 0.5 : 0.8 });
-    if (hits.length > 0) scene.cameras.main.shake(70, 0.003);
+    playSfx(scene, 'swing');
+    if (hits.length > 0) {
+      playSfx(scene, 'swordHit');
+      feel.shake(70, 0.003);
+      feel.hitStop(45);
+    } else if (deflected) playSfx(scene, 'swordHit', { rate: 1.4, volume: 0.7 });
   }
 
   private deflect(origin: { x: number; y: number }, aim: number, cone: MeleeCone): boolean {

@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { EXPLOSION_FRAMES, Sfx, Tex } from '../content/assetKeys';
+import { EXPLOSION_FRAMES, Tex } from '../content/assetKeys';
 import { GOD_DAMAGE_MULTIPLIER, GOD_MODE } from '../debug';
 import type { Enemy } from '../entities/Enemy';
 import { Fireball } from '../entities/Fireball';
@@ -7,6 +7,8 @@ import type { Player } from '../entities/Player';
 import { backOffFromWall, lineClear } from '../logic/lineOfSight';
 import { FIREBALL, fireballDamage, fireballStatus, fireballVictims, type FireballStatus } from '../logic/fireball';
 import type { GameClock } from './GameClock';
+import { feel } from './feel';
+import { playSfx } from './sfx';
 
 export const FIREBALL_STATE_KEY = 'fireballState';
 const FLIGHT_HIT_REACH = 5;
@@ -44,7 +46,7 @@ export class FireballSystem {
     if (!this.status.ready || this.o.player.dead) return;
     this.readyAt = this.o.clock.now + FIREBALL.cooldownMs;
     this.balls.add(new Fireball(this.o.scene, x, y, direction, FIREBALL.speed));
-    this.o.scene.sound.play(Sfx.shoot, { volume: 0.4, rate: 0.55 });
+    playSfx(this.o.scene, 'fireballCast');
     this.publish();
   }
 
@@ -95,8 +97,8 @@ export class FireballSystem {
     sprite.play(key).once(Phaser.Animations.Events.ANIMATION_COMPLETE, () => sprite.destroy());
     const ring = scene.add.circle(x, y, FIREBALL.radius, 0xff7a2a, 0.18).setStrokeStyle(2, 0xffc060, 0.9).setDepth(8);
     scene.tweens.add({ targets: ring, alpha: 0, scale: 1.2, duration: 260, onComplete: () => ring.destroy() });
-    scene.cameras.main.shake(130, 0.006);
-    scene.sound.play(Sfx.explosion, { volume: 0.5 });
+    feel.shake(130, 0.006);
+    playSfx(scene, 'explosion');
   }
 
   private publish(): void {

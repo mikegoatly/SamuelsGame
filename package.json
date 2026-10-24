@@ -5,11 +5,13 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "preview": "vite preview",
     "build": "tsc --noEmit && vite build",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
     "copy-assets": "tsx tools/copy-assets.ts",
-    "gen-maps": "tsx tools/generate-maps.ts"
+    "gen-maps": "tsx tools/generate-maps.ts",
+    "favicon": "tsx tools/make-favicon.ts"
   },
   "dependencies": {
     "phaser": "^3.90.0"

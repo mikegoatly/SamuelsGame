@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { Frame, Music, Sfx } from '../content/assetKeys';
+import { Frame, Music } from '../content/assetKeys';
 import { CAMERA_ZOOM } from '../content/config';
 import { GOD_DAMAGE_MULTIPLIER, GOD_MODE } from '../debug';
 import { getLevel, type LevelConfig } from '../content/levels';
@@ -14,6 +14,7 @@ import { RewardPickup } from '../entities/RewardPickup';
 import { damageToEnemy } from '../logic/combat';
 import { rectCenter } from '../logic/geometry';
 import { addCoins, applyLevelClear, withProgress } from '../logic/save';
+import { feel } from '../systems/feel';
 import { GameClock } from '../systems/GameClock';
 import { EnemyFactory } from '../systems/EnemyFactory';
 import { FireballSystem } from '../systems/FireballSystem';
@@ -23,10 +24,11 @@ import { InputController } from '../systems/InputController';
 import type { LevelDirector } from '../systems/LevelDirector';
 import { LootSystem, type RunState } from '../systems/LootSystem';
 import { MeleeSystem } from '../systems/MeleeSystem';
-import { MusicPlayer } from '../systems/MusicPlayer';
+import { musicOf, type MusicPlayer } from '../systems/MusicPlayer';
 import { ProgressionSystem } from '../systems/ProgressionSystem';
 import { RoomFlowSystem } from '../systems/RoomFlowSystem';
 import { saveSystem } from '../systems/SaveSystem';
+import { playSfx } from '../systems/sfx';
 import { SpawnSystem } from '../systems/SpawnSystem';
 import { SpikeSystem } from '../systems/SpikeSystem';
 import { WeaponSwitcher } from '../systems/WeaponSwitcher';
@@ -61,6 +63,7 @@ export class GameScene extends Phaser.Scene {
     this.level = getLevel(data.levelId ?? 'arena');
     this.run = { coins: 0 };
     this.clock = new GameClock(this);
+    feel.bind(this, this.clock);
     this.startedAt = 0;
     const save = saveSystem.data;
     const events = new GameEvents();
@@ -80,13 +83,14 @@ export class GameScene extends Phaser.Scene {
       events,
       weapon,
       () => saveSystem.data.charms,
+      this.clock,
     );
     player.slowZones = map.slowZones;
     const enemies = (this.enemies = this.physics.add.group({ allowGravity: false }));
     const isSolid = (x: number, y: number): boolean => [walls, ...map.solid].some((layer) => layer.getTileAtWorldXY(x, y) !== null);
     const factory = new EnemyFactory(this, enemies, { target: player, events, shots, clock: this.clock, isBlocked: isSolid });
     const director = this.createDirector(map, player, factory, events);
-    const loot = new LootSystem(this, player, events, this.run, saveSystem);
+    const loot = new LootSystem(this, player, events, this.run, saveSystem, this.clock);
     const fireball = new FireballSystem({
       scene: this,
       player,
@@ -131,7 +135,7 @@ export class GameScene extends Phaser.Scene {
     this.input.gamepad?.on('down', (_pad: Phaser.Input.Gamepad.Gamepad, button: Phaser.Input.Gamepad.Button) => {
       if (button.index === BUTTON_START) this.pauseGame();
     });
-    const music = this.startMusic(events);
+    this.startMusic(events);
     this.setUpReward(map, player, events);
 
     this.physics.world.setBounds(0, 0, walls.width, walls.height);
@@ -141,10 +145,10 @@ export class GameScene extends Phaser.Scene {
     camera.startFollow(player, true, 0.15, 0.15);
     camera.fadeIn(250);
 
-    this.scene.launch('Hud', { events, progression, player, director, loot, fireball, roomTotal: map.world?.rooms.length });
+    this.scene.launch('Hud', { events, progression, player, director, loot, fireball, roomTotal: map.world?.rooms.length, bossName: this.level.bossId ? getEnemy(this.level.bossId).name : undefined });
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       director.stop();
-      music?.stop();
+      musicOf(this.game).fadeOut();
       events.clear();
       this.scene.stop('Hud');
     });
@@ -167,6 +171,7 @@ export class GameScene extends Phaser.Scene {
   completeLevel(): void {
     if (this.ending) return;
     this.ending = true;
+    feel.lock();
     this.physics.pause();
     const timeMs = Math.round(this.clock.now - this.startedAt);
     const coins = this.run.coins;
@@ -227,10 +232,13 @@ export class GameScene extends Phaser.Scene {
     this.physics.add.collider(player, enemies, (_, enemy) => (enemy as Enemy).tryContact(player));
   }
 
-  private startMusic(events: GameEvents): MusicPlayer | undefined {
-    if (!this.level.music) return undefined;
-    const music = new MusicPlayer(this);
-    music.play(this.level.music);
+  private startMusic(events: GameEvents): MusicPlayer {
+    const music = musicOf(this.game);
+    if (!this.level.music) {
+      music.fadeOut();
+      return music;
+    }
+    music.crossfadeTo(this.level.music);
     const bossMusic = this.level.bossMusic ?? Music.boss;
     if (bossMusic) events.on('boss-started', () => music.crossfadeTo(bossMusic));
     return music;
@@ -253,7 +261,7 @@ export class GameScene extends Phaser.Scene {
       this.physics.add.overlap(player, reward, () => {
         if (!armed || !reward.active || this.ending) return;
         reward.destroy();
-        this.sound.play(Sfx.shoot, { volume: 0.5, rate: 2.2 });
+        playSfx(this, 'charm');
         this.completeLevel();
       });
     });
@@ -281,13 +289,13 @@ export class GameScene extends Phaser.Scene {
 
   private celebrateLevelUp(player: Player): void {
     floatText(this, player.x, player.y - 16, 'LEVEL UP!', '#7dffb0', 14, 24, 1100);
-    this.sound.play(Sfx.shoot, { volume: 0.5, rate: 1.8 });
-    this.sound.play(Sfx.hit, { volume: 0.4, rate: 1.5, delay: 0.1 });
+    playSfx(this, 'levelUp');
   }
 
   private endRun(director: LevelDirector): void {
     if (this.ending) return;
     this.ending = true;
+    feel.lock();
     director.stop();
     const lostCoins = this.run.coins;
     this.run.coins = 0;

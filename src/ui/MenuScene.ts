@@ -24,7 +24,7 @@ export abstract class MenuScene extends Phaser.Scene {
     return this.time.now - this.createdAt >= delayMs;
   }
 
-  override update(): void {
+  override update(_time = 0, _delta = 0): void {
     this.menu?.update();
   }
 

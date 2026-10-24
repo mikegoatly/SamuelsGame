@@ -9,15 +9,15 @@ export const Tex = {
   fireball: 'fireball',
   explosion: 'explosion',
   quicksand: 'quicksand',
-} as const;
-
-export const Sfx = {
-  shoot: 'sfx-shoot',
-  hit: 'sfx-hit',
-  explosion: 'sfx-explosion',
+  smoke: 'fx-smoke',
+  star: 'fx-star',
+  muzzle: 'fx-muzzle',
+  vignette: 'vignette',
+  palaceTiles: 'tiny-dungeon-palace',
 } as const;
 
 export const Music = {
+  menu: 'music-menu',
   ruins: 'music-ruins',
   desert: 'music-desert',
   palace: 'music-palace',
@@ -33,6 +33,7 @@ export const MapKey = {
 
 /** Music cache key -> file under assets/. */
 export const MUSIC_FILES: Record<string, string> = {
+  [Music.menu]: 'music/menu.mp3',
   [Music.ruins]: 'music/ruins.mp3',
   [Music.desert]: 'music/desert.mp3',
   [Music.palace]: 'music/palace.mp3',

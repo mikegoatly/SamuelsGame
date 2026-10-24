@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { Sfx } from '../content/assetKeys';
+import { playSfx } from './sfx';
 import type { Player } from '../entities/Player';
 import { rectContains } from '../logic/geometry';
 import { SPIKE_CYCLE, spikeDamage, spikeState, spikesHurt, type SpikeState } from '../logic/spikes';
@@ -38,7 +38,7 @@ export class SpikeSystem {
       this.draw(trap, state, state === 'warn' && Math.floor(now / BLINK_MS) % 2 === 0);
       if (spikesHurt(state) && !this.player.dead && this.touching(trap)) {
         const { x, y, w, h } = trap.spec.rect;
-        if (this.player.takeDamage(spikeDamage(this.player.maxHp), x + w / 2, y + h / 2)) this.scene.sound.play(Sfx.hit, { volume: 0.3, rate: 1.4 });
+        if (this.player.takeDamage(spikeDamage(this.player.maxHp), x + w / 2, y + h / 2)) playSfx(this.scene, 'hurt', { rate: 1.4, volume: 0.6 });
       }
     }
   }

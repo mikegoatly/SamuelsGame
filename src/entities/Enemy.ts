@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
-import { FONT, Frame, Sfx, Tex } from '../content/assetKeys';
+import { FONT, Frame, Tex } from '../content/assetKeys';
+import { deathTint } from '../content/deathTints';
 import type { EnemyDef } from '../content/enemies';
 import { damageToPlayer, enemyMaxHp } from '../logic/combat';
 import { leadAim } from '../logic/aim';
@@ -9,9 +10,12 @@ import { chargeLaneLength, cloakAlpha, newChargeState, stepCharge, type ChargeSt
 import { rangedStance, spreadDirections } from '../logic/enemyAi';
 import { lineClear } from '../logic/lineOfSight';
 import { isFrontal, shieldedDamage } from '../logic/shield';
+import { deathBurst } from '../systems/fx';
+import { feel } from '../systems/feel';
 import type { GameClock } from '../systems/GameClock';
 import type { GameEvents } from '../systems/GameEvents';
 import { floatText } from '../systems/floatText';
+import { playSfx } from '../systems/sfx';
 import type { EnemyProjectiles, ShotStyle } from './EnemyProjectile';
 import type { Player } from './Player';
 
@@ -159,7 +163,8 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     this.revealedUntil = this.clock.now + HIT_REVEAL_MS;
     floatText(this.scene, this.x, this.y - this.displayHeight / 2, String(dealt), blocked ? '#9ab4ff' : '#ffe066');
     if (blocked) this.flashShield();
-    this.scene.sound.play(Sfx.hit, { volume: 0.4 });
+    playSfx(this.scene, 'enemyHit');
+    if (this.def.boss) feel.hitStop(30);
     if (this.hp <= 0) {
       this.die();
       return;
@@ -217,7 +222,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     this.lane = this.scene.add.rectangle(0, 0, chargeLaneLength(tuning), 10, 0xff2a2a, 0.25).setRotation(this.chargeDirection.angle()).setDepth(3);
     this.placeLane(tuning);
     this.setTint(WINDUP_TINT);
-    this.scene.sound.play(Sfx.shoot, { volume: 0.2, rate: 0.5 });
+    playSfx(this.scene, 'enemyShot', { rate: 0.7 });
   }
 
   /** Keeps the warning lane glued to the scorpion, so a knock during the windup cannot leave it pointing from the old spot. */
@@ -282,7 +287,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     const homing = this.def.homing;
     const style: ShotStyle | undefined = homing ? { tint: ORB_TINT, scale: ORB_SCALE, homing: { ...homing, target: this.target } } : undefined;
     for (const d of spreadDirections(aim.x, aim.y, count, arc)) this.shots.fire(this.x, this.y, d.x, d.y, speed, damage, homing ? ORB_RANGE : SHOT_RANGE, style);
-    this.scene.sound.play(Sfx.shoot, { volume: 0.15, rate: homing ? 0.45 : 0.6 });
+    playSfx(this.scene, 'enemyShot', { rate: homing ? 0.6 : 1, volume: 0.9 });
   }
 
   /** Dark mage: kites and lobs orbs, but blinks away (hidden for a moment) when the player closes in, then answers with an orb. */
@@ -309,7 +314,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     this.setVelocity(0, 0);
     this.conceal(true);
     this.puff();
-    this.scene.sound.play(Sfx.shoot, { volume: 0.2, rate: 0.35 });
+    playSfx(this.scene, 'enemyShot', { rate: 0.5 });
   }
 
   private appearElsewhere(distance: number): void {
@@ -335,7 +340,8 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     this.label.destroy();
     this.shieldImage?.destroy();
     this.events.emit('enemy-died', this.level, this.x, this.y, this.def.lootTableId);
-    this.puff();
+    deathBurst(this.scene, this.x, this.y, deathTint(this.def.id, this.def.tint), this.def.boss === true);
+    playSfx(this.scene, 'enemyDie');
     this.scene.tweens.killTweensOf(this);
     this.scene.tweens.add({
       targets: this,

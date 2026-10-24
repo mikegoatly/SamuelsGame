@@ -12,6 +12,8 @@ import type { ProgressionSystem } from '../systems/ProgressionSystem';
 import type { LevelDirector } from '../systems/LevelDirector';
 import { MUTE_EVENT } from '../systems/audioSettings';
 import { saveSystem } from '../systems/SaveSystem';
+import { BossIntro } from '../ui/BossIntro';
+import { DamageVignette } from '../ui/DamageVignette';
 import { TouchControlsView } from '../ui/TouchControlsView';
 
 export interface HudData {
@@ -22,6 +24,7 @@ export interface HudData {
   loot: LootSystem;
   fireball: FireballSystem;
   roomTotal?: number;
+  bossName?: string;
 }
 
 const BAR_X = 10;
@@ -53,14 +56,18 @@ export class HudScene extends Phaser.Scene {
   private xpRatio = 0;
   private weaponIcon!: Phaser.GameObjects.Image;
   private weaponText!: Phaser.GameObjects.Text;
+  private vignette!: DamageVignette;
+  private intro!: BossIntro;
 
   constructor() {
     super('Hud');
   }
 
   create(data: HudData): void {
-    const { events, progression, player, director, loot, fireball, roomTotal } = data;
+    const { events, progression, player, director, loot, fireball, roomTotal, bossName } = data;
     this.fireball = fireball;
+    this.vignette = new DamageVignette(this);
+    const intro = (this.intro = new BossIntro(this));
     this.bars = this.add.graphics();
     this.levelText = this.makeText(BAR_X, 4, '#ffffff', 16);
     this.hpText = this.makeText(BAR_X + 4, 27, '#ffffff', 8);
@@ -82,7 +89,14 @@ export class HudScene extends Phaser.Scene {
     const onMute = (muted: boolean): void => void this.muteText.setVisible(muted);
     this.scale.on('resize', this.layout, this);
     this.game.events.on(MUTE_EVENT, onMute);
+    const onPause = (): void => this.vignette.setPaused(true);
+    const onResume = (): void => this.vignette.setPaused(false);
+    this.events.on(Phaser.Scenes.Events.PAUSE, onPause);
+    this.events.on(Phaser.Scenes.Events.RESUME, onResume);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      this.events.off(Phaser.Scenes.Events.PAUSE, onPause);
+      this.events.off(Phaser.Scenes.Events.RESUME, onResume);
+      intro.cancel();
       this.scale.off('resize', this.layout, this);
       this.game.events.off(MUTE_EVENT, onMute);
     });
@@ -101,20 +115,27 @@ export class HudScene extends Phaser.Scene {
     events.on('charms-changed', (charms) => this.showCharms(charms));
     events.on('wave-started', (wave) => this.waveText.setText(`Wave ${wave}`));
     events.on('room-started', (order, total) => this.waveText.setText(`Room ${order}/${total}`));
-    events.on('boss-started', () => this.waveText.setText('Boss'));
+    events.on('boss-started', () => {
+      this.waveText.setText('Boss');
+      if (bossName) intro.play(bossName);
+    });
+    events.on('player-hurt', () => this.vignette.hurt());
     events.on('boss-spawned', (name, hp, max) => this.showBoss(name, hp, max));
     events.on('boss-hp', (hp, max) => {
       this.boss = { hp, max };
       this.drawBossBar();
     });
+    events.on('player-died', () => intro.cancel());
     events.on('boss-died', () => {
+      intro.cancel();
       this.boss = null;
       this.bossName.setVisible(false);
       this.drawBossBar();
     });
   }
 
-  update(): void {
+  update(_time: number, delta: number): void {
+    this.vignette.update(delta, this.hp.value / this.hp.max, saveSystem.data.settings.reduceShake);
     this.touchView.update();
     this.drawFireball();
   }
@@ -165,6 +186,8 @@ export class HudScene extends Phaser.Scene {
     this.waveText.setX(this.fullscreenButton.x - half - 6);
     this.pauseButton.setPosition(this.fullscreenButton.x, PAUSE_Y);
     this.muteText.setY(this.scale.height - 6);
+    this.vignette.resize(this.scale.width, this.scale.height);
+    this.intro?.layout();
     this.drawBossBar();
   }
 
