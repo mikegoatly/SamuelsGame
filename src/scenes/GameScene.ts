@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { Frame, Sfx } from '../content/assetKeys';
+import { Frame, Music, Sfx } from '../content/assetKeys';
 import { CAMERA_ZOOM } from '../content/config';
 import { GOD_DAMAGE_MULTIPLIER, GOD_MODE } from '../debug';
 import { getLevel, type LevelConfig } from '../content/levels';
@@ -22,11 +22,14 @@ import { floatText } from '../systems/floatText';
 import { InputController } from '../systems/InputController';
 import type { LevelDirector } from '../systems/LevelDirector';
 import { LootSystem, type RunState } from '../systems/LootSystem';
+import { MeleeSystem } from '../systems/MeleeSystem';
 import { MusicPlayer } from '../systems/MusicPlayer';
 import { ProgressionSystem } from '../systems/ProgressionSystem';
 import { RoomFlowSystem } from '../systems/RoomFlowSystem';
 import { saveSystem } from '../systems/SaveSystem';
 import { SpawnSystem } from '../systems/SpawnSystem';
+import { SpikeSystem } from '../systems/SpikeSystem';
+import { WeaponSwitcher } from '../systems/WeaponSwitcher';
 import { buildLevelMap, type LevelMap } from './RoomBuilder';
 
 export interface GameSceneData {
@@ -92,6 +95,10 @@ export class GameScene extends Phaser.Scene {
       unlocked: () => saveSystem.data.powers.unlocked.includes('fireball'),
       isSolid,
     });
+
+    new MeleeSystem({ scene: this, player, enemies, shots, isSolid });
+    new WeaponSwitcher(player, events, saveSystem);
+    if (map.spikes.length > 0) new SpikeSystem(this, player, this.clock, map.spikes);
 
     this.addColliders(map, player, enemies, projectiles, shots);
     this.physics.add.overlap(projectiles, enemies, (boltObj, enemyObj) => {
@@ -224,7 +231,7 @@ export class GameScene extends Phaser.Scene {
     if (!this.level.music) return undefined;
     const music = new MusicPlayer(this);
     music.play(this.level.music);
-    const bossMusic = this.level.bossMusic;
+    const bossMusic = this.level.bossMusic ?? Music.boss;
     if (bossMusic) events.on('boss-started', () => music.crossfadeTo(bossMusic));
     return music;
   }

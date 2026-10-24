@@ -1,7 +1,9 @@
 import type { BossBrainConfig } from '../logic/bossBrain';
+import type { BlinkTuning } from '../logic/blink';
 import type { ChargeTuning } from '../logic/charge';
+import type { Shield } from '../logic/shield';
 import { Frame, Tex } from './assetKeys';
-import { sandWyrmBrain, stoneGuardianBrain } from './bosses';
+import { madKingBrain, sandWyrmBrain, stoneGuardianBrain } from './bosses';
 
 export interface EnemyDef {
   id: string;
@@ -9,7 +11,7 @@ export interface EnemyDef {
   baseHp: number;
   baseDamage: number;
   speed: number;
-  behaviour: 'chaser' | 'erratic' | 'ranged' | 'charger' | 'boss';
+  behaviour: 'chaser' | 'erratic' | 'ranged' | 'charger' | 'mage' | 'boss';
   lootTableId: string;
   tint?: number;
   name?: string;
@@ -22,6 +24,16 @@ export interface EnemyDef {
   /** Ranged enemies fire `count` bolts fanned over `arc` radians instead of one. */
   spread?: { count: number; arc: number };
   charge?: ChargeTuning;
+  /** Takes reduced damage from the front; the shield turns slowly toward the player. */
+  shield?: Shield;
+  /** Ranged enemies aim where the player is going rather than where they are. */
+  lead?: boolean;
+  /** Orbs steer toward the player for `ms` at `turnRate` radians per second. */
+  homing?: { turnRate: number; ms: number };
+  /** Mages teleport away when the player closes in, then fire an orb. */
+  blink?: BlinkTuning;
+  /** Charger alpha while stalking (assassins fade out until they strike). */
+  cloak?: number;
   brain?: BossBrainConfig;
   slamDamage?: number;
   boltDamage?: number;
@@ -129,6 +141,79 @@ export const sandWyrm: EnemyDef = {
   boltSpeed: 95,
 };
 
-export const enemies: EnemyDef[] = [slime, bat, cyclops, spider, ghost, stoneGuardian, scorpion, bandit, mummy, vulture, sandWyrm];
+export const palaceGuard: EnemyDef = {
+  id: 'palaceGuard',
+  name: 'Palace Guard',
+  frame: Frame.knightVisor,
+  baseHp: 80,
+  baseDamage: 17,
+  speed: 27,
+  behaviour: 'chaser',
+  lootTableId: 'palaceGuard',
+  tint: 0xc8d4ff,
+  scale: 1.15,
+  shield: { arc: 2.6, reduction: 0.55, turnRate: 1.3 },
+};
+export const royalArcher: EnemyDef = {
+  id: 'royalArcher',
+  name: 'Royal Archer',
+  frame: Frame.knightGrey,
+  baseHp: 26,
+  baseDamage: 11,
+  speed: 36,
+  behaviour: 'ranged',
+  lootTableId: 'royalArcher',
+  tint: 0xffc080,
+  fireEveryMs: 2200,
+  shotSpeed: 140,
+  lead: true,
+};
+export const darkMage: EnemyDef = {
+  id: 'darkMage',
+  name: 'Dark Mage',
+  frame: Frame.hooded,
+  baseHp: 32,
+  baseDamage: 12,
+  speed: 34,
+  behaviour: 'mage',
+  lootTableId: 'darkMage',
+  tint: 0xb878ff,
+  fireEveryMs: 3400,
+  shotSpeed: 62,
+  homing: { turnRate: 1.3, ms: 2600 },
+  blink: { triggerRange: 62, distance: 85, vanishMs: 350, castDelayMs: 300, cooldownMs: 4500 },
+};
+export const assassin: EnemyDef = {
+  id: 'assassin',
+  name: 'Assassin',
+  frame: Frame.bandit,
+  baseHp: 20,
+  baseDamage: 15,
+  speed: 64,
+  behaviour: 'charger',
+  lootTableId: 'assassin',
+  tint: 0x7878a8,
+  charge: { triggerRange: 80, windupMs: 350, dashMs: 240, recoverMs: 900, dashSpeed: 340 },
+  cloak: 0.14,
+};
+export const madKing: EnemyDef = {
+  id: 'madKing',
+  name: 'Mad King',
+  frame: Frame.horned,
+  baseHp: 1190,
+  baseDamage: 18,
+  speed: 40,
+  behaviour: 'boss',
+  lootTableId: 'madKing',
+  tint: 0xffd070,
+  scale: 3,
+  boss: true,
+  brain: madKingBrain,
+  slamDamage: 20,
+  boltDamage: 11,
+  boltSpeed: 85,
+};
+
+export const enemies: EnemyDef[] = [slime, bat, cyclops, spider, ghost, stoneGuardian, scorpion, bandit, mummy, vulture, sandWyrm, palaceGuard, royalArcher, darkMage, assassin, madKing];
 
 export const getEnemy = (id: string): EnemyDef => enemies.find((e) => e.id === id) ?? slime;

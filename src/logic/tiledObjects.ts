@@ -34,8 +34,10 @@ export interface BossArenaSpec {
 }
 
 export interface HazardSpec {
-  kind: 'quicksand';
+  kind: 'quicksand' | 'spikes';
   rect: Rect;
+  /** Spike traps only: phase shift of the timer, ms. */
+  offsetMs?: number;
 }
 
 export interface LevelObjects {
@@ -44,6 +46,7 @@ export interface LevelObjects {
   doors: DoorSpec[];
   bossArena: BossArenaSpec | null;
   hazards: HazardSpec[];
+  thrones: Point[];
   exit: Point | null;
 }
 
@@ -82,9 +85,12 @@ export function parseLevelObjects(map: TiledMapLike): LevelObjects {
     rooms: ofType('room').map(toRoom).sort((a, b) => a.order - b.order),
     doors: ofType('door').map((o) => ({ room: whole(propsOf(o).room, 0), rect: rectOf(o) })),
     bossArena: arena ? { order: whole(propsOf(arena).order, 0), rect: rectOf(arena) } : null,
-    hazards: ofType('hazard')
-      .filter((o) => propsOf(o).kind === 'quicksand')
-      .map((o): HazardSpec => ({ kind: 'quicksand', rect: rectOf(o) })),
+    hazards: ofType('hazard').flatMap((o): HazardSpec[] => {
+      const props = propsOf(o);
+      if (props.kind === 'quicksand') return [{ kind: 'quicksand', rect: rectOf(o) }];
+      return props.kind === 'spikes' ? [{ kind: 'spikes', rect: rectOf(o), offsetMs: whole(props.offset, 0) }] : [];
+    }),
+    thrones: ofType('throne').map(pointOf),
     exit: exit ? pointOf(exit) : null,
   };
 }

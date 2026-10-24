@@ -28,6 +28,8 @@ const music: Array<[string, string]> = [
   ['Complicated Melody.mp3', 'music/ruins.mp3'],
   ['Arpeggio.mp3', 'music/desert.mp3'],
   ['Fight.mp3', 'music/boss.mp3'],
+  ['Montage.mp3', 'music/palace.mp3'],
+  ['Hard Rock.mp3', 'music/boss-palace.mp3'],
 ];
 
 if (!existsSync(kenneyDir)) {

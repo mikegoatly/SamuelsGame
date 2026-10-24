@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { ControlFrame, FONT, Frame, Tex } from '../content/assetKeys';
 import { items } from '../content/items';
+import { getWeapon, knownWeapons } from '../content/weapons';
 import type { Player } from '../entities/Player';
 import type { PlayerProgress } from '../logic/progression';
 import type { CharmId, Charms } from '../logic/stats';
@@ -50,6 +51,8 @@ export class HudScene extends Phaser.Scene {
   private fireBar!: Phaser.GameObjects.Graphics;
   private fireText!: Phaser.GameObjects.Text;
   private xpRatio = 0;
+  private weaponIcon!: Phaser.GameObjects.Image;
+  private weaponText!: Phaser.GameObjects.Text;
 
   constructor() {
     super('Hud');
@@ -74,6 +77,7 @@ export class HudScene extends Phaser.Scene {
     this.showCharms(saveSystem.data.charms);
     this.touchView = new TouchControlsView(this);
     this.createFireballIndicator();
+    this.createWeaponIndicator(player.weapon.id);
     this.layout();
     const onMute = (muted: boolean): void => void this.muteText.setVisible(muted);
     this.scale.on('resize', this.layout, this);
@@ -87,6 +91,7 @@ export class HudScene extends Phaser.Scene {
     this.hp = { value: player.hp, max: player.maxHp };
     this.showProgress(progression.progress, progression.xpForNextLevel);
 
+    events.on('weapon-changed', (id) => this.showWeapon(id));
     events.on('hp-changed', (value, max) => {
       this.hp = { value, max };
       this.drawBars();
@@ -120,12 +125,34 @@ export class HudScene extends Phaser.Scene {
     this.fireText = this.makeText(BAR_X + 16, 0, '#ffb060', 8).setOrigin(0, 0.5).setText('Fireball').setVisible(false);
   }
 
+  /** Bottom-left slot showing the equipped weapon; Q / wheel / Y / swap button cycle it. */
+  private createWeaponIndicator(weaponId: string): void {
+    this.weaponIcon = this.add.image(BAR_X + 8, 0, Tex.tiles, Frame.wand).setScale(1.5);
+    this.weaponText = this.makeText(BAR_X + 22, 0, '#e8e8f8', 8).setOrigin(0, 0.5);
+    this.showWeapon(weaponId);
+  }
+
+  private showWeapon(id: string): void {
+    const weapon = getWeapon(id);
+    this.weaponIcon.setFrame(weapon.frame);
+    if (weapon.tint === null) this.weaponIcon.clearTint();
+    else this.weaponIcon.setTint(weapon.tint);
+    const many = knownWeapons(saveSystem.data.weapons.owned).length > 1;
+    this.weaponText.setText(many ? `${weapon.name} (Q)` : weapon.name);
+  }
+
   /** Bottom-left cooldown bar, shown once the power is unlocked and a wand-type weapon is equipped. */
   private drawFireball(): void {
     const status = this.fireball.current;
     const y = this.scale.height - 30;
-    this.fireIcon.setVisible(status.available).setPosition(BAR_X + 6, y).setAlpha(status.ready ? 1 : 0.5);
-    this.fireText.setVisible(status.available).setPosition(BAR_X + 16, y - 7).setColor(status.ready ? '#ffb060' : '#9a9ab8');
+    this.weaponIcon.setPosition(BAR_X + 8, y - 24);
+    this.weaponText.setPosition(BAR_X + 22, y - 24);
+    this.fireIcon.setVisible(status.unlocked).setPosition(BAR_X + 6, y).setAlpha(status.available ? (status.ready ? 1 : 0.5) : 0.25);
+    this.fireText
+      .setVisible(status.unlocked)
+      .setPosition(BAR_X + 16, y - 7)
+      .setText(status.available ? 'Fireball' : 'Fireball (wand)')
+      .setColor(status.available ? (status.ready ? '#ffb060' : '#9a9ab8') : '#6a6a80');
     this.fireBar.clear();
     if (!status.available) return;
     this.fireBar.fillStyle(0x14121c, 0.85).fillRect(BAR_X + 15, y - 1, 52, 6);

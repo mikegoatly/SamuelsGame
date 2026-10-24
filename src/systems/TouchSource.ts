@@ -1,7 +1,11 @@
 import Phaser from 'phaser';
+import { knownWeapons } from '../content/weapons';
+import { saveSystem } from './SaveSystem';
 import { pastThreshold } from '../logic/stick';
 import { classifyTouch, readStick, touchMetrics, type ButtonId, type TouchRole } from '../logic/virtualStick';
 import type { InputSource } from './InputController';
+
+export const canSwapWeapons = (): boolean => knownWeapons(saveSystem.data.weapons.owned).length > 1;
 
 export const TOUCH_STATE_KEY = 'touchState';
 
@@ -33,12 +37,14 @@ export class TouchSource implements InputSource {
   fire = false;
   altFire = false;
   dash = false;
+  weaponCycle = 0;
 
+  private pendingSwap = false;
   readonly state: TouchState = {
     visible: false,
     move: newStick(),
     aim: newStick(),
-    buttons: { dash: false, altFire: false },
+    buttons: { dash: false, altFire: false, swap: false },
   };
 
   private readonly lastAim = new Phaser.Math.Vector2(1, 0);
@@ -70,11 +76,13 @@ export class TouchSource implements InputSource {
     if (this.state.visible && this.padInUse(scene)) this.hide();
     this.moveVector.reset();
     this.fire = this.altFire = this.dash = false;
+    this.weaponCycle = this.pendingSwap ? 1 : 0;
+    this.pendingSwap = false;
     const { state } = this;
     state.move.active = state.aim.active = false;
-    state.buttons.dash = state.buttons.altFire = false;
+    state.buttons.dash = state.buttons.altFire = state.buttons.swap = false;
 
-    const { stickRadius } = touchMetrics(scene.scale.width, scene.scale.height);
+    const { stickRadius } = touchMetrics(scene.scale.width, scene.scale.height, canSwapWeapons());
     for (const [pointer, role] of this.held) {
       if (role === 'move') {
         const { value } = this.readInto(state.move, pointer, stickRadius);
@@ -106,7 +114,7 @@ export class TouchSource implements InputSource {
   private touchStart(pointer: Phaser.Input.Pointer): void {
     this.state.visible = true;
     const { scale } = this.scene;
-    const role = classifyTouch(pointer, scale.width, touchMetrics(scale.width, scale.height));
+    const role = classifyTouch(pointer, scale.width, touchMetrics(scale.width, scale.height, canSwapWeapons()));
     if (!role) return;
     if (role === 'move' || role === 'aim') {
       if ([...this.held.values()].includes(role)) return;
@@ -114,6 +122,7 @@ export class TouchSource implements InputSource {
       view.originX = pointer.x;
       view.originY = pointer.y;
     }
+    if (role === 'swap') this.pendingSwap = true;
     this.held.set(pointer, role);
   }
 

@@ -43,6 +43,7 @@ describe('classifyTouch', () => {
   const metrics = touchMetrics(width, 360);
   const dash = metrics.buttons.find((b) => b.id === 'dash')!;
   const alt = metrics.buttons.find((b) => b.id === 'altFire')!;
+  const swap = metrics.buttons.find((b) => b.id === 'swap')!;
 
   it.each([
     ['left half', 50, 300, 'move'],
@@ -51,6 +52,7 @@ describe('classifyTouch', () => {
     ['centre line', 320, 200, 'aim'],
     ['dash button', dash.x, dash.y, 'dash'],
     ['alt button', alt.x, alt.y, 'altFire'],
+    ['swap button', swap.x, swap.y, 'swap'],
     ['fullscreen button', metrics.fullscreen.x, metrics.fullscreen.y, null],
     ['pause button', metrics.pause.x, metrics.pause.y, null],
   ])('%s', (_name, x, y, expected) => {
@@ -76,6 +78,21 @@ describe('touchMetrics', () => {
       expect(button.x).toBeGreaterThan(w / 2);
       expect(Math.hypot(button.x - fullscreen.x, button.y - fullscreen.y)).toBeGreaterThan(button.r + fullscreen.r);
     }
-    expect(Math.hypot(a!.x - b!.x, a!.y - b!.y)).toBeGreaterThan(a!.r + b!.r);
+    for (const first of buttons) {
+      for (const second of buttons.filter((o) => o !== first)) expect(Math.hypot(first.x - second.x, first.y - second.y)).toBeGreaterThan(first.r + second.r);
+    }
+    expect(a).toBeDefined();
+    expect(b).toBeDefined();
+  });
+});
+
+describe('swap button visibility', () => {
+  it('is left out of the layout and the touch classification when the player has one weapon', () => {
+    const full = touchMetrics(640, 360);
+    const lone = touchMetrics(640, 360, false);
+    const swap = full.buttons.find((b) => b.id === 'swap')!;
+    expect(lone.buttons.map((b) => b.id)).toEqual(['dash', 'altFire']);
+    expect(classifyTouch({ x: swap.x, y: swap.y }, 640, full)).toBe('swap');
+    expect(classifyTouch({ x: swap.x, y: swap.y }, 640, lone)).toBe('aim');
   });
 });

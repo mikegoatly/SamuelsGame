@@ -19,13 +19,21 @@ export function buildTiledMap(scene: Phaser.Scene, level: LevelConfig): LevelMap
   const doorTiles = map.createBlankLayer('doors', tileset, 0, 0, map.width, map.height)!.setDepth(1);
   const tint = ENVIRONMENT_TINT[level.environment];
   if (tint.ground !== null) ground.setTint(tint.ground);
+  if (tint.checker !== undefined) ground.forEachTile((tile) => void (tile.tint = (tile.x + tile.y) % 2 === 0 ? tint.checker! : tint.ground!));
   if (tint.walls !== null) for (const layer of [walls, doorTiles]) layer.setTint(tint.walls);
 
   const world = parseLevelObjects(scene.cache.tilemap.get(level.mapKey!).data as TiledMapLike);
   const doors = new DoorLayer(doorTiles, world.doors, FIRST_GID + Frame.doorClosed);
-  const slowZones = world.hazards.map((h) => h.rect);
+  const slowZones = world.hazards.filter((h) => h.kind === 'quicksand').map((h) => h.rect);
   for (const rect of slowZones) drawQuicksand(scene, rect);
-  return { walls, solid: [doorTiles], playerStart: world.playerStart, world, doors, slowZones };
+  for (const throne of world.thrones) drawThrone(scene, throne.x, throne.y);
+  return { walls, solid: [doorTiles], playerStart: world.playerStart, world, doors, slowZones, spikes: world.hazards.filter((h) => h.kind === 'spikes') };
+}
+
+/** A gilded seat on the floor; the Mad King teleports between these. */
+function drawThrone(scene: Phaser.Scene, x: number, y: number): void {
+  scene.add.ellipse(x, y + 4, 34, 18, 0xffd060, 0.18).setDepth(0.5);
+  scene.add.image(x, y, Tex.tiles, Frame.throne).setScale(1.6).setTint(0xffd060).setDepth(0.7);
 }
 
 /** A dark, softly pulsing sand pit; the slowdown itself is pure logic (`logic/hazards`). */

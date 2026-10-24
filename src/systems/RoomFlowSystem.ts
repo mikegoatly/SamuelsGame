@@ -119,7 +119,7 @@ export class RoomFlowSystem implements LevelDirector {
     const centre = rectCenter(arena.rect);
     const spawnX = arena.rect.x + arena.rect.w * 0.3;
     this.o.scene.time.delayedCall(BOSS_SPAWN_DELAY_MS, () => {
-      if (!this.stopped) this.o.factory.spawnBoss(bossDef, this.o.level.bossLevel ?? 5, spawnX, centre.y, { rect: arena.rect, isBlocked: this.o.isBlocked });
+      if (!this.stopped) this.o.factory.spawnBoss(bossDef, this.o.level.bossLevel ?? 5, spawnX, centre.y, { rect: arena.rect, thrones: this.o.world.thrones, isBlocked: this.o.isBlocked });
     });
   }
 

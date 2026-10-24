@@ -26,7 +26,7 @@ export interface FireballOptions {
 export class FireballSystem {
   private readonly balls = new Set<Fireball>();
   private readyAt = 0;
-  private status: FireballStatus = { available: false, ready: false, fraction: 0 };
+  private status: FireballStatus = { unlocked: false, available: false, ready: false, fraction: 0 };
 
   constructor(private readonly o: FireballOptions) {
     o.player.altFireHandler = (x, y, direction) => this.tryCast(x, y, direction);
@@ -103,7 +103,7 @@ export class FireballSystem {
     const { player, scene, clock, unlocked } = this.o;
     const next = fireballStatus({ unlocked: unlocked(), castsPowers: player.weapon.castsPowers === true, now: clock.now, readyAt: this.readyAt });
     const { status } = this;
-    if (next.available === status.available && next.ready === status.ready && next.fraction === status.fraction && scene.registry.has(FIREBALL_STATE_KEY)) return;
+    if (next.unlocked === status.unlocked && next.available === status.available && next.ready === status.ready && next.fraction === status.fraction && scene.registry.has(FIREBALL_STATE_KEY)) return;
     this.status = next;
     scene.registry.set(FIREBALL_STATE_KEY, next);
   }

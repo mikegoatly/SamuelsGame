@@ -1,5 +1,5 @@
 export type BossPhase = 1 | 2;
-export type BossMode = 'chase' | 'telegraph' | 'burrowed' | 'rising';
+export type BossMode = 'chase' | 'telegraph' | 'dash' | 'burrowed' | 'rising';
 
 interface Timer {
   /** Delay before the first use, counted from the fight start (or from entering a phase that introduces the attack). */
@@ -42,9 +42,38 @@ export interface SummonAttack extends Timer {
   count: number;
   minion: string;
   levelDrop: number;
+  /** Most live minions of this type at once; a summon only fills the gap. */
+  maxAlive: number;
 }
 
-export type BossAttack = SlamAttack | BurrowAttack | BurstAttack | SpitAttack | SummonAttack;
+/** Telegraphed straight dash: a line shows where the boss will charge. */
+export interface LungeAttack extends Timer {
+  kind: 'lunge';
+  cooldownMs: number;
+  telegraphMs: number;
+  dashMs: number;
+  dashSpeed: number;
+  /** Width of the warning line and the danger lane, px. */
+  width: number;
+}
+
+/** Vanishes (untargetable), warns at a destination, then reappears there; shares the hidden-time handling with burrow. */
+export interface TeleportAttack extends Timer {
+  kind: 'teleport';
+  cooldownMs: number;
+  vanishMs: number;
+  telegraphMs: number;
+  radius: number;
+}
+
+export interface SpiralAttack extends Timer {
+  kind: 'spiral';
+  everyMs: number;
+  count: number;
+  turns: number;
+}
+
+export type BossAttack = SlamAttack | BurrowAttack | BurstAttack | SpitAttack | SummonAttack | LungeAttack | TeleportAttack | SpiralAttack;
 type AttackKind = BossAttack['kind'];
 
 export interface BossPhaseConfig {
@@ -65,7 +94,13 @@ export type BossAction =
   | { type: 'emerge'; radius: number }
   | { type: 'burst'; count: number }
   | { type: 'spit'; count: number; arc: number }
-  | { type: 'summon'; count: number; minion: string; levelDrop: number }
+  | { type: 'summon'; count: number; minion: string; levelDrop: number; maxAlive: number }
+  | { type: 'telegraphLine'; length: number; width: number; durationMs: number }
+  | { type: 'lunge'; dashMs: number; speed: number; width: number }
+  | { type: 'lungeEnd' }
+  | { type: 'vanish'; travelMs: number }
+  | { type: 'appear'; radius: number }
+  | { type: 'spiral'; count: number; turns: number }
   | { type: 'phase'; phase: BossPhase };
 
 export interface BossState {
@@ -75,11 +110,16 @@ export interface BossState {
   strikeAt: number;
   /** Which sequenced attack is mid-way. */
   active: AttackKind | null;
+  /** The sequenced attack in progress, kept so a phase change cannot strand it. */
+  current: BossAttack | null;
   /** When the boss went underground; timed attacks are pushed back by the time spent there. */
   hiddenAt: number;
   /** Next time each attack kind may fire. */
   due: Partial<Record<AttackKind, number>>;
 }
+
+/** How many minions a summon may actually spawn given how many are alive. */
+export const summonCount = (count: number, maxAlive: number, alive: number): number => Math.max(0, Math.min(count, maxAlive - alive));
 
 export const bossPhase = (config: BossBrainConfig, hpRatio: number): BossPhase => (hpRatio <= config.phaseTwoAt ? 2 : 1);
 
@@ -90,7 +130,7 @@ export function phaseAttack<K extends AttackKind>(config: BossBrainConfig, phase
 export function newBossState(config: BossBrainConfig, now: number): BossState {
   const due: BossState['due'] = {};
   for (const attack of config.phases[1].attacks) due[attack.kind] = now + attack.firstMs;
-  return { phase: 1, mode: 'chase', strikeAt: 0, active: null, hiddenAt: 0, due };
+  return { phase: 1, mode: 'chase', strikeAt: 0, active: null, current: null, hiddenAt: 0, due };
 }
 
 const hidden = (mode: BossMode): boolean => mode === 'burrowed' || mode === 'rising';
@@ -105,71 +145,88 @@ export function stepBoss(config: BossBrainConfig, state: BossState, now: number,
     actions.push({ type: 'phase', phase: 2 });
   }
   const attacks = config.phases[next.phase].attacks;
-  advanceSequence(attacks, next, now, actions);
+  advanceSequence(next, now, actions);
   if (next.mode === 'chase') startSequence(attacks, next, now, actions);
   if (!hidden(next.mode)) fireTimed(attacks, next, now, actions);
   return { state: next, actions };
 }
 
-function find<K extends AttackKind>(attacks: BossAttack[], kind: K | null): Extract<BossAttack, { kind: K }> | undefined {
-  return attacks.find((a): a is Extract<BossAttack, { kind: K }> => a.kind === kind);
+const TIMED: readonly AttackKind[] = ['burst', 'spit', 'summon', 'spiral'];
+
+function advanceSequence(s: BossState, now: number, out: BossAction[]): void {
+  const attack = s.current;
+  if (now < s.strikeAt || !attack) return;
+  if (s.mode === 'telegraph' && attack.kind === 'slam') {
+    finish(s, 'slam', now + attack.cooldownMs);
+    out.push({ type: 'slam' });
+  } else if (s.mode === 'telegraph' && attack.kind === 'lunge') {
+    s.mode = 'dash';
+    s.strikeAt = now + attack.dashMs;
+    out.push({ type: 'lunge', dashMs: attack.dashMs, speed: attack.dashSpeed, width: attack.width });
+  } else if (s.mode === 'dash' && attack.kind === 'lunge') {
+    finish(s, 'lunge', now + attack.cooldownMs);
+    out.push({ type: 'lungeEnd' });
+  } else if (s.mode === 'burrowed' && (attack.kind === 'burrow' || attack.kind === 'teleport')) {
+    s.mode = 'rising';
+    s.strikeAt = now + attack.telegraphMs;
+    out.push({ type: 'telegraph', radius: attack.radius, durationMs: attack.telegraphMs });
+  } else if (s.mode === 'rising' && (attack.kind === 'burrow' || attack.kind === 'teleport')) {
+    const hiddenFor = now - s.hiddenAt;
+    for (const kind of Object.keys(s.due) as AttackKind[]) if (kind !== attack.kind) s.due[kind]! += hiddenFor;
+    finish(s, attack.kind, now + attack.cooldownMs);
+    out.push(attack.kind === 'burrow' ? { type: 'emerge', radius: attack.radius } : { type: 'appear', radius: attack.radius });
+  } else {
+    finish(s, attack.kind, now + 1000);
+  }
 }
 
-function advanceSequence(attacks: BossAttack[], s: BossState, now: number, out: BossAction[]): void {
-  if (now < s.strikeAt) return;
-  if (s.mode === 'telegraph') {
-    const slam = find(attacks, 'slam');
-    s.mode = 'chase';
-    s.active = null;
-    if (slam) s.due.slam = now + slam.cooldownMs;
-    out.push({ type: 'slam' });
-  } else if (s.mode === 'burrowed') {
-    const burrow = find(attacks, 'burrow');
-    if (!burrow) return;
-    s.mode = 'rising';
-    s.strikeAt = now + burrow.telegraphMs;
-    out.push({ type: 'telegraph', radius: burrow.radius, durationMs: burrow.telegraphMs });
-  } else if (s.mode === 'rising') {
-    const burrow = find(attacks, 'burrow');
-    s.mode = 'chase';
-    s.active = null;
-    const hiddenFor = now - s.hiddenAt;
-    for (const kind of ['burst', 'spit', 'summon'] as const) if (s.due[kind] !== undefined) s.due[kind] += hiddenFor;
-    if (burrow) {
-      s.due.burrow = now + burrow.cooldownMs;
-      out.push({ type: 'emerge', radius: burrow.radius });
-    }
-  }
+function finish(s: BossState, kind: AttackKind, nextDue: number): void {
+  s.mode = 'chase';
+  s.active = null;
+  s.current = null;
+  s.due[kind] = nextDue;
 }
 
 function startSequence(attacks: BossAttack[], s: BossState, now: number, out: BossAction[]): void {
   for (const attack of attacks) {
     if ((s.due[attack.kind] ?? Infinity) > now) continue;
     if (attack.kind === 'slam') {
-      s.mode = 'telegraph';
-      s.active = 'slam';
-      s.strikeAt = now + attack.telegraphMs;
+      begin(s, attack, 'telegraph', now + attack.telegraphMs);
       out.push({ type: 'telegraph', radius: attack.radius, durationMs: attack.telegraphMs });
       return;
     }
-    if (attack.kind === 'burrow') {
-      s.mode = 'burrowed';
-      s.active = 'burrow';
-      s.strikeAt = now + attack.travelMs;
+    if (attack.kind === 'lunge') {
+      begin(s, attack, 'telegraph', now + attack.telegraphMs);
+      out.push({ type: 'telegraphLine', length: (attack.dashSpeed * attack.dashMs) / 1000, width: attack.width, durationMs: attack.telegraphMs });
+      return;
+    }
+    if (attack.kind === 'burrow' || attack.kind === 'teleport') {
+      const travelMs = attack.kind === 'burrow' ? attack.travelMs : attack.vanishMs;
+      begin(s, attack, 'burrowed', now + travelMs);
       s.hiddenAt = now;
-      out.push({ type: 'burrow', travelMs: attack.travelMs });
+      out.push(attack.kind === 'burrow' ? { type: 'burrow', travelMs } : { type: 'vanish', travelMs });
       return;
     }
   }
 }
 
+function begin(s: BossState, attack: BossAttack, mode: BossMode, strikeAt: number): void {
+  s.mode = mode;
+  s.active = attack.kind;
+  s.current = attack;
+  s.strikeAt = strikeAt;
+}
+
+const SEQUENCED: readonly AttackKind[] = ['slam', 'burrow', 'lunge', 'teleport'];
+
 function fireTimed(attacks: BossAttack[], s: BossState, now: number, out: BossAction[]): void {
   for (const attack of attacks) {
-    if (attack.kind === 'slam' || attack.kind === 'burrow') continue;
+    if (SEQUENCED.includes(attack.kind) || !TIMED.includes(attack.kind)) continue;
     if ((s.due[attack.kind] ?? Infinity) > now) continue;
-    s.due[attack.kind] = now + attack.everyMs;
+    s.due[attack.kind] = now + (attack as { everyMs: number }).everyMs;
     if (attack.kind === 'burst') out.push({ type: 'burst', count: attack.count });
     else if (attack.kind === 'spit') out.push({ type: 'spit', count: attack.count, arc: attack.arc });
-    else out.push({ type: 'summon', count: attack.count, minion: attack.minion, levelDrop: attack.levelDrop });
+    else if (attack.kind === 'spiral') out.push({ type: 'spiral', count: attack.count, turns: attack.turns });
+    else if (attack.kind === 'summon') out.push({ type: 'summon', count: attack.count, minion: attack.minion, levelDrop: attack.levelDrop, maxAlive: attack.maxAlive });
   }
 }

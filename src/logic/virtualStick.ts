@@ -4,7 +4,7 @@ export interface Circle extends Stick {
   r: number;
 }
 
-export type ButtonId = 'dash' | 'altFire';
+export type ButtonId = 'dash' | 'altFire' | 'swap';
 export type TouchRole = 'move' | 'aim' | ButtonId;
 
 export interface ButtonZone extends Circle {
@@ -41,7 +41,7 @@ export function isInCircle(point: Stick, circle: Circle, slop = 0): boolean {
 }
 
 /** Layout in game px for the current screen size; HUD and input both derive from this. */
-export function touchMetrics(width: number, height: number): TouchMetrics {
+export function touchMetrics(width: number, height: number, hasSwap = true): TouchMetrics {
   const stickRadius = Math.min(70, Math.max(40, Math.round(Math.min(width, height) * 0.14)));
   const r = Math.round(stickRadius * 0.56);
   const x = width - 16 - r;
@@ -51,6 +51,7 @@ export function touchMetrics(width: number, height: number): TouchMetrics {
     buttons: [
       { id: 'dash', x, y: dashY, r },
       { id: 'altFire', x, y: dashY - Math.round(r * 2.5), r },
+      ...(hasSwap ? [{ id: 'swap' as const, x: x - Math.round(r * 0.2), y: dashY + Math.round(r * 2.2), r: Math.round(r * 0.75) }] : []),
     ],
     fullscreen: { x: width - 22, y: 22, r: 14 },
     pause: { x: width - 22, y: 58, r: 14 },

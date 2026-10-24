@@ -100,6 +100,9 @@ export function grantWeapon(save: SaveData, weaponId: string, equip = true): Sav
   return { ...save, weapons: { owned, equipped: equip ? weaponId : save.weapons.equipped } };
 }
 
+export const equipWeapon = (save: SaveData, weaponId: string): SaveData =>
+  save.weapons.owned.includes(weaponId) ? { ...save, weapons: { ...save.weapons, equipped: weaponId } } : save;
+
 export function unlockPower(save: SaveData, powerId: string): SaveData {
   if (save.powers.unlocked.includes(powerId)) return save;
   return { ...save, powers: { unlocked: [...save.powers.unlocked, powerId] } };

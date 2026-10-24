@@ -1,8 +1,10 @@
 import Phaser from 'phaser';
+import { KeyLatch, WheelThrottle } from '../logic/keyLatch';
 import type { InputSource } from './InputController';
 
-type Key = Phaser.Input.Keyboard.Key;
-type Keys = Record<'up' | 'down' | 'left' | 'right' | 'w' | 'a' | 's' | 'd' | 'space', Key>;
+const WHEEL_INTERVAL_MS = 200;
+const KEY_NAMES = ['UP', 'DOWN', 'LEFT', 'RIGHT', 'W', 'A', 'S', 'D', 'SPACE', 'Q'] as const;
+type KeyName = (typeof KEY_NAMES)[number];
 
 export class KeyboardMouseSource implements InputSource {
   readonly moveVector = new Phaser.Math.Vector2();
@@ -10,8 +12,10 @@ export class KeyboardMouseSource implements InputSource {
   fire = false;
   altFire = false;
   dash = false;
+  weaponCycle = 0;
 
-  private readonly keys: Keys;
+  private readonly wheel = new WheelThrottle(WHEEL_INTERVAL_MS);
+  private readonly latches = Object.fromEntries(KEY_NAMES.map((name) => [name, new KeyLatch()])) as Record<KeyName, KeyLatch>;
   private readonly mouseAim = new Phaser.Math.Vector2();
   private mouseMoved = false;
   private wasDown = false;
@@ -27,22 +31,23 @@ export class KeyboardMouseSource implements InputSource {
   constructor(scene: Phaser.Scene) {
     scene.input.mouse?.disableContextMenu();
     const keyboard = scene.input.keyboard!;
-    const cursors = keyboard.createCursorKeys();
-    const letters = keyboard.addKeys({ w: 'W', a: 'A', s: 'S', d: 'D', space: 'SPACE' }) as Pick<
-      Keys,
-      'w' | 'a' | 's' | 'd' | 'space'
-    >;
-    this.keys = { ...letters, up: cursors.up, down: cursors.down, left: cursors.left, right: cursors.right };
+    keyboard.createCursorKeys();
+    keyboard.addKeys({ w: 'W', a: 'A', s: 'S', d: 'D', space: 'SPACE', q: 'Q' });
+    for (const name of KEY_NAMES) {
+      keyboard.on(`keydown-${name}`, () => this.latches[name].down());
+      keyboard.on(`keyup-${name}`, () => this.latches[name].up());
+    }
+    window.addEventListener('blur', () => Object.values(this.latches).forEach((latch) => latch.reset()));
+    scene.input.on('wheel', (_pointer: Phaser.Input.Pointer, _over: unknown, _dx: number, dy: number) => this.wheel.add(dy));
   }
 
   update(scene: Phaser.Scene): void {
-    const k = this.keys;
-    this.moveVector.set(
-      Number(k.right.isDown || k.d.isDown) - Number(k.left.isDown || k.a.isDown),
-      Number(k.down.isDown || k.s.isDown) - Number(k.up.isDown || k.w.isDown),
-    );
+    const held = (...names: KeyName[]): number => Number(names.map((name) => this.latches[name].read()).some(Boolean));
+    this.moveVector.set(held('RIGHT', 'D') - held('LEFT', 'A'), held('DOWN', 'S') - held('UP', 'W'));
 
-    this.dash = k.space.isDown;
+    this.dash = this.latches.SPACE.read();
+    this.weaponCycle = this.latches.Q.take() ? 1 : this.wheel.take(scene.time.now);
+
     this.fire = this.altFire = false;
     const pointer = scene.input.mousePointer;
     if (!pointer) return;

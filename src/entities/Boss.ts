@@ -2,20 +2,28 @@ import Phaser from 'phaser';
 import { Sfx, Tex } from '../content/assetKeys';
 import type { EnemyDef } from '../content/enemies';
 import { damageToPlayer } from '../logic/combat';
+import { spiralVolley } from '../logic/aim';
 import { spreadDirections } from '../logic/enemyAi';
-import { bossPhase, newBossState, stepBoss, type BossAction, type BossBrainConfig, type BossState } from '../logic/bossBrain';
+import { bossPhase, newBossState, stepBoss, summonCount, type BossAction, type BossBrainConfig, type BossState } from '../logic/bossBrain';
 import { Enemy, type EnemyContext } from './Enemy';
 import type { Player } from './Player';
 
 const BOLT_RANGE = 340;
 const BURROW_SPEED_MULTIPLIER = 4;
 const DUST = 0xd8b070;
+const MAGIC = 0xd8a0ff;
+const LUNGE_TINT = 0xff6a4a;
+const TELEPORT_MARGIN = 16;
 
 export interface BossHooks {
   /** Spawns a minion near (x, y); the host picks a free spot. */
   summon(enemyId: string, level: number, x: number, y: number): void;
   /** A free spot inside the arena just beside (x, y) for the boss to erupt at. */
   emergeSpot(x: number, y: number): { x: number; y: number };
+  /** A free spot on a throne (or anywhere safe) away from the player for the boss to teleport to. */
+  teleportSpot(last: { x: number; y: number } | null, avoid: { x: number; y: number }, avoidRadius: number): { x: number; y: number };
+  /** Live enemies of this type, for the minion cap. */
+  aliveCount(enemyId: string): number;
 }
 
 /** Generic boss body: the pure state machine in `logic/bossBrain` (data-driven per boss) decides, this class performs. */
@@ -23,10 +31,14 @@ export class Boss extends Enemy {
   private readonly config: BossBrainConfig;
   private brain: BossState;
   private burstSpin = 0;
-  private telegraph: Phaser.GameObjects.Arc[] = [];
+  private telegraph: Phaser.GameObjects.Shape[] = [];
   private dust?: Phaser.GameObjects.Particles.ParticleEmitter;
   private readonly lastAim = new Phaser.Math.Vector2(1, 0);
-  private strike = { x: 0, y: 0, radius: 0 };
+  private strike = { x: 0, y: 0, radius: 0, magic: false };
+  private lungeDirection = new Phaser.Math.Vector2(1, 0);
+  /** One chance per lunge to connect; a dodge (dash or i-frames) uses it up. */
+  private lungeResolved = false;
+  private lastThrone: { x: number; y: number } | null = null;
 
   constructor(scene: Phaser.Scene, x: number, y: number, def: EnemyDef, level: number, context: EnemyContext, private readonly hooks: BossHooks) {
     super(scene, x, y, def, level, context);
@@ -40,14 +52,21 @@ export class Boss extends Enemy {
     return this.alive && this.brain.mode !== 'burrowed' && this.brain.mode !== 'rising';
   }
 
-  override takeHit(amount: number, directionX: number, directionY: number): void {
+  override takeHit(amount: number, directionX: number, directionY: number, knockback = 1): void {
     if (!this.targetable) return;
-    super.takeHit(amount, directionX, directionY);
+    super.takeHit(amount, directionX, directionY, knockback);
     if (this.alive) this.events.emit('boss-hp', this.hp, this.maxHp);
   }
 
   override tryContact(player: Player): void {
-    if (this.targetable) super.tryContact(player);
+    if (!this.targetable) return;
+    if (this.brain.mode === 'dash') {
+      if (this.lungeResolved) return;
+      this.lungeResolved = true;
+      player.takeDamage(damageToPlayer(this.def.slamDamage ?? 20, this.level, player.level), this.x, this.y);
+      return;
+    }
+    super.tryContact(player);
   }
 
   protected override act(time: number): void {
@@ -60,11 +79,17 @@ export class Boss extends Enemy {
       this.setVelocity(0, 0);
       return;
     }
+    if (mode === 'dash') return;
+    if (mode === 'burrowed' && this.brain.active === 'teleport') {
+      this.setVelocity(0, 0);
+      return;
+    }
     const speed = this.def.speed * this.config.phases[bossPhase(this.config, this.hp / this.maxHp)].speedMultiplier;
     this.chase(time, mode === 'burrowed' ? speed * BURROW_SPEED_MULTIPLIER : speed);
   }
 
   protected override die(): void {
+    this.forcedTint = null;
     this.clearTelegraph();
     this.stopDust();
     this.shots.clear();
@@ -81,15 +106,26 @@ export class Boss extends Enemy {
     else if (action.type === 'burrow') this.burrow();
     else if (action.type === 'burst') this.burst(action.count);
     else if (action.type === 'spit') this.spit(action.count, action.arc);
-    else if (action.type === 'summon') this.summon(action.count, action.minion, action.levelDrop);
+    else if (action.type === 'summon') this.summon(action.count, action.minion, action.levelDrop, action.maxAlive);
+    else if (action.type === 'telegraphLine') this.startLine(action.length, action.width, action.durationMs);
+    else if (action.type === 'lunge') this.startLunge(action.speed);
+    else if (action.type === 'lungeEnd') this.endLunge();
+    else if (action.type === 'vanish') this.vanishAway();
+    else if (action.type === 'appear') this.appear();
+    else if (action.type === 'spiral') this.spiral(action.count, action.turns);
     else this.enrage();
   }
 
   private startTelegraph(radius: number, durationMs: number): void {
     const rising = this.brain.mode === 'rising';
-    if (rising) this.surfaceUnderTarget();
-    const [color, edge] = rising ? [0xc89a50, 0xffd890] : [0xff2a2a, 0xff5a5a];
-    this.strike = { x: this.x, y: this.y + 4, radius };
+    const teleporting = rising && this.brain.active === 'teleport';
+    if (teleporting) {
+      this.lastThrone = this.hooks.teleportSpot(this.lastThrone, this.target, radius + TELEPORT_MARGIN);
+      this.moveTo(this.lastThrone);
+    }
+    else if (rising) this.surfaceUnderTarget();
+    const [color, edge] = teleporting ? [0xa060e0, 0xe0b0ff] : rising ? [0xc89a50, 0xffd890] : [0xff2a2a, 0xff5a5a];
+    this.strike = { x: this.x, y: this.y + 4, radius, magic: teleporting };
     const ring = this.scene.add.circle(this.x, this.y + 4, radius, color, 0.14).setStrokeStyle(2, edge, 0.9).setDepth(3);
     const fill = this.scene.add.circle(this.x, this.y + 4, radius, color, 0.38).setDepth(3).setScale(0.05);
     this.scene.tweens.add({ targets: fill, scale: 1, duration: durationMs, ease: 'Quad.easeIn' });
@@ -100,18 +136,74 @@ export class Boss extends Enemy {
 
   /** The hidden boss pops up beside where the player stands when the warning starts, inside the arena and off any wall. */
   private surfaceUnderTarget(): void {
-    const spot = this.hooks.emergeSpot(this.target.x, this.target.y);
+    this.moveTo(this.hooks.emergeSpot(this.target.x, this.target.y));
+  }
+
+  private moveTo(spot: { x: number; y: number }): void {
     this.setPosition(spot.x, spot.y);
     (this.body as Phaser.Physics.Arcade.Body).reset(spot.x, spot.y);
+  }
+
+  /** Red lane from the king along the line he is about to charge down; aimed once, at the start of the windup. */
+  private startLine(length: number, width: number, durationMs: number): void {
+    this.lungeDirection.set(this.target.x - this.x, this.target.y - this.y);
+    if (this.lungeDirection.lengthSq() < 1e-6) this.lungeDirection.copy(this.lastAim);
+    this.lungeDirection.normalize();
+    this.lastAim.copy(this.lungeDirection);
+    this.setFlipX(this.lungeDirection.x < 0);
+    const half = length / 2;
+    const lane = this.scene.add.rectangle(this.x + this.lungeDirection.x * half, this.y + this.lungeDirection.y * half, length, width, LUNGE_TINT, 0.2).setRotation(this.lungeDirection.angle()).setStrokeStyle(1, 0xff9a7a, 0.9).setDepth(3);
+    const fill = this.scene.add.rectangle(this.x, this.y, 2, width, LUNGE_TINT, 0.45).setRotation(this.lungeDirection.angle()).setOrigin(0, 0.5).setDepth(3);
+    this.scene.tweens.add({ targets: fill, width: length, duration: durationMs, ease: 'Quad.easeIn' });
+    this.telegraph = [lane, fill];
+    this.forcedTint = LUNGE_TINT;
+    this.setTint(LUNGE_TINT);
+    this.scene.sound.play(Sfx.shoot, { volume: 0.3, rate: 0.45 });
+  }
+
+  private startLunge(speed: number): void {
+    this.clearTelegraph();
+    this.lungeResolved = false;
+    this.setVelocity(this.lungeDirection.x * speed, this.lungeDirection.y * speed);
+    this.scene.sound.play(Sfx.hit, { volume: 0.5, rate: 0.8 });
+  }
+
+  private endLunge(): void {
+    this.setVelocity(0, 0);
+    this.forcedTint = null;
+    this.applyBaseTint();
+  }
+
+  private vanishAway(): void {
+    this.conceal(true);
+    this.setVelocity(0, 0);
+    this.puff();
+    this.scene.sound.play(Sfx.shoot, { volume: 0.35, rate: 0.35 });
+  }
+
+  /** Reappears on the throne and sends out a shockwave the player must be clear of. */
+  private appear(): void {
+    this.strikeArea(true);
+    this.puff();
+  }
+
+  private spiral(count: number, turns: number): void {
+    this.burstSpin += 0.5;
+    const damage = this.boltDamage();
+    for (const bolt of spiralVolley(count, turns, this.burstSpin, this.def.boltSpeed ?? 90)) {
+      this.shots.fire(this.x, this.y, bolt.x, bolt.y, bolt.speed, damage, BOLT_RANGE);
+    }
+    this.scene.sound.play(Sfx.shoot, { volume: 0.3, rate: 0.5 });
   }
 
   private strikeArea(emerging: boolean): void {
     const { x, y, radius } = this.strike;
     this.clearTelegraph();
     if (emerging) this.conceal(false);
-    const wave = this.scene.add.circle(x, y, radius, emerging ? 0xf0d090 : 0xffffff, 0.35).setStrokeStyle(3, 0xffd0a0, 1).setDepth(7);
+    const magic = emerging && this.strike.magic;
+    const wave = this.scene.add.circle(x, y, radius, magic ? MAGIC : emerging ? 0xf0d090 : 0xffffff, 0.35).setStrokeStyle(3, 0xffd0a0, 1).setDepth(7);
     this.scene.tweens.add({ targets: wave, scale: 1.25, alpha: 0, duration: 260, onComplete: () => wave.destroy() });
-    if (emerging) this.sandBurst(x, y);
+    if (emerging && !magic) this.sandBurst(x, y);
     this.scene.cameras.main.shake(200, 0.01);
     this.scene.sound.play(Sfx.hit, { volume: 0.7, rate: 0.5 });
     if (Phaser.Math.Distance.Between(x, y, this.target.x, this.target.y) <= radius + 4) {
@@ -164,8 +256,9 @@ export class Boss extends Enemy {
     this.scene.sound.play(Sfx.shoot, { volume: 0.3, rate: 0.6 });
   }
 
-  private summon(count: number, minion: string, levelDrop: number): void {
-    for (let i = 0; i < count; i++) {
+  private summon(count: number, minion: string, levelDrop: number, maxAlive: number): void {
+    const spawn = summonCount(count, maxAlive, this.hooks.aliveCount(minion));
+    for (let i = 0; i < spawn; i++) {
       const angle = Math.random() * Math.PI * 2;
       this.hooks.summon(minion, Math.max(1, this.level - levelDrop), this.x + Math.cos(angle) * 36, this.y + Math.sin(angle) * 36);
     }

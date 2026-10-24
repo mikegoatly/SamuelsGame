@@ -117,6 +117,41 @@ export const sandWyrmLoot: LootTable = {
   entries: [common('coinPile', 350), common('goldPile', 350), rare('healthPotionSmall', 50), rare('healthPotionLarge', 150), ...charms(34, 33, 33)],
 };
 
+export const palaceGuardLoot: LootTable = {
+  id: 'palaceGuard',
+  rolls: 1,
+  nothingWeight: 80,
+  entries: [common('coinPile', 290), common('goldPile', 260), rare('healthPotionSmall', 100), rare('healthPotionLarge', 170), ...charms(35, 35, 30)],
+};
+
+export const royalArcherLoot: LootTable = {
+  id: 'royalArcher',
+  rolls: 1,
+  nothingWeight: 80,
+  entries: [common('coin', 100), common('coinPile', 330), common('goldPile', 180), rare('healthPotionSmall', 120), rare('healthPotionLarge', 130), ...charms(20, 20, 20)],
+};
+
+export const darkMageLoot: LootTable = {
+  id: 'darkMage',
+  rolls: 1,
+  nothingWeight: 80,
+  entries: [common('coin', 80), common('coinPile', 300), common('goldPile', 200), rare('healthPotionSmall', 120), rare('healthPotionLarge', 150), ...charms(25, 25, 20)],
+};
+
+export const assassinLoot: LootTable = {
+  id: 'assassin',
+  rolls: 1,
+  nothingWeight: 90,
+  entries: [common('coin', 100), common('coinPile', 330), common('goldPile', 190), rare('healthPotionSmall', 110), rare('healthPotionLarge', 120), ...charms(20, 20, 20)],
+};
+
+export const madKingLoot: LootTable = {
+  id: 'madKing',
+  rolls: 6,
+  nothingWeight: 0,
+  entries: [common('coinPile', 250), common('goldPile', 400), rare('healthPotionSmall', 40), rare('healthPotionLarge', 200), ...charms(37, 37, 36)],
+};
+
 export const lootTables: Record<string, LootTable> = Object.fromEntries(
-  [slimeLoot, batLoot, cyclopsLoot, ghostLoot, stoneGuardianLoot, scorpionLoot, banditLoot, mummyLoot, vultureLoot, sandWyrmLoot].map((table) => [table.id, table]),
+  [slimeLoot, batLoot, cyclopsLoot, ghostLoot, stoneGuardianLoot, scorpionLoot, banditLoot, mummyLoot, vultureLoot, sandWyrmLoot, palaceGuardLoot, royalArcherLoot, darkMageLoot, assassinLoot, madKingLoot].map((table) => [table.id, table]),
 );

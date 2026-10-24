@@ -1,11 +1,13 @@
 import { SHEET_COLS, TILE_SIZE } from '../src/content/assetKeys';
-import { floorMask, generateLayout, placeHazards, type DungeonLayout, type LayoutRoom } from '../src/logic/dungeonLayout';
+import { floorMask, generateLayout, placeHazards, placeSpikeTraps, throneTiles, type DungeonLayout, type LayoutRoom } from '../src/logic/dungeonLayout';
 import type { Rect } from '../src/logic/geometry';
+import { SPIKE_CYCLE } from '../src/logic/spikes';
 import { mulberry32, randInt } from '../src/logic/rng';
 import type { MapTheme } from './mapThemes';
 
 const WALL_RING = 2;
 const SHEET_ROWS = 11;
+const SPIKE_PERIOD = SPIKE_CYCLE.periodMs;
 
 interface Prop {
   name: string;
@@ -83,7 +85,7 @@ const rectPx = (r: Rect): Pick<TiledObject, 'x' | 'y' | 'width' | 'height'> => (
 const ints = (props: Record<string, number | string>): Prop[] =>
   Object.entries(props).map(([name, value]) => ({ name, type: typeof value === 'number' ? 'int' : 'string', value }));
 
-function buildObjects(layout: DungeonLayout, hazards: Rect[], theme: MapTheme): TiledObject[] {
+function buildObjects(layout: DungeonLayout, hazards: Rect[], spikes: Rect[], theme: MapTheme): TiledObject[] {
   let nextId = 1;
   const make = (name: string, type: string, area: Pick<TiledObject, 'x' | 'y' | 'width' | 'height'>, props: Record<string, number | string> = {}, point = false): TiledObject => ({
     id: nextId++,
@@ -108,7 +110,9 @@ function buildObjects(layout: DungeonLayout, hazards: Rect[], theme: MapTheme): 
     ...combat.map((room, i) => make(`room${room.index}`, 'room', rectPx(room.rect), { order: room.index, encounter: `${theme.id}-room-${room.index}`, ...theme.encounters[i]! })),
     ...layout.doors.filter((d) => d.room > 0).map((d, i) => make(`door${i + 1}`, 'door', rectPx(d.rect), { room: d.room })),
     ...hazards.map((r, i) => make(`quicksand${i + 1}`, 'hazard', rectPx(r), { kind: 'quicksand' })),
+    ...spikes.map((r, i) => make(`spikes${i + 1}`, 'hazard', rectPx(r), { kind: 'spikes', offset: (i % 2 === 0 ? i * 640 : (i - 1) * 640) % SPIKE_PERIOD })),
     make('bossArena', 'bossArena', rectPx(boss.rect), { order: boss.index }),
+    ...(theme.thrones ? throneTiles(boss).map((t, i) => make(`throne${i + 1}`, 'throne', { x: px(t.x) + TILE_SIZE / 2, y: px(t.y) + TILE_SIZE / 2, width: 0, height: 0 }, {}, true)) : []),
     make('exit', 'exit', { x: px(boss.rect.x + 2), y: px(boss.cy) + TILE_SIZE / 2, width: 0, height: 0 }, {}, true),
   ];
 }
@@ -124,7 +128,8 @@ export function buildTmj(theme: MapTheme) {
   const ground = paintGround(layout, floor, rng, theme);
   const walls = paintWalls(layout, floor, rng, theme);
   const hazards = placeHazards(layout, rng, theme.quicksandPerRoom);
-  const objects = buildObjects(layout, hazards, theme);
+  const spikes = placeSpikeTraps(layout, rng, theme.spikePairsPerRoom ?? 0, hazards);
+  const objects = buildObjects(layout, hazards, spikes, theme);
   return {
     compressionlevel: -1,
     type: 'map',

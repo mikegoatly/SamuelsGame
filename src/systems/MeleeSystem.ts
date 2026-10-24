@@ -1,0 +1,68 @@
+import Phaser from 'phaser';
+import { Sfx } from '../content/assetKeys';
+import type { WeaponDef } from '../content/weapons';
+import { GOD_DAMAGE_MULTIPLIER, GOD_MODE } from '../debug';
+import type { Enemy } from '../entities/Enemy';
+import type { EnemyProjectile, EnemyProjectiles } from '../entities/EnemyProjectile';
+import type { Player } from '../entities/Player';
+import { damageToEnemy } from '../logic/combat';
+import { lineClear } from '../logic/lineOfSight';
+import { inCone, meleeHits, type MeleeCone } from '../logic/melee';
+
+const DEFLECT_PADDING = 6;
+const SLASH_COLOR = 0xffe27a;
+
+export interface MeleeOptions {
+  scene: Phaser.Scene;
+  player: Player;
+  enemies: Phaser.Physics.Arcade.Group;
+  shots: EnemyProjectiles;
+  isSolid: (x: number, y: number) => boolean;
+}
+
+/** Resolves sword swings: one cone test per swing hurts each enemy once, swats enemy bolts out of the air and draws the slash. */
+export class MeleeSystem {
+  constructor(private readonly o: MeleeOptions) {
+    o.player.meleeHandler = (x, y, aim, weapon) => this.swing(x, y, aim, weapon);
+  }
+
+  private swing(x: number, y: number, aim: number, weapon: WeaponDef): void {
+    const melee = weapon.melee;
+    if (!melee) return;
+    const { player, scene } = this.o;
+    const origin = { x, y };
+    const cone: MeleeCone = { arc: melee.arc, reach: melee.reach };
+    const targets = (this.o.enemies.getChildren() as Enemy[]).filter((e) => e.active && e.alive && e.targetable && lineClear(origin, e, this.o.isSolid));
+    const hits = meleeHits(origin, aim, cone, targets.map((e) => ({ x: e.x, y: e.y, reach: e.displayWidth / 2 })));
+    for (const index of hits) {
+      const enemy = targets[index]!;
+      const raw = damageToEnemy(weapon.baseDamage, player.level, enemy.level, player.stats.damageMultiplier);
+      enemy.takeHit(raw * (GOD_MODE ? GOD_DAMAGE_MULTIPLIER : 1), enemy.x - x, enemy.y - y, melee.knockback);
+    }
+    const deflected = this.deflect(origin, aim, { ...cone, reach: cone.reach + DEFLECT_PADDING });
+    this.slash(x, y, aim, melee.arc, melee.reach, melee.swingMs);
+    scene.sound.play(Sfx.shoot, { volume: 0.35, rate: hits.length > 0 || deflected ? 0.5 : 0.8 });
+    if (hits.length > 0) scene.cameras.main.shake(70, 0.003);
+  }
+
+  private deflect(origin: { x: number; y: number }, aim: number, cone: MeleeCone): boolean {
+    let any = false;
+    for (const bolt of this.o.shots.group.getChildren() as EnemyProjectile[]) {
+      if (!bolt.active || !inCone(origin, aim, cone, bolt) || !lineClear(origin, bolt, this.o.isSolid)) continue;
+      bolt.kill();
+      any = true;
+      const spark = this.o.scene.add.circle(bolt.x, bolt.y, 5, SLASH_COLOR, 0.9).setDepth(9);
+      this.o.scene.tweens.add({ targets: spark, scale: 2.2, alpha: 0, duration: 180, onComplete: () => spark.destroy() });
+    }
+    return any;
+  }
+
+  /** A gold crescent wedge sweeping through the arc and fading. */
+  private slash(x: number, y: number, aim: number, arc: number, reach: number, swingMs: number): void {
+    const g = this.o.scene.add.graphics({ x, y }).setDepth(9);
+    const radius = reach + 6;
+    g.fillStyle(SLASH_COLOR, 0.35).slice(0, 0, radius, aim - arc / 2, aim + arc / 2, false).fillPath();
+    g.lineStyle(2, 0xffffff, 0.9).beginPath().arc(0, 0, radius, aim - arc / 2, aim + arc / 2, false).strokePath();
+    this.o.scene.tweens.add({ targets: g, alpha: 0, scaleX: 1.12, scaleY: 1.12, duration: swingMs + 60, onComplete: () => g.destroy() });
+  }
+}

@@ -3,7 +3,7 @@ import { ControlFrame, Tex } from '../content/assetKeys';
 import { touchMetrics, type ButtonId } from '../logic/virtualStick';
 import { FIREBALL_STATE_KEY } from '../systems/FireballSystem';
 import type { FireballStatus } from '../logic/fireball';
-import { TOUCH_STATE_KEY, type StickView, type TouchState } from '../systems/TouchSource';
+import { canSwapWeapons, TOUCH_STATE_KEY, type StickView, type TouchState } from '../systems/TouchSource';
 
 const IDLE_ALPHA = 0.4;
 const ACTIVE_ALPHA = 0.8;
@@ -21,7 +21,7 @@ export class TouchControlsView {
 
   constructor(private readonly scene: Phaser.Scene) {
     this.sticks = { move: this.makeStick(), aim: this.makeStick() };
-    this.buttons = { dash: this.makeImage(ControlFrame.dash), altFire: this.makeImage(ControlFrame.altFire) };
+    this.buttons = { dash: this.makeImage(ControlFrame.dash), altFire: this.makeImage(ControlFrame.altFire), swap: this.makeImage(ControlFrame.swap) };
     this.cooldown = scene.add.graphics().setDepth(101);
   }
 
@@ -29,16 +29,16 @@ export class TouchControlsView {
     const state = this.scene.registry.get(TOUCH_STATE_KEY) as TouchState | undefined;
     const visible = state?.visible ?? false;
     const { scale } = this.scene;
-    const metrics = touchMetrics(scale.width, scale.height);
+    const metrics = touchMetrics(scale.width, scale.height, canSwapWeapons());
 
     const fireball = this.scene.registry.get(FIREBALL_STATE_KEY) as FireballStatus | undefined;
     this.cooldown.clear();
     for (const zone of metrics.buttons) {
       const image = this.buttons[zone.id];
-      const hidden = zone.id === 'altFire' && !fireball?.available;
+      const hidden = (zone.id === 'altFire' && !fireball?.unlocked) ;
       image.setVisible(visible && !hidden).setPosition(zone.x, zone.y).setDisplaySize(zone.r * 2, zone.r * 2);
       image.setAlpha(state?.buttons[zone.id] ? ACTIVE_ALPHA : IDLE_ALPHA);
-      if (zone.id === 'altFire' && visible && fireball?.available) this.showFireball(image, zone, fireball);
+      if (zone.id === 'altFire' && visible && fireball?.unlocked) this.showFireball(image, zone, fireball);
     }
     if (state) {
       this.showStick(this.sticks.move, visible ? state.move : undefined, metrics.stickRadius);
@@ -48,6 +48,10 @@ export class TouchControlsView {
 
   /** Orange tint when ready; greyed with a dark pie sweeping away as the cooldown recovers. */
   private showFireball(image: Phaser.GameObjects.Image, zone: { x: number; y: number; r: number }, fireball: FireballStatus): void {
+    if (!fireball.available) {
+      image.setTint(0x505058).setAlpha(0.3);
+      return;
+    }
     if (fireball.ready) {
       image.setTint(0xff9030).setAlpha(Math.max(image.alpha, 0.65));
       return;

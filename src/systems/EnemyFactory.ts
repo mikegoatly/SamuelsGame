@@ -2,17 +2,20 @@ import Phaser from 'phaser';
 import { getEnemy, type EnemyDef } from '../content/enemies';
 import { Boss } from '../entities/Boss';
 import { Enemy, type EnemyContext } from '../entities/Enemy';
-import { insetRect, rectContains, type Rect } from '../logic/geometry';
-import { pickEmergePoint, pickRectSpawn } from '../logic/spawnPoints';
+import { insetRect, rectContains, type Point, type Rect } from '../logic/geometry';
+import { pickEmergePoint, pickRectSpawn, pickThrone } from '../logic/spawnPoints';
 
 const FADE_IN_MS = 300;
 const BOSS_FADE_IN_MS = 700;
 const MINION_RADIUS = 36;
 const MINION_INSET = 24;
 const EMERGE_OFFSET = 18;
+const TELEPORT_MIN_DISTANCE = 120;
 
 export interface BossArea {
   rect: Rect;
+  /** Teleport destinations for bosses that blink between thrones. */
+  thrones: readonly Point[];
   isBlocked: (x: number, y: number) => boolean;
 }
 
@@ -35,6 +38,11 @@ export class EnemyFactory {
         this.spawn(getEnemy(id), lvl, at.x, at.y);
       },
       emergeSpot: (x: number, y: number) => pickEmergePoint(area.rect, { x, y }, EMERGE_OFFSET, Math.random, area.isBlocked, MINION_INSET),
+      aliveCount: (enemyId: string) => (this.group.getChildren() as Enemy[]).filter((e) => e.alive && e.def.id === enemyId).length,
+      teleportSpot: (last: Point | null, avoid: Point, avoidRadius: number) => {
+        const throne = pickThrone(area.thrones, last, avoid, Math.random, avoidRadius);
+        return throne ? pickEmergePoint(area.rect, throne, 0, Math.random, area.isBlocked, MINION_INSET) : pickRectSpawn(area.rect, avoid, TELEPORT_MIN_DISTANCE, Math.random, area.isBlocked, MINION_INSET);
+      },
     };
     return this.fadeIn(new Boss(this.scene, x, y, def, level, this.context, hooks), BOSS_FADE_IN_MS);
   }

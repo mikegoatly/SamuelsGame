@@ -71,3 +71,12 @@ export function pickEmergePoint(
   const direct = clamp(near);
   return blocked(direct.x, direct.y) ? pickRectSpawn(rect, near, 0, rng, blocked, inset) : direct;
 }
+
+/** Throne for the boss to appear on: never its last one, outside `avoidRadius` of the player when possible, usually the one furthest from the player. */
+export function pickThrone(thrones: readonly Point[], last: Point | null, avoid: Point, rng: () => number, avoidRadius = 0): Point | undefined {
+  const others = last ? thrones.filter((t) => Math.hypot(t.x - last.x, t.y - last.y) > 4) : [...thrones];
+  const safe = others.filter((t) => Math.hypot(t.x - avoid.x, t.y - avoid.y) > avoidRadius);
+  const pool = safe.length > 0 ? safe : others.length > 0 ? others : [...thrones];
+  const far = pool.sort((a, b) => Math.hypot(b.x - avoid.x, b.y - avoid.y) - Math.hypot(a.x - avoid.x, a.y - avoid.y));
+  return far[Math.floor(rng() * Math.ceil(far.length / 2))];
+}

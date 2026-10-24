@@ -1,5 +1,5 @@
 import { Frame } from '../src/content/assetKeys';
-import { DESERT_PRESET, RUINS_PRESET, type LayoutPreset } from '../src/logic/layoutPresets';
+import { DESERT_PRESET, PALACE_PRESET, RUINS_PRESET, type LayoutPreset } from '../src/logic/layoutPresets';
 
 export interface Encounter {
   waves: number;
@@ -21,6 +21,10 @@ export interface MapTheme {
   /** One entry per combat room: waves and the monster level range. */
   encounters: Encounter[];
   quicksandPerRoom: number;
+  /** Mirrored pairs of timed spike traps per combat room (default none). */
+  spikePairsPerRoom?: number;
+  /** Adds `throne` objects to the boss arena (boss teleport destinations). */
+  thrones?: boolean;
 }
 
 export const RUINS_THEME: MapTheme = {
@@ -71,4 +75,27 @@ export const DESERT_THEME: MapTheme = {
   quicksandPerRoom: 1,
 };
 
-export const THEMES: readonly MapTheme[] = [RUINS_THEME, DESERT_THEME];
+export const PALACE_THEME: MapTheme = {
+  id: 'palace',
+  seed: 7731905,
+  preset: PALACE_PRESET,
+  floor: {
+    base: Frame.floor,
+    variants: [],
+  },
+  wall: { base: Frame.wall, alt: Frame.wallAlt, altChance: 0.4, accent: Frame.banner, accentChance: 0.14 },
+  cover: Frame.statue,
+  encounters: [
+    { waves: 2, minLevel: 10, maxLevel: 10 },
+    { waves: 2, minLevel: 10, maxLevel: 11 },
+    { waves: 2, minLevel: 11, maxLevel: 12 },
+    { waves: 2, minLevel: 12, maxLevel: 13 },
+    { waves: 3, minLevel: 13, maxLevel: 14 },
+    { waves: 3, minLevel: 14, maxLevel: 15 },
+  ],
+  quicksandPerRoom: 0,
+  spikePairsPerRoom: 1,
+  thrones: true,
+};
+
+export const THEMES: readonly MapTheme[] = [RUINS_THEME, DESERT_THEME, PALACE_THEME];

@@ -25,11 +25,15 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   slowZones: Rect[] = [];
   /** Called when alt-fire is held; the power system decides whether anything happens. */
   altFireHandler?: (x: number, y: number, direction: Phaser.Math.Vector2) => void;
+  /** Called on each melee swing; the melee system finds and hurts whatever the cone touches. */
+  meleeHandler?: (x: number, y: number, aim: number, weapon: WeaponDef) => void;
+  weapon: WeaponDef;
 
   private readonly wand: Phaser.GameObjects.Image;
   private readonly aimDirection = new Phaser.Math.Vector2(1, 0);
   private readonly position = new Phaser.Math.Vector2();
   private nextFireAt = 0;
+  private swing = { startedAt: -Infinity, aim: 0 };
   private nextDashAt = 0;
   private dashEndsAt = 0;
   private invulnerableUntil = 0;
@@ -43,15 +47,16 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     private readonly projectiles: Phaser.Physics.Arcade.Group,
     private readonly progression: ProgressionSystem,
     private readonly events: GameEvents,
-    readonly weapon: WeaponDef,
+    weapon: WeaponDef,
     private readonly getCharms: () => Charms,
   ) {
     super(scene, x, y, Tex.tiles, Frame.hero);
+    this.weapon = weapon;
     scene.add.existing(this);
     scene.physics.add.existing(this);
     this.setSize(10, 10).setOffset(3, 5).setDepth(10).setPushable(false);
     this.wand = scene.add.image(x, y, Tex.tiles, weapon.frame).setDepth(11);
-    if (weapon.tint !== null) this.wand.setTint(weapon.tint);
+    this.showWeapon();
     this.stats = computePlayerStats(progression.level, getCharms());
     this.maxHp = this.hp = this.stats.maxHp;
     events.on('level-up', () => this.onLevelUp());
@@ -98,9 +103,22 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
       this.setVelocity(this.controls.moveVector.x * speed, this.controls.moveVector.y * speed);
     }
 
+    if (this.controls.weaponCycle !== 0) this.events.emit('weapon-cycle', this.controls.weaponCycle > 0 ? 1 : -1);
     this.handleFire(time);
     if (this.controls.altFire) this.altFireHandler?.(this.x, this.y - 2, this.aimDirection);
     this.updateVisuals(time);
+  }
+
+  /** Swaps the held weapon; the sprite follows. */
+  equip(weapon: WeaponDef): void {
+    this.weapon = weapon;
+    this.showWeapon();
+  }
+
+  private showWeapon(): void {
+    this.wand.setFrame(this.weapon.frame);
+    if (this.weapon.tint === null) this.wand.clearTint();
+    else this.wand.setTint(this.weapon.tint);
   }
 
   heal(amount: number): void {
@@ -146,6 +164,10 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   private handleFire(time: number): void {
     if (!this.controls.fire || time < this.nextFireAt) return;
     this.nextFireAt = time + this.weapon.fireRateMs;
+    if (this.weapon.kind === 'melee') {
+      this.swingSword(time);
+      return;
+    }
     const bolt = fireProjectile(
       this.projectiles,
       this.x + this.aimDirection.x * 10,
@@ -156,14 +178,31 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     if (bolt) this.scene.sound.play(Sfx.shoot, { volume: 0.3 });
   }
 
+  private swingSword(time: number): void {
+    const aim = this.aimDirection.angle();
+    this.swing = { startedAt: time, aim };
+    this.meleeHandler?.(this.x, this.y - 2, aim, this.weapon);
+  }
+
+  /** Angle the held weapon points at: aimed normally, sweeping through the cone while a swing plays. */
+  private weaponAngle(time: number): number {
+    const melee = this.weapon.melee;
+    if (!melee) return this.aimDirection.angle();
+    const progress = (time - this.swing.startedAt) / melee.swingMs;
+    if (progress < 0 || progress >= 1) return this.aimDirection.angle();
+    return this.swing.aim - melee.arc / 2 + progress * melee.arc;
+  }
+
   private updateVisuals(time: number): void {
     const hurt = time < this.invulnerableUntil;
     const alpha = this.isDashing ? 0.5 : hurt && Math.floor(time / 70) % 2 === 0 ? 0.35 : 1;
     this.setFlipX(this.aimDirection.x < 0);
     this.setAlpha(alpha);
+    const angle = this.weaponAngle(time);
+    const reach = this.weapon.kind === 'melee' ? 11 : 8;
     this.wand
-      .setPosition(this.x + this.aimDirection.x * 8, this.y - 2 + this.aimDirection.y * 8)
-      .setRotation(this.aimDirection.angle() + Math.PI / 2)
+      .setPosition(this.x + Math.cos(angle) * reach, this.y - 2 + Math.sin(angle) * reach)
+      .setRotation(angle + Math.PI / 2)
       .setAlpha(alpha);
   }
 

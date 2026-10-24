@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { Frame, TILE_SIZE, Tex } from '../content/assetKeys';
 import type { Environment, LevelConfig } from '../content/levels';
 import type { Rect } from '../logic/geometry';
-import type { LevelObjects } from '../logic/tiledObjects';
+import type { HazardSpec, LevelObjects } from '../logic/tiledObjects';
 import type { DoorLayer } from '../systems/DoorLayer';
 import { buildTiledMap } from './TiledMapBuilder';
 
@@ -43,11 +43,15 @@ export interface LevelMap {
   doors?: DoorLayer;
   /** Quicksand patches in world px. */
   slowZones: Rect[];
+  /** Timed spike traps in world px. */
+  spikes: HazardSpec[];
 }
 
 export interface EnvironmentTint {
   ground: number | null;
   walls: number | null;
+  /** Second ground tint laid out as a chessboard (polished marble). */
+  checker?: number;
 }
 
 const uniform = (tint: number | null): EnvironmentTint => ({ ground: tint, walls: tint });
@@ -56,7 +60,8 @@ export const ENVIRONMENT_TINT: Record<Environment, EnvironmentTint> = {
   arena: uniform(null),
   ruins: uniform(0xc8d0c0),
   desert: { ground: 0xfff0d0, walls: 0xe6c48c },
-  palace: uniform(0xb8a0ff),
+  palace: { ground: 0xb4a0ff, walls: 0xc4c8d8, checker: 0x8470dc },
+  unknown: uniform(null),
 };
 
 /** Levels with a loaded `mapKey` build from their Tiled map, everything else uses the generated room. */
@@ -65,5 +70,5 @@ export function buildLevelMap(scene: Phaser.Scene, level: LevelConfig): LevelMap
   const walls = buildRoom(scene);
   const { walls: tint } = ENVIRONMENT_TINT[level.environment];
   if (tint !== null) walls.setTint(tint);
-  return { walls, solid: [], slowZones: [], playerStart: { x: (ROOM_COLS * TILE_SIZE) / 2, y: (ROOM_ROWS * TILE_SIZE) / 2 } };
+  return { walls, solid: [], slowZones: [], spikes: [], playerStart: { x: (ROOM_COLS * TILE_SIZE) / 2, y: (ROOM_ROWS * TILE_SIZE) / 2 } };
 }

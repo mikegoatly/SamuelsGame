@@ -13,6 +13,19 @@ export function lineClear(from: Point, to: Point, blocked: (x: number, y: number
   return true;
 }
 
+const BODY_SAMPLES = 8;
+
+/** True when the centre and the rim of a circular body at `p` are all unblocked. */
+export function bodyClear(p: Point, radius: number, blocked: (x: number, y: number) => boolean): boolean {
+  if (blocked(p.x, p.y)) return false;
+  if (radius <= 0) return true;
+  for (let i = 0; i < BODY_SAMPLES; i++) {
+    const angle = (i / BODY_SAMPLES) * Math.PI * 2;
+    if (blocked(p.x + Math.cos(angle) * radius, p.y + Math.sin(angle) * radius)) return false;
+  }
+  return true;
+}
+
 const BACK_STEP = 2;
 const BACK_MAX = 20;
 

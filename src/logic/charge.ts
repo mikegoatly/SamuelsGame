@@ -30,3 +30,6 @@ export function stepCharge(state: ChargeState, now: number, distance: number, t:
   if (state.phase === 'dash') return { state: { phase: 'recover', until: now + t.recoverMs }, event: 'recover' };
   return { state: { phase: 'stalk', until: now }, event: 'stalk' };
 }
+
+/** Assassins fade while stalking and show themselves as they commit to the strike. */
+export const cloakAlpha = (phase: ChargePhase, faint: number): number => (phase === 'stalk' ? faint : 1);

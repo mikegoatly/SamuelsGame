@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { bandit, getEnemy, mummy, sandWyrm, stoneGuardian, type EnemyDef } from '../src/content/enemies';
+import { bandit, getEnemy, madKing, mummy, palaceGuard, sandWyrm, stoneGuardian, type EnemyDef } from '../src/content/enemies';
 import { desert } from '../src/content/levels/desert';
+import { palace } from '../src/content/levels/palace';
 import { ruins } from '../src/content/levels/ruins';
-import { apprenticeStaff, brokenWand } from '../src/content/weapons';
+import { apprenticeStaff, brokenWand, goldenSword } from '../src/content/weapons';
+import { FIREBALL, fireballDamage } from '../src/logic/fireball';
 import { damageToEnemy, damageToPlayer, enemyMaxHp, playerMaxHp } from '../src/logic/combat';
 
 describe('stone guardian balance', () => {
@@ -91,5 +93,95 @@ describe('desert enemy balance', () => {
     for (const level of MONSTER_LEVELS) {
       expect(damageToPlayer(bandit.baseDamage, level, level) * bandit.spread!.count).toBeLessThan(playerMaxHp(level) * 0.4);
     }
+  });
+});
+
+describe('palace enemy balance', () => {
+  const shotsPerSecond = 1000 / brokenWand.fireRateMs;
+  const MONSTER_LEVELS = [10, 11, 12, 13, 14, 15];
+  const pool = palace.enemyPool.map((e) => getEnemy(e.enemyId));
+  const secondsToKill = (def: EnemyDef, monsterLevel: number, playerLevel: number, damageTaken = 1): number =>
+    enemyMaxHp(def.baseHp, monsterLevel) / (damageToEnemy(brokenWand.baseDamage, playerLevel, monsterLevel) * damageTaken * shotsPerSecond);
+  const frontal = (def: EnemyDef): number => 1 - (def.shield?.reduction ?? 0);
+  const hitsToDie = (def: EnemyDef, monsterLevel: number, playerLevel: number): number =>
+    playerMaxHp(playerLevel) / damageToPlayer(def.baseDamage, monsterLevel, playerLevel);
+
+  it('every enemy dies in a sane time to an on-level wand; the shielded guard takes longer head-on', () => {
+    for (const def of pool) {
+      for (const level of MONSTER_LEVELS) {
+        const flank = secondsToKill(def, level, level);
+        expect(flank, `${def.id} L${level}`).toBeGreaterThanOrEqual(0.3);
+        expect(flank, `${def.id} L${level}`).toBeLessThanOrEqual(def.id === 'palaceGuard' ? 4.5 : 3.5);
+        if (def.id === 'palaceGuard') expect(secondsToKill(def, level, level, frontal(def)), `${def.id} L${level} front`).toBeLessThanOrEqual(10);
+      }
+    }
+    for (const level of MONSTER_LEVELS) {
+      for (const def of pool.filter((d) => d.id !== 'palaceGuard')) expect(secondsToKill(palaceGuard, level, level)).toBeGreaterThan(secondsToKill(def, level, level));
+    }
+  });
+
+  it('stays killable when a few levels behind: level 15 monsters vs a level 11 player take at most 14s unshielded', () => {
+    for (const def of pool) expect(secondsToKill(def, 15, 11), def.id).toBeLessThanOrEqual(14);
+  });
+
+  it('an on-level player (9 to 15) survives at least 5 contact hits, and 3 even when 2 levels behind', () => {
+    for (const def of pool) {
+      for (const level of MONSTER_LEVELS) {
+        expect(hitsToDie(def, level, level), `${def.id} L${level}`).toBeGreaterThanOrEqual(5);
+        expect(hitsToDie(def, level, Math.max(9, level - 2)), `${def.id} L${level} behind`).toBeGreaterThanOrEqual(3);
+      }
+    }
+  });
+
+  it('archer arrows and mage orbs take at least 8 hits to kill an on-level player', () => {
+    for (const id of ['royalArcher', 'darkMage']) {
+      for (const level of MONSTER_LEVELS) expect(hitsToDie(getEnemy(id), level, level), `${id} L${level}`).toBeGreaterThanOrEqual(8);
+    }
+  });
+});
+
+describe('mad king balance', () => {
+  const level = palace.bossLevel!;
+  const hp = enemyMaxHp(madKing.baseHp, level);
+  const secondsToKill = (playerLevel: number, accuracy: number): number => {
+    const wand = damageToEnemy(brokenWand.baseDamage, playerLevel, level) * (1000 / brokenWand.fireRateMs) * accuracy;
+    const fire = (fireballDamage(brokenWand.baseDamage, playerLevel, level) / (FIREBALL.cooldownMs / 1000)) * accuracy;
+    return hp / (wand + fire);
+  };
+
+  it('is a level 16 boss', () => {
+    expect(level).toBe(16);
+  });
+
+  it('takes a level 14-15 player with the broken wand and fireballs 90-110s at ~50% uptime', () => {
+    for (const playerLevel of [14, 15]) {
+      expect(secondsToKill(playerLevel, 0.5), `level ${playerLevel}`).toBeGreaterThanOrEqual(90);
+      expect(secondsToKill(playerLevel, 0.5), `level ${playerLevel}`).toBeLessThanOrEqual(110);
+    }
+  });
+
+  it('its blade ring bolts take at least 6 hits to kill an on-level player and a lunge at least 4', () => {
+    expect(playerMaxHp(15) / damageToPlayer(madKing.boltDamage!, level, 15)).toBeGreaterThanOrEqual(6);
+    expect(playerMaxHp(15) / damageToPlayer(madKing.slamDamage!, level, 15)).toBeGreaterThanOrEqual(4);
+  });
+});
+
+describe('golden sword balance', () => {
+  const dpsAtGap0 = (level: number) => ({
+    wand: damageToEnemy(brokenWand.baseDamage, level, level) * (1000 / brokenWand.fireRateMs),
+    sword: damageToEnemy(goldenSword.baseDamage, level, level) * (1000 / goldenSword.fireRateMs),
+  });
+
+  it('has higher single-target DPS than the wand at every palace level, but only within a short reach', () => {
+    for (let level = 9; level <= 15; level++) {
+      const { wand, sword } = dpsAtGap0(level);
+      expect(sword / wand, `level ${level}`).toBeGreaterThan(1.3);
+      expect(sword / wand, `level ${level}`).toBeLessThan(2);
+    }
+    expect(goldenSword.melee!.reach).toBeLessThan(brokenWand.range / 5);
+  });
+
+  it('hits for about 2.2x a wand bolt', () => {
+    expect(damageToEnemy(goldenSword.baseDamage, 12, 12) / damageToEnemy(brokenWand.baseDamage, 12, 12)).toBeCloseTo(2.2, 1);
   });
 });

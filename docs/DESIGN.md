@@ -18,7 +18,7 @@ Rushing ahead means under-levelled player → damage dealt reduced, damage taken
 |---|------|-------------|-------------|--------|
 | 1 | Broken Wand | Ruins | 1–4 | Broken Wand (basic magic bolt) |
 | 2 | Lost Desert | Desert | 5–9 | Wand power: Fireball |
-| 3 | Killer Palace | Palace | 10–15 | Golden Sword |
+| 3 | Killer Palace | Palace | 10–15 | Golden Sword (melee) |
 | 4+ | (future) | … | … | … → Ultimate Boss |
 
 Each level config (`src/content/levels/*.ts`): id, name, tilemap key, music, enemy pool + spawn
@@ -27,7 +27,10 @@ weights, monster level range, boss id, reward id, unlock requirement (previous l
 ## 3. Player
 
 - Stats: HP, move speed, level, XP, dash (cooldown), inventory.
-- Weapons: slot-based. Start with fists/stick → Broken Wand → Wand+Fireball (alt fire) → Golden Sword (melee).
+- Weapons (`content/weapons.ts`, `kind: 'ranged' | 'melee'`): Apprentice Staff -> Broken Wand (+Fireball alt-fire, needs `castsPowers`) -> Golden Sword.
+  Golden Sword: base 22 (2.2x a wand bolt), swing every 350ms, ~100 degree cone, reach 28px to the target's body edge, each enemy hit once per
+  swing (`logic/melee.ts`, angle-wrap safe), knockback 2.4x, and it swats enemy bolts inside the cone (`systems/MeleeSystem`). DPS ~1.57x the wand but only at close range.
+  Owned weapons cycle with Q / mouse wheel / gamepad Y, LB, RB / touch swap button (`logic/weaponCycle.ts`, `systems/WeaponSwitcher`); the equipped weapon is saved and shown in the HUD.
 - Weapon damage = `base × (1 + 0.12 × (playerLevel − 1))` × item modifiers.
 
 ## 4. Progression maths (pure functions, unit tested)
@@ -65,6 +68,7 @@ MainMenu -> LevelSelect (2x2 cards, Back) -> Game {levelId}; GameOver (Retry / L
 | Aim + fire | Mouse + LMB | Right virtual stick (fires past ~50% deflection) | Right stick (auto-fires past ~50%) or RT |
 | Alt fire (Fireball) | RMB | Button | LT |
 | Dash | Space | Button | A |
+| Swap weapon | Q / mouse wheel | Small button under Dash (once 2+ weapons) | Y / RB (next), LB (previous) |
 | Pause | Esc | Button (top right) | Start |
 
 Touch (`TouchSource`): floating twin sticks. A touch starting in the left half spawns the move stick, the right half the
@@ -164,3 +168,18 @@ tests/                    Vitest specs for logic/
   (broken wand). Status is published in the registry for the HUD bar (bottom-left) and the touch button (hidden when locked, greyed with a pie when cooling).
 - Quicksand: `hazard` objects become slow zones (50% speed, `logic/hazards.ts`) drawn as dark sand pits.
 - Save v3 adds `powers.unlocked`; `LevelCompleteScene` shows a reward line ("Fireball unlocked!" / "Broken Wand acquired!") from `content/rewards.ts`.
+
+## 11. Level 3 flow (M6)
+
+- Palace: `PALACE_THEME` + `PALACE_PRESET` (5x2 grid mirrored from the desert: start on the right, six odd-sized symmetric combat rooms, throne room spanning two cells).
+  `LayoutPreset.symmetric` centres rooms on their corridor lines, mirrors cover into four quadrants and lines the throne room with a mirrored colonnade;
+  `placeSpikeTraps` adds mirrored pairs of timed spike traps and `throneTiles` the boss teleport points (`throne` objects). Ground is a tinted checkerboard
+  (per-tile tint, `EnvironmentTint.checker`), walls grey brick with banners, statues as cover. Monster levels 10-15 (2/2/2/2/3/3 waves). Music `palace.mp3` (Montage), boss `boss-palace.mp3` (Hard Rock).
+- Spike traps (`logic/spikes.ts`, `systems/SpikeSystem`): 3.2s cycle on the pause-safe GameClock, down -> 0.7s red-blinking warning -> up 0.9s; only up spikes hurt (14% max HP, i-frames and dash respected).
+- Enemies: palaceGuard (shield: frontal hits take 55% less, shield turns at 1.3 rad/s so flanking works; `logic/shield.ts`), royalArcher (`leadAim` predictive shots),
+  darkMage (`logic/blink.ts`: blinks 85px when the player is within 62px, then fires a slow homing orb; `logic/angle.ts steerToward`), assassin (charger, alpha 0.14 while stalking via `cloakAlpha`, revealed on windup/hit).
+  Palace loot pays 3.5-4 coins/kill, 11-17% large potions, 6-10% charms.
+- Mad King (Lv16, base HP 1190 = 5652, scale 3): phase 1 lunge (0.7s red lane, 400ms dash, `lunge` attack), 12-bolt spinning ring, 2 guards every 24s; phase 2 (<=50%, x1.25 speed) adds teleport between three thrones
+  (vanish 0.8s, warning ring at the destination, shockwave on arrival; destinations clamped to the arena and unblocked) and 24-bolt double spirals (`spiralVolley`). The brain keeps the running sequence in `BossState.current`,
+  so a phase change mid-lunge/hide always finishes it; hidden time pushes every other timer back. A Lv14-15 player with wand + fireballs needs ~90-108s at 50% uptime.
+- Clearing it grants and equips the Golden Sword ("Golden Sword acquired!"). `ultimate` (comingSoon, no map) shows as a locked "??? / The Ultimate Boss awaits / Coming soon" card once the palace is cleared (`visibleLevels`); a level 4 is a new config + theme + preset.

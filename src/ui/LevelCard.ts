@@ -17,6 +17,7 @@ const ENVIRONMENT_COLOR: Record<Environment, number> = {
   ruins: 0x7ca08c,
   desert: 0xd0a860,
   palace: 0xa070e0,
+  unknown: 0xe0a040,
 };
 
 export class LevelCard implements MenuItem {
@@ -38,10 +39,18 @@ export class LevelCard implements MenuItem {
     const left = x - width / 2 + 10;
     const alpha = state.unlocked ? 1 : 0.45;
     const top = y - height / 2;
-    this.line(left, top + 14, level.name, 16, '#ffffff').setAlpha(alpha);
-    this.line(left, top + 36, `${level.environment}, recommended Lv ${level.recommendedLevel}`, 16, '#c8c8e0').setAlpha(alpha);
-    this.line(left, top + 56, `Monsters Lv ${level.monsterLevelRange[0]}-${level.monsterLevelRange[1]}`, 16, '#9a9ab8').setAlpha(alpha);
-    this.status(left, top + 80);
+    const compact = height < 90;
+    const size = compact ? 14 : 16;
+    const rows = compact ? [12, 30, 48, 65] : [14, 36, 56, 80];
+    this.line(left, top + rows[0]!, level.name, size, '#ffffff').setAlpha(alpha);
+    if (level.comingSoon) {
+      this.line(left, top + rows[1]!, level.tagline ?? '', size, '#d8c8f0');
+      this.line(left, top + rows[3]!, 'Coming soon', size, '#9a9ab8');
+      return;
+    }
+    this.line(left, top + rows[1]!, `${level.environment}, recommended Lv ${level.recommendedLevel}`, size, '#c8c8e0').setAlpha(alpha);
+    this.line(left, top + rows[2]!, `Monsters Lv ${level.monsterLevelRange[0]}-${level.monsterLevelRange[1]}`, size, '#9a9ab8').setAlpha(alpha);
+    this.status(left, top + rows[3]!, size);
   }
 
   setFocused(focused: boolean): void {
@@ -56,16 +65,16 @@ export class LevelCard implements MenuItem {
     this.scene.tweens.add({ targets: this.area, x: this.area.x + 4, duration: 50, yoyo: true, repeat: 2 });
   }
 
-  private status(x: number, y: number): void {
+  private status(x: number, y: number, size: number): void {
     const { state, level } = this;
     if (!state.unlocked) {
-      this.line(x, y, `Locked: clear ${state.requirementName ?? 'previous'}`, 16, '#9a9ab8');
+      this.line(x, y, `Locked: clear ${state.requirementName ?? 'previous'}`, size, '#9a9ab8');
     } else if (isUnderLevelled(state.playerLevel, level.recommendedLevel)) {
-      this.line(x, y, `Under-levelled!${state.cleared ? '  (cleared)' : ''}`, 16, '#ff5a5a');
+      this.line(x, y, `Under-levelled!${state.cleared ? '  (cleared)' : ''}`, size, '#ff5a5a');
     } else if (state.cleared) {
-      this.line(x, y, 'CLEARED', 16, '#7dffb0');
+      this.line(x, y, 'CLEARED', size, '#7dffb0');
     } else {
-      this.line(x, y, 'Ready', 16, '#ffe066');
+      this.line(x, y, 'Ready', size, '#ffe066');
     }
   }
 

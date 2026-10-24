@@ -1,4 +1,4 @@
-import { rectCenter, type Rect } from './geometry';
+import { rectCenter, type Point, type Rect } from './geometry';
 import { RUINS_PRESET, type CellPlan, type LayoutPreset, type Range } from './layoutPresets';
 import { randInt } from './rng';
 
@@ -53,14 +53,21 @@ function placeAxis(rng: () => number, origin: number, extent: number, centre: nu
   return [randInt(rng, lo, hi), length];
 }
 
-function placeRoom(rng: () => number, plan: CellPlan, index: number): LayoutRoom {
+/** Odd length (largest allowed) centred on `centre`, so the room mirrors about its corridor line. */
+function centreAxis(centre: number, extent: number, size: Range): [number, number] {
+  let length = Math.min(size[1], extent - 2 * MARGIN);
+  if (length % 2 === 0) length -= 1;
+  return [centre - (length - 1) / 2, length];
+}
+
+function placeRoom(rng: () => number, plan: CellPlan, index: number, symmetric = false): LayoutRoom {
   const x0 = plan.col * CELL_W;
   const y0 = plan.row * CELL_H;
   const width = plan.span * CELL_W;
   const cx = x0 + width / 2;
   const cy = y0 + CELL_H / 2;
-  const [x, w] = placeAxis(rng, x0, width, cx, plan.w);
-  const [y, h] = placeAxis(rng, y0, CELL_H, cy, plan.h);
+  const [x, w] = symmetric ? centreAxis(cx, width, plan.w) : placeAxis(rng, x0, width, cx, plan.w);
+  const [y, h] = symmetric ? centreAxis(cy, CELL_H, plan.h) : placeAxis(rng, y0, CELL_H, cy, plan.h);
   return { index, kind: plan.kind, rect: { x, y, w, h }, cx, cy };
 }
 
@@ -85,7 +92,7 @@ const clearOfCorridors = (room: LayoutRoom, x: number, y: number): boolean => Ma
 const insideInset = (rect: Rect, x: number, y: number, inset: number): boolean =>
   x >= rect.x + inset && x < rect.x + rect.w - inset && y >= rect.y + inset && y < rect.y + rect.h - inset;
 
-const SHAPES: [number, number][][] = [[[0, 0]], [[0, 0], [1, 0]], [[0, 0], [0, 1]]];
+const SHAPES: [number, number][][] = [[[0, 0]], [[0, 0], [1, 0]], [[0, 0], [0, 1]], [[0, 0], [1, 0]], [[0, 0], [1, 0], [0, 1], [1, 1]]];
 
 function combatPillars(rng: () => number, room: LayoutRoom, cover: LayoutPreset['cover']): Pillar[] {
   const { rect } = room;
@@ -105,6 +112,55 @@ function combatPillars(rng: () => number, room: LayoutRoom, cover: LayoutPreset[
   return tiles;
 }
 
+const MIRROR_ATTEMPTS = 80;
+
+/** Cover placed in one quadrant and mirrored into the other three, clear of the corridor lines. */
+function mirroredPillars(rng: () => number, room: LayoutRoom, cover: LayoutPreset['cover']): Pillar[] {
+  const { rect } = room;
+  const tiles = new Map<string, Pillar>();
+  const target = Math.max(2, Math.floor((cover.base + Math.floor((rect.w * rect.h) / cover.divisor)) / 4) + 1);
+  let placed = 0;
+  for (let attempt = 0; attempt < MIRROR_ATTEMPTS && placed < target; attempt++) {
+    const x = randInt(rng, rect.x + 2, room.cx - 3);
+    const y = randInt(rng, rect.y + 2, room.cy - 3);
+    const roll = rng();
+    const shape = SHAPES[roll < 0.5 ? 0 : roll < 0.75 ? 3 : 4]!;
+    const cells = shape.map(([dx, dy]) => ({ x: x + dx, y: y + dy }));
+    const ok = cells.every((c) => c.x <= room.cx - 3 && c.y <= room.cy - 3 && insideInset(rect, c.x, c.y, 2));
+    const spaced = cells.every((c) => [...tiles.values()].every((t) => Math.max(Math.abs(t.x - c.x), Math.abs(t.y - c.y)) >= 3 || (t.x === c.x && t.y === c.y)));
+    if (!ok || !spaced) continue;
+    placed++;
+    for (const c of cells) {
+      for (const mx of [c.x, 2 * room.cx - c.x]) for (const my of [c.y, 2 * room.cy - c.y]) tiles.set(`${mx},${my}`, { room: room.index, x: mx, y: my });
+    }
+  }
+  return [...tiles.values()];
+}
+
+/** Two 2x2 colonnade rows either side of the throne room's centre line, mirrored left-right. */
+function colonnade(room: LayoutRoom): Pillar[] {
+  const tiles: Pillar[] = [];
+  for (const dx of [5, 11]) {
+    for (const sx of [-1, 1]) {
+      for (const sy of [-1, 1]) {
+        for (let i = 0; i < 2; i++) {
+          for (let j = 0; j < 2; j++) tiles.push({ room: room.index, x: room.cx + sx * (dx + i), y: room.cy + sy * (3 + j) });
+        }
+      }
+    }
+  }
+  return tiles;
+}
+
+/** Thrones the boss teleports between: both corners and the back of the room, in tile coordinates. */
+export function throneTiles(room: LayoutRoom): Point[] {
+  return [
+    { x: room.cx - 17, y: room.cy - 5 },
+    { x: room.cx, y: room.cy - 5 },
+    { x: room.cx + 17, y: room.cy - 5 },
+  ];
+}
+
 function bossPillars(room: LayoutRoom): Pillar[] {
   const mid = rectCenter(room.rect);
   const tiles: Pillar[] = [];
@@ -120,9 +176,11 @@ function bossPillars(room: LayoutRoom): Pillar[] {
 }
 
 export function generateLayout(rng: () => number, preset: LayoutPreset = RUINS_PRESET): DungeonLayout {
-  const rooms = preset.plan.map((plan, index) => placeRoom(rng, plan, index));
+  const rooms = preset.plan.map((plan, index) => placeRoom(rng, plan, index, preset.symmetric));
   const links = rooms.slice(1).map((room, i) => connect(rooms[i]!, room));
-  const pillars = rooms.flatMap((room) => (room.kind === 'combat' ? combatPillars(rng, room, preset.cover) : room.kind === 'boss' ? bossPillars(room) : []));
+  const combat = preset.symmetric ? mirroredPillars : combatPillars;
+  const boss = preset.symmetric ? colonnade : bossPillars;
+  const pillars = rooms.flatMap((room) => (room.kind === 'combat' ? combat(rng, room, preset.cover) : room.kind === 'boss' ? boss(room) : []));
   return {
     cols: preset.gridCols * CELL_W,
     rows: preset.gridRows * CELL_H,
@@ -191,6 +249,41 @@ function patchFits(room: LayoutRoom, patch: Rect, solid: Set<string>, others: Re
   }
   for (let y = patch.y; y < patch.y + patch.h; y++) {
     for (let x = patch.x; x < patch.x + patch.w; x++) if (Math.abs(x - room.cx) <= 1 || Math.abs(y - room.cy) <= 1) return false;
+  }
+  return !others.some((o) => o.x < patch.x + patch.w + 1 && patch.x < o.x + o.w + 1 && o.y < patch.y + patch.h + 1 && patch.y < o.y + o.h + 1);
+}
+
+/** Mirrored pairs (left-right) of spike-trap rects per combat room, off the corridor lines, cover and `taken` patches. */
+export function placeSpikeTraps(layout: DungeonLayout, rng: () => number, pairsPerRoom: number, taken: Rect[]): Rect[] {
+  if (pairsPerRoom <= 0) return [];
+  const solid = new Set(layout.pillars.map((p) => `${p.x},${p.y}`));
+  const traps: Rect[] = [];
+  for (const room of layout.rooms.filter((r) => r.kind === 'combat')) {
+    for (let n = 0; n < pairsPerRoom; n++) {
+      for (let attempt = 0; attempt < PATCH_ATTEMPTS * 3; attempt++) {
+        const w = randInt(rng, 2, 3);
+        const h = randInt(rng, 2, 3);
+        const x = randInt(rng, room.rect.x + 2, room.cx - 2 - w);
+        const y = randInt(rng, room.rect.y + 2, room.rect.y + room.rect.h - 2 - h);
+        const left = { x, y, w, h };
+        const right = { x: 2 * room.cx - (x + w - 1), y, w, h };
+        const others = [...taken, ...traps];
+        if (trapFits(room, left, solid, others) && trapFits(room, right, solid, others)) {
+          traps.push(left, right);
+          break;
+        }
+      }
+    }
+  }
+  return traps;
+}
+
+/** Walkable hazards may sit right beside cover, but never on it, on the corridor lanes or touching another patch. */
+function trapFits(room: LayoutRoom, patch: Rect, solid: Set<string>, others: Rect[]): boolean {
+  for (let y = patch.y; y < patch.y + patch.h; y++) {
+    for (let x = patch.x; x < patch.x + patch.w; x++) {
+      if (solid.has(`${x},${y}`) || Math.abs(x - room.cx) <= 1 || Math.abs(y - room.cy) <= 1) return false;
+    }
   }
   return !others.some((o) => o.x < patch.x + patch.w + 1 && patch.x < o.x + o.w + 1 && o.y < patch.y + patch.h + 1 && patch.y < o.y + o.h + 1);
 }

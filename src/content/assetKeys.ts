@@ -20,18 +20,23 @@ export const Sfx = {
 export const Music = {
   ruins: 'music-ruins',
   desert: 'music-desert',
+  palace: 'music-palace',
+  bossPalace: 'music-boss-palace',
   boss: 'music-boss',
 } as const;
 
 export const MapKey = {
   ruins: 'ruins',
   desert: 'desert',
+  palace: 'palace',
 } as const;
 
 /** Music cache key -> file under assets/. */
 export const MUSIC_FILES: Record<string, string> = {
   [Music.ruins]: 'music/ruins.mp3',
   [Music.desert]: 'music/desert.mp3',
+  [Music.palace]: 'music/palace.mp3',
+  [Music.bossPalace]: 'music/boss-palace.mp3',
   [Music.boss]: 'music/boss.mp3',
 };
 
@@ -79,6 +84,13 @@ export const Frame = {
   hooded: 111,
   bandit: 112,
   serpent: 123,
+  knightVisor: 97,
+  knightGrey: 100,
+  horned: 87,
+  throne: 55,
+  banner: 29,
+  statue: [64, 65, 41] as readonly number[],
+  shield: 102,
 } as const;
 
 /** Kenney Onscreen Controls "flat-dark" atlas frames. */
@@ -87,5 +99,6 @@ export const ControlFrame = {
   stickKnob: 'flatDark00.png',
   dash: 'flatDark24.png',
   altFire: 'flatDark27.png',
+  swap: 'flatDark28.png',
   fullscreen: 'flatDark29.png',
 } as const;

@@ -1,14 +1,18 @@
 import Phaser from 'phaser';
-import { FONT, Sfx, Tex } from '../content/assetKeys';
+import { FONT, Frame, Sfx, Tex } from '../content/assetKeys';
 import type { EnemyDef } from '../content/enemies';
 import { damageToPlayer, enemyMaxHp } from '../logic/combat';
-import { chargeLaneLength, newChargeState, stepCharge, type ChargeState, type ChargeTuning } from '../logic/charge';
+import { leadAim } from '../logic/aim';
+import { steerToward } from '../logic/angle';
+import { newBlinkState, pickBlinkPoint, stepBlink, type BlinkState } from '../logic/blink';
+import { chargeLaneLength, cloakAlpha, newChargeState, stepCharge, type ChargeState, type ChargeTuning } from '../logic/charge';
 import { rangedStance, spreadDirections } from '../logic/enemyAi';
 import { lineClear } from '../logic/lineOfSight';
+import { isFrontal, shieldedDamage } from '../logic/shield';
 import type { GameClock } from '../systems/GameClock';
 import type { GameEvents } from '../systems/GameEvents';
 import { floatText } from '../systems/floatText';
-import type { EnemyProjectiles } from './EnemyProjectile';
+import type { EnemyProjectiles, ShotStyle } from './EnemyProjectile';
 import type { Player } from './Player';
 
 const CONTACT_COOLDOWN_MS = 900;
@@ -21,6 +25,12 @@ const SHOT_RANGE = 260;
 const SHOOT_DISTANCE = 220;
 const DEFAULT_CHARGE: ChargeTuning = { triggerRange: 110, windupMs: 600, dashMs: 380, recoverMs: 800, dashSpeed: 280 };
 const WINDUP_TINT = 0xff5a3a;
+const SHIELD_TINT = 0xc8d8ff;
+const HIT_REVEAL_MS = 600;
+const ORB_SCALE = 1.35;
+const ORB_TINT = 0xc070ff;
+const ORB_RANGE = 320;
+const BODY_RADIUS = 7;
 
 export interface EnemyContext {
   target: Player;
@@ -53,6 +63,12 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
   private charge: ChargeState = newChargeState();
   private chargeDirection = new Phaser.Math.Vector2(1, 0);
   private lane?: Phaser.GameObjects.Rectangle;
+  private blink: BlinkState = newBlinkState();
+  /** Tint that survives the hit flash (e.g. a boss winding up a lunge). */
+  protected forcedTint: number | null = null;
+  private facing = 0;
+  private revealedUntil = 0;
+  private readonly shieldImage?: Phaser.GameObjects.Image;
 
   constructor(
     scene: Phaser.Scene,
@@ -80,6 +96,8 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     this.baseTint = def.tint ?? (gap >= LEVEL_GAP_TINT ? 0xff8080 : gap <= -LEVEL_GAP_TINT ? 0x9a9a9a : null);
     this.applyBaseTint();
 
+    if (def.shield) this.shieldImage = scene.add.image(x, y, Tex.tiles, Frame.shield).setDepth(6).setTint(SHIELD_TINT).setScale(0.9);
+
     this.label = scene.add
       .text(x, y, `Lv${level}`, { fontFamily: FONT, fontSize: '8px', color: '#d8d8e8', stroke: '#14121c', strokeThickness: 2 })
       .setOrigin(0.5)
@@ -90,7 +108,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
 
   /** False while the enemy cannot be hurt (e.g. a boss under the sand); bolts pass through. */
   get targetable(): boolean {
-    return this.alive;
+    return this.alive && this.blink.phase !== 'vanish';
   }
 
   override preUpdate(time: number, delta: number): void {
@@ -98,7 +116,30 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     if (!this.alive) return;
     const now = this.clock.now;
     if (now >= this.knockbackUntil) this.act(now);
+    if (this.def.shield) this.updateShield(delta);
+    this.applyCloak(now);
     this.label.setPosition(this.x, this.y - this.displayHeight / 2 - 2);
+  }
+
+  /** The shield swings slowly toward the player, so circling round the back works. */
+  private updateShield(delta: number): void {
+    const { shield } = this.def;
+    if (!shield || !this.shieldImage) return;
+    this.facing = steerToward(this.facing, Math.atan2(this.target.y - this.y, this.target.x - this.x), (shield.turnRate * delta) / 1000);
+    this.shieldImage
+      .setPosition(this.x + Math.cos(this.facing) * 9, this.y + Math.sin(this.facing) * 9 + 1)
+      .setRotation(this.facing)
+      .setVisible(this.alive && this.blink.phase !== 'vanish')
+      .setAlpha(this.alpha);
+  }
+
+  /** Assassins fade while stalking; a fresh hit shows them briefly. */
+  private applyCloak(now: number): void {
+    const { cloak } = this.def;
+    if (cloak === undefined || !this.armed || this.def.behaviour !== 'charger') return;
+    const alpha = now < this.revealedUntil ? 1 : cloakAlpha(this.charge.phase, cloak);
+    this.setAlpha(alpha);
+    this.label.setAlpha(Math.min(0.8, alpha));
   }
 
   tryContact(player: Player): void {
@@ -108,10 +149,16 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     if (applied) this.nextContactAt = now + CONTACT_COOLDOWN_MS;
   }
 
-  takeHit(amount: number, directionX: number, directionY: number): void {
+  /** `direction` is the way the blow travels; `knockback` scales the shove (sword > bolt). */
+  takeHit(amount: number, directionX: number, directionY: number, knockback = 1): void {
     if (!this.alive) return;
-    this.hp -= amount;
-    floatText(this.scene, this.x, this.y - this.displayHeight / 2, String(amount), '#ffe066');
+    const { shield } = this.def;
+    const blocked = shield !== undefined && isFrontal(this.facing, { x: -directionX, y: -directionY }, shield.arc);
+    const dealt = shield ? shieldedDamage(amount, blocked, shield.reduction) : amount;
+    this.hp -= dealt;
+    this.revealedUntil = this.clock.now + HIT_REVEAL_MS;
+    floatText(this.scene, this.x, this.y - this.displayHeight / 2, String(dealt), blocked ? '#9ab4ff' : '#ffe066');
+    if (blocked) this.flashShield();
     this.scene.sound.play(Sfx.hit, { volume: 0.4 });
     if (this.hp <= 0) {
       this.die();
@@ -119,7 +166,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     }
     this.cancelDash();
     if (!this.def.boss) {
-      const knock = new Phaser.Math.Vector2(directionX, directionY).normalize().scale(KNOCKBACK_SPEED);
+      const knock = new Phaser.Math.Vector2(directionX, directionY).normalize().scale(KNOCKBACK_SPEED * knockback);
       this.setVelocity(knock.x, knock.y);
       this.knockbackUntil = this.clock.now + KNOCKBACK_MS;
     }
@@ -127,8 +174,15 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     this.scene.time.delayedCall(80, () => this.alive && this.applyBaseTint());
   }
 
+  private flashShield(): void {
+    if (!this.shieldImage) return;
+    this.shieldImage.setTint(0xffffff);
+    this.scene.time.delayedCall(90, () => this.shieldImage?.active && this.shieldImage.setTint(SHIELD_TINT));
+  }
+
   protected act(time: number): void {
-    if (this.def.behaviour === 'ranged') this.kite(time);
+    if (this.def.behaviour === 'mage') this.castMage(time);
+    else if (this.def.behaviour === 'ranged') this.kite(time);
     else if (this.def.behaviour === 'charger') this.chargeAt(time);
     else this.chase(time);
   }
@@ -215,11 +269,55 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     this.setFlipX(dx < 0);
     if (this.armed && time >= this.nextShotAt && distance <= SHOOT_DISTANCE) {
       this.nextShotAt = time + (this.def.fireEveryMs ?? 1800);
-      const damage = damageToPlayer(this.def.baseDamage, this.level, this.target.level);
-      const { count, arc } = this.def.spread ?? { count: 1, arc: 0 };
-      for (const d of spreadDirections(ux, uy, count, arc)) this.shots.fire(this.x, this.y, d.x, d.y, this.def.shotSpeed ?? 70, damage, SHOT_RANGE);
-      this.scene.sound.play(Sfx.shoot, { volume: 0.15, rate: 0.6 });
+      this.shoot(ux, uy);
     }
+  }
+
+  /** One volley at the player; archers lead their target, mages fire slow homing orbs. */
+  private shoot(ux: number, uy: number): void {
+    const damage = damageToPlayer(this.def.baseDamage, this.level, this.target.level);
+    const speed = this.def.shotSpeed ?? 70;
+    const aim = this.def.lead ? leadAim(this, this.target, (this.target.body as Phaser.Physics.Arcade.Body).velocity, speed) : { x: ux, y: uy };
+    const { count, arc } = this.def.spread ?? { count: 1, arc: 0 };
+    const homing = this.def.homing;
+    const style: ShotStyle | undefined = homing ? { tint: ORB_TINT, scale: ORB_SCALE, homing: { ...homing, target: this.target } } : undefined;
+    for (const d of spreadDirections(aim.x, aim.y, count, arc)) this.shots.fire(this.x, this.y, d.x, d.y, speed, damage, homing ? ORB_RANGE : SHOT_RANGE, style);
+    this.scene.sound.play(Sfx.shoot, { volume: 0.15, rate: homing ? 0.45 : 0.6 });
+  }
+
+  /** Dark mage: kites and lobs orbs, but blinks away (hidden for a moment) when the player closes in, then answers with an orb. */
+  private castMage(time: number): void {
+    const tuning = this.def.blink;
+    if (!tuning) return this.kite(time);
+    const distance = Phaser.Math.Distance.Between(this.x, this.y, this.target.x, this.target.y);
+    const step = stepBlink(this.blink, time, this.armed ? distance : Infinity, tuning);
+    this.blink = step.state;
+    if (step.event === 'vanish') {
+      this.nextShotAt = time + (this.def.fireEveryMs ?? 1800);
+      this.vanish();
+    }
+    else if (step.event === 'appear') this.appearElsewhere(tuning.distance);
+    else if (step.event === 'cast') {
+      this.nextShotAt = time + (this.def.fireEveryMs ?? 1800);
+      this.shoot(this.target.x - this.x, this.target.y - this.y);
+    }
+    if (this.blink.phase === 'vanish') this.setVelocity(0, 0);
+    else this.kite(time);
+  }
+
+  private vanish(): void {
+    this.setVelocity(0, 0);
+    this.conceal(true);
+    this.puff();
+    this.scene.sound.play(Sfx.shoot, { volume: 0.2, rate: 0.35 });
+  }
+
+  private appearElsewhere(distance: number): void {
+    const spot = pickBlinkPoint(this, this.target, distance, Math.random, this.isBlocked, BODY_RADIUS);
+    this.setPosition(spot.x, spot.y);
+    (this.body as Phaser.Physics.Arcade.Body).reset(spot.x, spot.y);
+    this.conceal(false);
+    this.puff();
   }
 
   /** Removes the enemy without death rewards (e.g. minions when their boss falls). */
@@ -235,6 +333,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     this.disableBody();
     this.clearLane();
     this.label.destroy();
+    this.shieldImage?.destroy();
     this.events.emit('enemy-died', this.level, this.x, this.y, this.def.lootTableId);
     this.puff();
     this.scene.tweens.killTweensOf(this);
@@ -247,7 +346,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     });
   }
 
-  private puff(): void {
+  protected puff(): void {
     const emitter = this.scene.add.particles(this.x, this.y, Tex.puff, {
       speed: { min: 20, max: 70 },
       lifespan: 350,
@@ -259,8 +358,9 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     this.scene.time.delayedCall(500, () => emitter.destroy());
   }
 
-  private applyBaseTint(): void {
+  protected applyBaseTint(): void {
     if (this.charge.phase === 'windup') this.setTint(WINDUP_TINT);
+    else if (this.forcedTint !== null) this.setTint(this.forcedTint);
     else if (this.baseTint === null) this.clearTint();
     else this.setTint(this.baseTint);
   }
@@ -268,6 +368,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
   override destroy(fromScene?: boolean): void {
     this.clearLane();
     this.label.destroy();
+    this.shieldImage?.destroy();
     super.destroy(fromScene);
   }
 }

@@ -18,6 +18,8 @@ export interface LayoutPreset {
   plan: CellPlan[];
   /** Combat-room cover target: `base + floor(area / divisor)` obstacles. */
   cover: { base: number; divisor: number };
+  /** Rooms are odd-sized and centred on their corridor lines; cover and the boss colonnade mirror left-right (and combat cover top-bottom). */
+  symmetric?: boolean;
 }
 
 /** Serpentine through a 4x2 grid: start -> r1..r3 along the top, r4, r5 back along the bottom, boss spans the last two cells. */
@@ -50,5 +52,23 @@ export const DESERT_PRESET: LayoutPreset = {
     { kind: 'combat', col: 4, row: 1, span: 1, w: [17, 20], h: [14, 16] },
     { kind: 'combat', col: 3, row: 1, span: 1, w: [18, 20], h: [14, 16] },
     { kind: 'boss', col: 1, row: 1, span: 2, w: [40, 46], h: [15, 16] },
+  ],
+};
+
+/** Mirror of the desert's 5x2 grid (start on the right): six grand symmetric combat rooms, then a throne room spanning cells 2-3 of the bottom row. */
+export const PALACE_PRESET: LayoutPreset = {
+  gridCols: 5,
+  gridRows: 2,
+  cover: { base: 2, divisor: 90 },
+  symmetric: true,
+  plan: [
+    { kind: 'start', col: 4, row: 0, span: 1, w: [9, 11], h: [9, 9] },
+    { kind: 'combat', col: 3, row: 0, span: 1, w: [17, 19], h: [13, 15] },
+    { kind: 'combat', col: 2, row: 0, span: 1, w: [17, 19], h: [13, 15] },
+    { kind: 'combat', col: 1, row: 0, span: 1, w: [19, 19], h: [15, 15] },
+    { kind: 'combat', col: 0, row: 0, span: 1, w: [19, 19], h: [15, 15] },
+    { kind: 'combat', col: 0, row: 1, span: 1, w: [19, 19], h: [15, 15] },
+    { kind: 'combat', col: 1, row: 1, span: 1, w: [19, 19], h: [15, 15] },
+    { kind: 'boss', col: 2, row: 1, span: 2, w: [43, 45], h: [15, 15] },
   ],
 };

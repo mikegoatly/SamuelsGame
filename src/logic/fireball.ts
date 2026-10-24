@@ -21,6 +21,8 @@ export const fireballDamage = (weaponBase: number, playerLevel: number, monsterL
   damageToEnemy(weaponBase * FIREBALL.damageMultiplier, playerLevel, monsterLevel, modifier);
 
 export interface FireballStatus {
+  /** The power is owned, whatever weapon is equipped. */
+  unlocked: boolean;
   available: boolean;
   ready: boolean;
   /** Cooldown progress, 0 just cast .. 1 ready. */
@@ -32,7 +34,7 @@ export function fireballStatus(input: { unlocked: boolean; castsPowers: boolean;
   const available = unlocked && castsPowers;
   const remaining = Math.max(0, readyAt - now);
   const fraction = Math.min(1, Math.max(0, 1 - remaining / FIREBALL.cooldownMs));
-  return { available, ready: available && remaining === 0, fraction: available ? fraction : 0 };
+  return { unlocked, available, ready: available && remaining === 0, fraction: available ? fraction : 0 };
 }
 
 export interface BlastTarget extends Point {

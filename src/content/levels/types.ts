@@ -1,6 +1,6 @@
 import type { LevelRange } from '../../logic/waves';
 
-export type Environment = 'ruins' | 'desert' | 'palace' | 'arena';
+export type Environment = 'ruins' | 'desert' | 'palace' | 'arena' | 'unknown';
 
 export interface LevelConfig {
   id: string;
@@ -18,4 +18,8 @@ export interface LevelConfig {
   mapKey?: string;
   music?: string;
   bossMusic?: string;
+  /** Teaser levels are listed but cannot be entered. */
+  comingSoon?: boolean;
+  /** Card subtitle for teaser levels. */
+  tagline?: string;
 }

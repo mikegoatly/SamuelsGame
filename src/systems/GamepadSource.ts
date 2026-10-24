@@ -13,7 +13,9 @@ export class GamepadSource implements InputSource {
   fire = false;
   altFire = false;
   dash = false;
+  weaponCycle = 0;
 
+  private swapHeld = false;
   private readonly lastAim = new Phaser.Math.Vector2(1, 0);
   private padAiming = false;
   private pointerX = 0;
@@ -27,8 +29,12 @@ export class GamepadSource implements InputSource {
   update(scene: Phaser.Scene): void {
     this.moveVector.reset();
     this.fire = this.altFire = this.dash = false;
+    this.weaponCycle = 0;
     const pad = this.activePad(scene);
-    if (!pad) return;
+    if (!pad) {
+      this.swapHeld = false;
+      return;
+    }
 
     const left = applyDeadzone(pad.leftStick.x, pad.leftStick.y);
     this.moveVector.set(
@@ -45,6 +51,15 @@ export class GamepadSource implements InputSource {
     this.fire = pastThreshold(pad.R2, TRIGGER_THRESHOLD) || pastThreshold(aimMagnitude, AIM_FIRE_THRESHOLD);
     this.altFire = pastThreshold(pad.L2, TRIGGER_THRESHOLD);
     this.dash = pad.A;
+    this.readSwap(pad);
+  }
+
+  /** Y or RB cycles forward, LB backward; edge-triggered. */
+  private readSwap(pad: Pad): void {
+    const forward = pad.Y || pad.R1 > TRIGGER_THRESHOLD;
+    const held = forward || pad.L1 > TRIGGER_THRESHOLD;
+    if (held && !this.swapHeld) this.weaponCycle = forward ? 1 : -1;
+    this.swapHeld = held;
   }
 
   rumble(durationMs: number, weak: number, strong: number): void {

@@ -13,6 +13,8 @@ export interface InputSource {
   readonly fire: boolean;
   readonly altFire: boolean;
   readonly dash: boolean;
+  /** +1 / -1 on the frame a weapon swap was requested, else 0. */
+  readonly weaponCycle: number;
   rumble?(durationMs: number, weak: number, strong: number): void;
 }
 
@@ -24,6 +26,7 @@ export class InputController {
   fire = false;
   altFire = false;
   dash = false;
+  weaponCycle = 0;
 
   private readonly sources: InputSource[];
 
@@ -38,6 +41,7 @@ export class InputController {
   update(scene: Phaser.Scene, origin: Phaser.Math.Vector2): void {
     this.moveVector.reset();
     this.fire = this.altFire = this.dash = false;
+    this.weaponCycle = 0;
 
     for (const source of this.sources) {
       source.update(scene);
@@ -45,6 +49,7 @@ export class InputController {
       this.fire ||= source.fire;
       this.altFire ||= source.altFire;
       this.dash ||= source.dash;
+      if (this.weaponCycle === 0) this.weaponCycle = source.weaponCycle;
       this.mergeAim(source, origin);
     }
     if (this.moveVector.lengthSq() > 1) this.moveVector.normalize();

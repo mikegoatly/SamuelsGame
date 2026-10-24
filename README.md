@@ -10,7 +10,7 @@ npm run dev        # http://localhost:5173
 npm run build      # typecheck + production build into dist/
 npm test           # Vitest (pure logic in src/logic)
 npm run typecheck
-npm run gen-maps   # regenerate public/assets/maps/*.tmj (ruins, desert) from tools/mapThemes.ts (deterministic seeds)
+npm run gen-maps   # regenerate public/assets/maps/*.tmj (ruins, desert, palace) from tools/mapThemes.ts (deterministic seeds)
 ```
 
 ## Controls
@@ -20,7 +20,8 @@ npm run gen-maps   # regenerate public/assets/maps/*.tmj (ruins, desert) from to
 | Move | WASD / arrows | Left half: floating stick | Left stick / D-pad |
 | Aim | Mouse | Right half: floating stick (last-used device wins) | Right stick |
 | Fire | Left mouse button | Right stick past ~50% | RT or right stick past ~50% |
-| Alt fire (Fireball, once unlocked) | Right mouse button | Star button, right edge (hidden until unlocked, greyed while cooling down) | LT |
+| Alt fire (Fireball, once unlocked; wand only) | Right mouse button | Star button, right edge (hidden until unlocked, greyed while cooling down or when a non-wand weapon is held) | LT |
+| Swap weapon | Q / mouse wheel | Small button under Dash (with 2+ weapons) | Y or RB (next), LB (previous) |
 | Dash | Space | Arrow button, right edge | A |
 | Pause | Esc | Pause button, top right | Start |
 | Menus | Mouse / arrows or WASD + Enter, Esc = back | Tap | D-pad / left stick + A, B = back |
@@ -75,3 +76,12 @@ bandits (3-bolt spread), mummies (slow tanks), vultures (erratic). The Sand Wyrm
 erupts under the player after a warning ring, spits bolt fans and, below 50% HP, calls scorpions. Its reward unlocks
 the Fireball power (`powers.unlocked` in the save): with a wand-type weapon, alt-fire throws a slow fireball that explodes on
 impact or at max range (radius 40, falloff to 40% at the edge, ~3x bolt damage, 2.5s cooldown). Clearing the desert unlocks the Palace.
+
+## Level 3: Killer Palace
+
+`public/assets/maps/palace.tmj` (theme `PALACE_THEME`, preset `PALACE_PRESET`): six grand symmetric combat rooms (monster Lv 10 to 15) with mirrored statue cover,
+timed spike traps (warning blink, then raised spikes hurt) and a throne room with a colonnade. Enemies: palace guards (shield blocks 55% from the front; get round the side),
+royal archers (lead their shots), dark mages (blink away when you get close, then fire slow homing orbs) and assassins (nearly invisible until they strike).
+The Mad King (Lv 16) lunges along a red lane, fires spinning blade rings, calls guards and, below 50% HP, teleports between thrones and fires spirals.
+Reward: the Golden Sword, a melee weapon (~100 degree swing, hits everything in the arc once, strong knockback, swats enemy bolts). Cycle weapons with Q / wheel / Y / swap button;
+the fireball only works with the wand. After clearing the palace a locked "???" card teases the next chapter. Music: `palace.mp3` and `boss-palace.mp3` (copied by `copy-assets`).
