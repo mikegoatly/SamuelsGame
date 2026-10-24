@@ -17,6 +17,6 @@ new Phaser.Game({
   roundPixels: true,
   input: { gamepad: true },
   physics: { default: 'arcade', arcade: { gravity: { x: 0, y: 0 } } },
-  scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH },
+  scale: { mode: Phaser.Scale.EXPAND, autoCenter: Phaser.Scale.CENTER_BOTH },
   scene: [BootScene, PreloadScene, GameScene, HudScene, GameOverScene],
 });

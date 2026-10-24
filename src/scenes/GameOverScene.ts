@@ -1,6 +1,5 @@
 import Phaser from 'phaser';
 import { FONT } from '../content/assetKeys';
-import { VIEW_HEIGHT, VIEW_WIDTH } from '../content/config';
 
 export interface GameOverData {
   level: number;
@@ -17,12 +16,20 @@ export class GameOverScene extends Phaser.Scene {
   }
 
   create(data: GameOverData): void {
-    const cx = VIEW_WIDTH / 2;
-    const cy = VIEW_HEIGHT / 2;
     this.cameras.main.fadeIn(300);
-    this.text(cx, cy - 50, 'You fell', 48, '#ff6b6b');
-    this.text(cx, cy + 4, `Reached level ${data.level} - wave ${data.wave}`, 20, '#ffffff');
-    const prompt = this.text(cx, cy + 56, 'Click / tap / press A to retry', 20, '#b48cff').setAlpha(0);
+    const title = this.text('You fell', 48, '#ff6b6b');
+    const summary = this.text(`Reached level ${data.level} - wave ${data.wave}`, 20, '#ffffff');
+    const prompt = this.text('Click / tap / press A to retry', 20, '#b48cff').setAlpha(0);
+    const layout = (): void => {
+      const cx = this.scale.width / 2;
+      const cy = this.scale.height / 2;
+      title.setPosition(cx, cy - 50);
+      summary.setPosition(cx, cy + 4);
+      prompt.setPosition(cx, cy + 56);
+    };
+    layout();
+    this.scale.on('resize', layout);
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.scale.off('resize', layout));
 
     this.time.delayedCall(RETRY_DELAY_MS, () => {
       prompt.setAlpha(1);
@@ -35,9 +42,9 @@ export class GameOverScene extends Phaser.Scene {
     });
   }
 
-  private text(x: number, y: number, value: string, size: number, color: string): Phaser.GameObjects.Text {
+  private text(value: string, size: number, color: string): Phaser.GameObjects.Text {
     return this.add
-      .text(x, y, value, { fontFamily: FONT, fontSize: `${size}px`, color, stroke: '#14121c', strokeThickness: 4 })
+      .text(0, 0, value, { fontFamily: FONT, fontSize: `${size}px`, color, stroke: '#14121c', strokeThickness: 4 })
       .setOrigin(0.5);
   }
 }

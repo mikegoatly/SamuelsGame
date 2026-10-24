@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { GamepadSource } from './GamepadSource';
 import { KeyboardMouseSource } from './KeyboardMouseSource';
+import { TouchSource } from './TouchSource';
 
 export interface InputSource {
   update(scene: Phaser.Scene): void;
@@ -27,7 +28,7 @@ export class InputController {
   private readonly sources: InputSource[];
 
   constructor(scene: Phaser.Scene, sources?: InputSource[]) {
-    this.sources = sources ?? [new KeyboardMouseSource(scene), new GamepadSource()];
+    this.sources = sources ?? [new KeyboardMouseSource(scene), new GamepadSource(), new TouchSource(scene)];
   }
 
   rumble(durationMs: number, weak: number, strong: number): void {

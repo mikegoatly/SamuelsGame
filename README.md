@@ -12,16 +12,20 @@ npm test           # Vitest (pure logic in src/logic)
 npm run typecheck
 ```
 
-## Controls (M1)
+## Controls
 
-| Action | Input |
-|---|---|
-| Move | WASD / arrow keys, or left stick / D-pad |
-| Aim | Mouse, or right stick (last-used device wins) |
-| Fire | Left mouse button, RT, or right stick past ~50% |
-| Alt fire | Right mouse button or LT (not wired to a weapon yet) |
-| Dash | Space or A |
-| Retry (game over) | Click / tap, A or Start |
+| Action | Keyboard / mouse | Touch | Gamepad |
+|---|---|---|---|
+| Move | WASD / arrows | Left half: floating stick | Left stick / D-pad |
+| Aim | Mouse | Right half: floating stick (last-used device wins) | Right stick |
+| Fire | Left mouse button | Right stick past ~50% | RT or right stick past ~50% |
+| Alt fire | Right mouse button (not wired to a weapon yet) | Star button, right edge | LT |
+| Dash | Space | Arrow button, right edge | A |
+| Retry (game over) | Click | Tap | A or Start |
+| Fullscreen | Top-right button | Top-right button | - |
+
+Touch controls appear after the first touch and hide on mouse, keyboard or gamepad use. The canvas expands from a
+640x360 base to fill the screen; portrait touch devices show a "Rotate your device" prompt.
 
 ## Assets
 

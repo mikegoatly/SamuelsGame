@@ -45,10 +45,17 @@ weights, monster level range, boss id, reward id, unlock requirement (previous l
 | Action | Keyboard/mouse | Touch (tablet) | Gamepad |
 |---|---|---|---|
 | Move | WASD | Left virtual stick | Left stick / D-pad |
-| Aim + fire | Mouse + LMB | Right virtual stick (fires while held) | Right stick (auto-fires past ~50%) or RT |
+| Aim + fire | Mouse + LMB | Right virtual stick (fires past ~50% deflection) | Right stick (auto-fires past ~50%) or RT |
 | Alt fire (Fireball) | RMB | Button | LT |
 | Dash | Space | Button | A |
 | Pause | Esc | Button | Start (not wired yet) |
+
+Touch (`TouchSource`): floating twin sticks. A touch starting in the left half spawns the move stick, the right half the
+aim stick (radius ~50 game px at 640x360, scaled with screen). Dash and Alt fire buttons sit on the right edge above the
+aim zone; touches starting on them (or the fullscreen button) never spawn a stick. Controls show only after a touch and
+hide on mouse/keyboard/gamepad use. Layout maths is pure (`logic/virtualStick.ts`); `HudScene` renders the `TouchState`
+read from the scene registry. Scaling is `Phaser.Scale.EXPAND` from a 640x360 base (no letterbox; HUD anchors to edges
+and re-lays out on resize); portrait touch devices get a CSS "Rotate your device" overlay.
 
 Input abstraction (`InputController`) emits `moveVector`, `aimVector`, `fire`, `altFire`, `dash` so game
 code never reads devices directly.
@@ -83,7 +90,7 @@ Alternative: `Topdown Shooter` (64px, modern guns/zombies) — cohesive but off-
 
 ```
 src/
-  main.ts                 Phaser game config (scale FIT, pixelArt, Arcade physics)
+  main.ts                 Phaser game config (scale EXPAND, pixelArt, Arcade physics)
   scenes/                 Boot, Preload, Menu, LevelSelect, Game, Hud (parallel), Pause, LevelComplete, GameOver
   entities/               Player, Enemy (base) + behaviours (chaser, shooter, charger), Boss, Projectile, Pickup
   systems/                InputController, CombatSystem, SpawnSystem, LootSystem, ProgressionSystem, SaveSystem

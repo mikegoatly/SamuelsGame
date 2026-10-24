@@ -6,13 +6,21 @@ type Keys = Record<'up' | 'down' | 'left' | 'right' | 'w' | 'a' | 's' | 'd' | 's
 
 export class KeyboardMouseSource implements InputSource {
   readonly moveVector = new Phaser.Math.Vector2();
-  readonly aimWorldPoint = new Phaser.Math.Vector2();
   readonly aimVector = null;
   fire = false;
   altFire = false;
   dash = false;
 
   private readonly keys: Keys;
+  private readonly mouseAim = new Phaser.Math.Vector2();
+  private mouseMoved = false;
+  private lastX = 0;
+  private lastY = 0;
+
+  /** Null until the mouse has moved, so touch-only devices get no phantom aim. */
+  get aimWorldPoint(): Phaser.Math.Vector2 | null {
+    return this.mouseMoved ? this.mouseAim : null;
+  }
 
   constructor(scene: Phaser.Scene) {
     scene.input.mouse?.disableContextMenu();
@@ -32,11 +40,16 @@ export class KeyboardMouseSource implements InputSource {
       Number(k.down.isDown || k.s.isDown) - Number(k.up.isDown || k.w.isDown),
     );
 
-    const pointer = scene.input.activePointer;
+    this.dash = k.space.isDown;
+    this.fire = this.altFire = false;
+    const pointer = scene.input.mousePointer;
+    if (!pointer) return;
+    if (pointer.x !== this.lastX || pointer.y !== this.lastY) this.mouseMoved = true;
+    this.lastX = pointer.x;
+    this.lastY = pointer.y;
     pointer.updateWorldPoint(scene.cameras.main);
-    this.aimWorldPoint.set(pointer.worldX, pointer.worldY);
+    this.mouseAim.set(pointer.worldX, pointer.worldY);
     this.fire = pointer.leftButtonDown();
     this.altFire = pointer.rightButtonDown();
-    this.dash = k.space.isDown;
   }
 }

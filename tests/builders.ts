@@ -5,6 +5,11 @@ export function expectClose(actual: number, expected: number): void {
   expect(actual).toBeCloseTo(expected, 6);
 }
 
+export function expectStick(actual: { x: number; y: number }, x: number, y: number): void {
+  expectClose(actual.x, x);
+  expectClose(actual.y, y);
+}
+
 export function aProgress(overrides: Partial<PlayerProgress> = {}): PlayerProgress {
   return { level: 1, xp: 0, ...overrides };
 }

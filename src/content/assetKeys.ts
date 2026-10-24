@@ -30,3 +30,12 @@ export const Frame = {
   ghost: 121,
   spider: 122,
 } as const;
+
+/** Kenney Onscreen Controls "flat-dark" atlas frames. */
+export const ControlFrame = {
+  stickBase: 'flatDark10.png',
+  stickKnob: 'flatDark00.png',
+  dash: 'flatDark24.png',
+  altFire: 'flatDark27.png',
+  fullscreen: 'flatDark29.png',
+} as const;

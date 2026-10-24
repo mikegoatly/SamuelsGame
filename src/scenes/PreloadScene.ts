@@ -1,6 +1,5 @@
 import Phaser from 'phaser';
 import { FONT, Sfx, TILE_SIZE, Tex } from '../content/assetKeys';
-import { VIEW_HEIGHT, VIEW_WIDTH } from '../content/config';
 
 export class PreloadScene extends Phaser.Scene {
   constructor() {
@@ -24,8 +23,8 @@ export class PreloadScene extends Phaser.Scene {
   }
 
   private drawLoadingBar(): void {
-    const cx = VIEW_WIDTH / 2;
-    const cy = VIEW_HEIGHT / 2;
+    const cx = this.scale.width / 2;
+    const cy = this.scale.height / 2;
     const barWidth = 240;
     this.add.text(cx, cy - 24, 'Loading...', { fontFamily: FONT, fontSize: '24px' }).setOrigin(0.5);
     this.add.rectangle(cx, cy, barWidth + 4, 16, 0x444444).setStrokeStyle(2, 0xffffff);

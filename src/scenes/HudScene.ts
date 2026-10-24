@@ -1,11 +1,11 @@
 import Phaser from 'phaser';
-import { FONT } from '../content/assetKeys';
-import { VIEW_WIDTH } from '../content/config';
+import { ControlFrame, FONT, Tex } from '../content/assetKeys';
 import type { Player } from '../entities/Player';
 import type { PlayerProgress } from '../logic/progression';
 import type { GameEvents } from '../systems/GameEvents';
 import type { ProgressionSystem } from '../systems/ProgressionSystem';
 import type { SpawnSystem } from '../systems/SpawnSystem';
+import { TouchControlsView } from '../ui/TouchControlsView';
 
 export interface HudData {
   events: GameEvents;
@@ -16,6 +16,8 @@ export interface HudData {
 
 const BAR_X = 10;
 const BAR_WIDTH = 140;
+const FULLSCREEN_SIZE = 28;
+const FULLSCREEN_MARGIN = 8;
 
 export class HudScene extends Phaser.Scene {
   private bars!: Phaser.GameObjects.Graphics;
@@ -23,6 +25,8 @@ export class HudScene extends Phaser.Scene {
   private levelText!: Phaser.GameObjects.Text;
   private waveText!: Phaser.GameObjects.Text;
   private hp = { value: 1, max: 1 };
+  private fullscreenButton!: Phaser.GameObjects.Image;
+  private touchView!: TouchControlsView;
   private xpRatio = 0;
 
   constructor() {
@@ -34,7 +38,12 @@ export class HudScene extends Phaser.Scene {
     this.bars = this.add.graphics();
     this.levelText = this.makeText(BAR_X, 4, '#ffffff', 16);
     this.hpText = this.makeText(BAR_X + 4, 27, '#ffffff', 8);
-    this.waveText = this.makeText(VIEW_WIDTH - 10, 4, '#d8d8e8', 16).setOrigin(1, 0);
+    this.waveText = this.makeText(0, 4, '#d8d8e8', 16).setOrigin(1, 0);
+    this.createFullscreenButton();
+    this.touchView = new TouchControlsView(this);
+    this.layout();
+    this.scale.on('resize', this.layout, this);
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.scale.off('resize', this.layout, this));
 
     this.waveText.setText(`Wave ${spawner.wave}`);
     this.hp = { value: player.hp, max: player.maxHp };
@@ -46,6 +55,33 @@ export class HudScene extends Phaser.Scene {
     });
     events.on('xp-changed', (progress) => this.showProgress(progress, progression.xpForNextLevel));
     events.on('wave-started', (wave) => this.waveText.setText(`Wave ${wave}`));
+  }
+
+  update(): void {
+    this.touchView.update();
+  }
+
+  private layout(): void {
+    const half = FULLSCREEN_SIZE / 2;
+    this.fullscreenButton.setPosition(this.scale.width - FULLSCREEN_MARGIN - half, FULLSCREEN_MARGIN + half);
+    this.waveText.setX(this.fullscreenButton.x - half - 6);
+  }
+
+  private createFullscreenButton(): void {
+    this.fullscreenButton = this.add
+      .image(0, 0, Tex.controls, ControlFrame.fullscreen)
+      .setDisplaySize(FULLSCREEN_SIZE, FULLSCREEN_SIZE)
+      .setAlpha(0.6)
+      .setVisible(this.scale.fullscreen.available)
+      .setInteractive({ useHandCursor: true });
+    this.fullscreenButton.on('pointerdown', () => {
+      try {
+        if (this.scale.isFullscreen) this.scale.stopFullscreen();
+        else this.scale.startFullscreen();
+      } catch {
+        /* unsupported */
+      }
+    });
   }
 
   private showProgress(progress: PlayerProgress, needed: number): void {
