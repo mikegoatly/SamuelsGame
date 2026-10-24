@@ -4,9 +4,9 @@ import { Prompt } from '../content/inputGlyphs';
 import { getLevel } from '../content/levels';
 import { cooldownText } from '../content/cards';
 import { getSkill, knownSkillIds } from '../content/skills';
-import { getWeapon, knownWeapons } from '../content/weapons';
+import { getWeapon, knownWeapons, weaponAtLevel } from '../content/weapons';
 import { cycleSlotSkill, SLOT_COUNT, type Slots } from '../logic/loadout';
-import { setLoadout, skillLevel } from '../logic/save';
+import { setLoadout, skillLevel, weaponLevel } from '../logic/save';
 import { nextWeapon } from '../logic/weaponCycle';
 import { saveSystem } from '../systems/SaveSystem';
 import { ChoiceRow, type ChoiceView } from '../ui/ChoiceRow';
@@ -75,7 +75,7 @@ export class LoadoutScene extends MenuScene {
     const owned = (): string[] => knownWeapons(saveSystem.data.weapons.owned);
     const view = (): ChoiceView => {
       const weapon = getWeapon(this.weapon);
-      return { label: weapon.name, detail: weapon.kind === 'melee' ? 'melee' : 'ranged', icon: { texture: Tex.tiles, frame: weapon.frame, tint: weapon.tint }, color: '#ffffff', glyph: Prompt.mouseLeft };
+      return { label: weapon.name, detail: `Lv${weaponLevel(saveSystem.data, weapon.id)} ${weapon.kind === 'melee' ? 'melee' : 'ranged'}`, icon: { texture: Tex.tiles, frame: weapon.frame, tint: weapon.tint }, color: '#ffffff', glyph: Prompt.mouseLeft };
     };
     return new ChoiceRow(this, x, y, width, ROW_HEIGHT, view, (direction) => {
       this.weapon = nextWeapon(owned(), this.weapon, direction);
@@ -88,7 +88,7 @@ export class LoadoutScene extends MenuScene {
     const view = (): ChoiceView => {
       const skill = this.slots[slot] ? getSkill(this.slots[slot]!) : undefined;
       if (!skill) return { label: owned().length > 0 ? 'Empty' : 'No skills yet', detail: '', color: '#7878a0', glyph: SLOT_GLYPHS[slot] };
-      return { label: skill.name, detail: cooldownText(skill).replace('Cooldown ', ''), icon: { texture: skill.icon }, color: '#ffffff', glyph: SLOT_GLYPHS[slot] };
+      return { label: skill.name, detail: `Lv${Math.max(1, skillLevel(saveSystem.data, skill.id))} ${cooldownText(skill, skillLevel(saveSystem.data, skill.id)).replace('Cooldown ', '')}`, icon: { texture: skill.icon }, color: '#ffffff', glyph: SLOT_GLYPHS[slot] };
     };
     return new ChoiceRow(this, x, y, width, ROW_HEIGHT, view, (direction) => {
       this.slots = cycleSlotSkill(this.slots, slot, owned(), direction);
@@ -105,9 +105,11 @@ export class LoadoutScene extends MenuScene {
       info.add(gameText(this, 0, y, value, 16, { color }).setOrigin(0, 0).setWordWrapWidth(this.wrap));
     };
     if (index === 0) {
-      const weapon = getWeapon(this.weapon);
+      const base = getWeapon(this.weapon);
+      const level = weaponLevel(saveSystem.data, base.id);
+      const weapon = weaponAtLevel(base, level);
       info.add(this.add.image(14, 14, Tex.tiles, weapon.frame).setScale(2));
-      text(36, weapon.name, '#ffe066');
+      text(36, `${weapon.name}  Lv ${level}/5`, '#ffe066');
       text(56, `Damage ${weapon.baseDamage}`);
       text(74, weapon.kind === 'melee' ? `${(1000 / weapon.fireRateMs).toFixed(1)} swings/s, hits an arc` : `${(1000 / weapon.fireRateMs).toFixed(1)} shots/s, range ${weapon.range}`);
       text(110, knownWeapons(saveSystem.data.weapons.owned).length > 1 ? 'Left/Right or tap to change' : 'Win more weapons from bosses', '#9a9ab8');

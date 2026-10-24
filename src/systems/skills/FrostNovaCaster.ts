@@ -8,8 +8,9 @@ import { asTargets, hurtEnemy, liveEnemies } from './targets';
 import type { CastCall, SkillCaster, SkillWorld } from './types';
 
 const FROST = 0x7ad8ff;
+const FREEZE_MS = 1000;
 
-/** Frost Nova: an instant ring around the player that hurts and slows every enemy it reaches (walls block it). */
+/** Frost Nova: an instant ring around the player that hurts and slows every enemy it reaches (walls block it). Level 5 also freezes them solid for a second. */
 export class FrostNovaCaster implements SkillCaster<NovaSkill> {
   constructor(private readonly world: SkillWorld) {}
 
@@ -22,6 +23,7 @@ export class FrostNovaCaster implements SkillCaster<NovaSkill> {
       if (!lineClear(centre, enemy, isSolid)) continue;
       hurtEnemy(this.world, enemy, params.damage, x, y);
       enemy.applySlow(params.slowFactor, params.slowMs);
+      if (params.twist) enemy.stun(FREEZE_MS);
       sparkBurst(scene, enemy.x, enemy.y, FROST, 5, 40);
     }
     ringBurst(scene, x, y, params.radius, FROST);

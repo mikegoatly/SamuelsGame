@@ -1,5 +1,5 @@
 import type { SaveData } from './save';
-import { CHARM_POWER_DAMAGE, CHARM_SWIFTNESS_SPEED, CHARM_VITALITY_HP, type CharmId } from './stats';
+import { GEM_LABEL, type GemColour } from './gems';
 
 export interface CardData {
   title: string;
@@ -20,27 +20,10 @@ export const shouldShowCard = (mode: CardMode, seen: readonly string[], id: stri
 
 export const markSeen = (save: SaveData, id: string): SaveData => (save.seen.includes(id) ? save : { ...save, seen: [...save.seen, id] });
 
-const percent = (fraction: number, count: number): number => Math.round(fraction * count * 100);
-
-export function charmCardText(charm: CharmId, count: number): { effect: string; total: string } {
-  switch (charm) {
-    case 'power':
-      return {
-        effect: `+${percent(CHARM_POWER_DAMAGE, 1)}% weapon damage. Permanent, stacks.`,
-        total: `Power charms: ${count} = +${percent(CHARM_POWER_DAMAGE, count)}% damage`,
-      };
-    case 'swiftness':
-      return {
-        effect: `+${percent(CHARM_SWIFTNESS_SPEED, 1)}% move speed. Permanent, stacks.`,
-        total: `Swiftness charms: ${count} = +${percent(CHARM_SWIFTNESS_SPEED, count)}% move speed`,
-      };
-    case 'vitality':
-      return {
-        effect: `+${CHARM_VITALITY_HP} max HP. Permanent, stacks.`,
-        total: `Vitality charms: ${count} = +${CHARM_VITALITY_HP * count} max HP`,
-      };
-  }
-}
+export const gemCardText = (colour: GemColour, count: number): { effect: string; total: string } => ({
+  effect: 'Spend at the Camp to upgrade skills and weapons.',
+  total: `${GEM_LABEL[colour]} gems: ${count}`,
+});
 
 export const shouldQueueCard = (mode: CardMode, seen: readonly string[], queued: readonly string[], id: string): boolean =>
   mode === 'always' || (!seen.includes(id) && !queued.includes(id));

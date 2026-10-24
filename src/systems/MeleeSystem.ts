@@ -6,6 +6,8 @@ import type { EnemyProjectile, EnemyProjectiles } from '../entities/EnemyProject
 import type { Player } from '../entities/Player';
 import { damageToEnemy } from '../logic/combat';
 import { lineClear } from '../logic/lineOfSight';
+import { fireProjectile } from '../entities/Projectile';
+import { WAVE } from '../logic/weaponTwists';
 import { feel } from './feel';
 import { playSfx } from './sfx';
 import { inCone, meleeHits, type MeleeCone } from '../logic/melee';
@@ -18,6 +20,8 @@ export interface MeleeOptions {
   player: Player;
   enemies: Phaser.Physics.Arcade.Group;
   shots: EnemyProjectiles;
+  /** Player bolt pool, used for the golden sword's slash wave. */
+  projectiles: Phaser.Physics.Arcade.Group;
   isSolid: (x: number, y: number) => boolean;
 }
 
@@ -42,12 +46,25 @@ export class MeleeSystem {
     }
     const deflected = this.deflect(origin, aim, { ...cone, reach: cone.reach + DEFLECT_PADDING });
     this.slash(x, y, aim, melee.arc, melee.reach, melee.swingMs);
+    if (weapon.activeTwist === 'wave') this.sendWave(x, y, aim, weapon, hits.map((i) => targets[i]));
     playSfx(scene, 'swing');
     if (hits.length > 0) {
       playSfx(scene, 'swordHit');
       feel.shake(70, 0.003);
       feel.hitStop(45);
     } else if (deflected) playSfx(scene, 'swordHit', { rate: 1.4, volume: 0.7 });
+  }
+
+  /** Level 5 twist: a short slash wave flies on from the swing, hurting what it reaches once. */
+  private sendWave(x: number, y: number, aim: number, weapon: WeaponDef, alreadyHit: readonly unknown[]): void {
+    const direction = new Phaser.Math.Vector2(Math.cos(aim), Math.sin(aim));
+    const wave: WeaponDef = { ...weapon, kind: 'ranged', speed: WAVE.speed, range: WAVE.range, activeTwist: undefined };
+    fireProjectile(this.o.projectiles, x + direction.x * 14, y + direction.y * 14, direction, wave, {
+      damageScale: WAVE.damageScale,
+      pierce: Infinity,
+      skip: alreadyHit,
+      scale: { x: 2.6, y: 1.6 },
+    });
   }
 
   private deflect(origin: { x: number; y: number }, aim: number, cone: MeleeCone): boolean {

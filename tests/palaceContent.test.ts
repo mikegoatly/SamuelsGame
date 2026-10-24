@@ -14,7 +14,7 @@ import { isLevelUnlocked, visibleLevels } from '../src/logic/levelRules';
 
 const PALACE_ENEMIES = ['palaceGuard', 'royalArcher', 'darkMage', 'assassin'];
 const DESERT_ENEMIES = ['scorpion', 'bandit', 'mummy', 'vulture'];
-const charm = (table: string) => ['charmOfPower', 'charmOfSwiftness', 'charmOfVitality'].reduce((sum, id) => sum + dropChance(lootTables[table]!, id), 0);
+const charm = (table: string) => ['gemRed', 'gemGreen', 'gemBlue'].reduce((sum, id) => sum + dropChance(lootTables[table]!, id), 0);
 const large = (table: string) => dropChance(lootTables[table]!, 'healthPotionLarge');
 const coins = (table: string) => {
   const t = lootTables[table]!;

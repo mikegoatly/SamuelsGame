@@ -29,6 +29,11 @@ const files: Array<[string, string]> = [
   ['2D assets/Particle Pack/PNG (Transparent)/spark_06.png', 'fx/skill-lightning.png'],
   ['2D assets/Particle Pack/PNG (Transparent)/circle_03.png', 'fx/skill-shield.png'],
   ['2D assets/Particle Pack/PNG (Transparent)/twirl_02.png', 'fx/skill-blink.png'],
+  ['2D assets/Particle Pack/PNG (Transparent)/slash_03.png', 'fx/skill-slash.png'],
+  ['2D assets/Particle Pack/PNG (Transparent)/smoke_08.png', 'fx/skill-poison.png'],
+  ['2D assets/Particle Pack/PNG (Transparent)/scratch_01.png', 'fx/skill-wolf.png'],
+  ['2D assets/Particle Pack/PNG (Transparent)/fire_02.png', 'fx/skill-meteor.png'],
+  ['2D assets/Particle Pack/PNG (Transparent)/magic_02.png', 'fx/skill-gravity.png'],
 ];
 
 const sci = 'Audio/Sci-Fi Sounds/Audio';
@@ -88,6 +93,15 @@ const sfx: Array<[string, string]> = [
   [`${sci}/forceField_004.ogg`, 'shieldbreak_0.ogg'],
   [`${sci}/spaceEngineSmall_000.ogg`, 'blink_0.ogg'],
   [`${sci}/spaceEngineSmall_001.ogg`, 'blink_1.ogg'],
+  [`${sci}/slime_000.ogg`, 'poison_0.ogg'],
+  [`${sci}/slime_001.ogg`, 'poison_1.ogg'],
+  [`${sci}/spaceEngineLow_000.ogg`, 'gravity_0.ogg'],
+  [`${sci}/spaceEngineLow_001.ogg`, 'gravity_1.ogg'],
+  [`${sci}/thrusterFire_000.ogg`, 'meteorfall_0.ogg'],
+  [`${sci}/lowFrequency_explosion_000.ogg`, 'meteorhit_0.ogg'],
+  [`${sci}/lowFrequency_explosion_001.ogg`, 'meteorhit_1.ogg'],
+  [`${sci}/laserLarge_002.ogg`, 'wolf_0.ogg'],
+  [`${sci}/laserLarge_003.ogg`, 'wolfbite_0.ogg'],
 ];
 for (const [src, dest] of sfx) files.push([src, `audio/${dest}`]);
 

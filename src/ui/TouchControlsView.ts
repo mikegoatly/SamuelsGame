@@ -1,8 +1,10 @@
 import Phaser from 'phaser';
 import { ControlFrame, Tex } from '../content/assetKeys';
+import { Frame } from '../content/assetKeys';
 import { getSkill } from '../content/skills';
 import { SKILL_BUTTONS, touchMetrics, type ButtonId } from '../logic/virtualStick';
 import type { SkillSlotStatus } from '../logic/skillSlots';
+import { saveSystem } from '../systems/SaveSystem';
 import { SKILL_STATE_KEY } from '../systems/SkillSystem';
 import { TOUCH_STATE_KEY, type StickView, type TouchState } from '../systems/TouchSource';
 
@@ -20,6 +22,7 @@ export class TouchControlsView {
   private readonly buttons: Record<ButtonId, Phaser.GameObjects.Image>;
   private readonly cooldown: Phaser.GameObjects.Graphics;
   private readonly icons: Phaser.GameObjects.Image[];
+  private readonly potionIcon: Phaser.GameObjects.Image;
 
   constructor(private readonly scene: Phaser.Scene) {
     this.sticks = { move: this.makeStick(), aim: this.makeStick() };
@@ -28,7 +31,9 @@ export class TouchControlsView {
       skill1: this.makeImage(ControlFrame.skill),
       skill2: this.makeImage(ControlFrame.skill),
       skill3: this.makeImage(ControlFrame.skill),
+      potion: this.makeImage(ControlFrame.skill),
     };
+    this.potionIcon = scene.add.image(0, 0, Tex.tiles, Frame.potionSmall).setVisible(false).setDepth(101);
     this.icons = SKILL_BUTTONS.map(() => scene.add.image(0, 0, Tex.tiles, 0).setVisible(false).setDepth(101));
     this.cooldown = scene.add.graphics().setDepth(102);
   }
@@ -47,11 +52,19 @@ export class TouchControlsView {
       image.setAlpha(state?.buttons[zone.id] ? ACTIVE_ALPHA : IDLE_ALPHA);
       const slot = SKILL_BUTTONS.indexOf(zone.id as (typeof SKILL_BUTTONS)[number]);
       if (slot >= 0) this.showSkill(image, this.icons[slot]!, zone, visible, statuses?.[slot]);
+      if (zone.id === 'potion') this.showPotion(image, zone, visible);
     }
     if (state) {
       this.showStick(this.sticks.move, visible ? state.move : undefined, metrics.stickRadius);
       this.showStick(this.sticks.aim, visible ? state.aim : undefined, metrics.stickRadius);
     }
+  }
+
+  /** Potion tile on its button, dimmed when none are carried. */
+  private showPotion(button: Phaser.GameObjects.Image, zone: { x: number; y: number; r: number }, visible: boolean): void {
+    const carried = saveSystem.data.potions > 0;
+    button.setTint(carried ? 0xff8a8a : 0x808080);
+    this.potionIcon.setVisible(visible).setPosition(zone.x, zone.y).setDisplaySize(zone.r * 1.5, zone.r * 1.5).setAlpha(carried ? 0.95 : 0.45);
   }
 
   /** Skill icon on its button; dimmed while cooling down with a dark pie sweeping away, nearly invisible for an empty slot. */

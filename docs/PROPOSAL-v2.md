@@ -1,6 +1,6 @@
 # v2 Proposal — Skills, Economy, Characters, Monsters, Hazards
 
-Based on playtest feedback (items 3, 4, 8, 9, 10). Status: **Phase 1 (skills + loadout) done**; decisions agreed (see §7).
+Based on playtest feedback (items 3, 4, 8, 9, 10). Status: **Phase 1 (skills + loadout) and Phase 2 economy (gems, upgrades, Camp shop, potions, revive) done**; decisions agreed (see §7).
 
 ## 1. Skills & loadout (feedback 8)
 
@@ -124,8 +124,9 @@ affected too, so you can lure them in.
 
 ## 6. Suggested build phases
 
-1. **Skills and loadout core — DONE:** slot system, input remap, HUD with button glyphs, loadout screen, Fireball converted to a skill, swap prompt, plus Frost Nova, Chain Lightning, Arcane Shield and Blink Strike. Remaining skills for Phase 2: Boomerang Blade, Poison Cloud, Spirit Wolf, Meteor, Gravity Well (and the level 5 twists, upgrade UI and economy).
-2. **Economy:** shop scene, gems, upgrades, save migration, the remaining skills.
+1. **Skills and loadout core — DONE:** slot system, input remap, HUD with button glyphs, loadout screen, Fireball converted to a skill, swap prompt, plus Frost Nova, Chain Lightning, Arcane Shield and Blink Strike. 
+   **Phase 2 skills: DONE.** Boomerang Blade, Poison Cloud, Spirit Wolf, Meteor and Gravity Well, all ten level 5 twists (flag in the per-level tables) and the new skills in the scroll pool. Upgrade UI and economy remain.
+2. **Economy - DONE:** Camp scene (upgrades + shop), gems, skill and weapon levels 1-5 with level 5 weapon twists, carry potions, revive token, save v7 migration.
 3. **Characters:** hero select, stats, passives, unlock tracking and hints.
 4. **Content:** new monsters, elites, hazards, room intensity curves.
 5. **Balance pass and playtest.**

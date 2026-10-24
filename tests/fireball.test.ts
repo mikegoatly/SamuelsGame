@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { FIREBALL, aoeFalloff, fireballDamage, fireballVictims } from '../src/logic/fireball';
+import { FIREBALL, aoeFalloff, fireballDamage, fireballVictims, splitDirections } from '../src/logic/fireball';
 import { damageToEnemy } from '../src/logic/combat';
 import { expectClose } from './builders';
 
@@ -44,5 +44,19 @@ describe('fireballVictims', () => {
     const victims = fireballVictims({ x: 0, y: 0 }, [{ x: 60, y: 0, reach: 5 }], 60, 0.5);
     expect(victims).toHaveLength(1);
     expect(victims[0]!.multiplier).toBeCloseTo(aoeFalloff(55, 60, 0.5));
+  });
+});
+
+describe('splitDirections', () => {
+  it('fans the mini fireballs evenly around the circle', () => {
+    const dirs = splitDirections({ x: 1, y: 0 }, 3);
+    expect(dirs).toHaveLength(3);
+    for (const d of dirs) expect(Math.hypot(d.x, d.y)).toBeCloseTo(1);
+    const angles = dirs.map((d) => Math.atan2(d.y, d.x));
+    expect(angles[1]! - angles[0]!).toBeCloseTo((Math.PI * 2) / 3);
+  });
+
+  it('starts offset from the travel heading so no mini continues straight on', () => {
+    for (const d of splitDirections({ x: 1, y: 0 }, 3)) expect(d.x).toBeLessThan(0.99);
   });
 });

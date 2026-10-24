@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { absorb, newShield, shieldActive } from '../src/logic/arcaneShield';
+import { absorb, newShield, shieldActive, shieldBurstDamage } from '../src/logic/arcaneShield';
 
 describe('arcane shield', () => {
   it('absorbs damage up to its capacity and lets the rest through', () => {
@@ -23,5 +23,12 @@ describe('arcane shield', () => {
     const shield = newShield(0, 3000, 10);
     absorb(shield, 10);
     expect(absorb(shield, 7)).toBe(7);
+  });
+});
+
+describe('shieldBurstDamage', () => {
+  it('scales with the shield capacity so higher levels burst harder', () => {
+    expect(shieldBurstDamage(40)).toBe(20);
+    expect(shieldBurstDamage(80)).toBeGreaterThan(shieldBurstDamage(40));
   });
 });

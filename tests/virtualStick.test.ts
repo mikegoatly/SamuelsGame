@@ -53,6 +53,7 @@ describe('classifyTouch', () => {
     ['skill 1 button', skill('skill1').x, skill('skill1').y, 'skill1'],
     ['skill 2 button', skill('skill2').x, skill('skill2').y, 'skill2'],
     ['skill 3 button', skill('skill3').x, skill('skill3').y, 'skill3'],
+    ['potion button', skill('potion').x, skill('potion').y, 'potion'],
     ['fullscreen button', metrics.fullscreen.x, metrics.fullscreen.y, null],
     ['pause button', metrics.pause.x, metrics.pause.y, null],
   ])('%s', (_name, x, y, expected) => {
@@ -65,8 +66,8 @@ describe('touchMetrics', () => {
     expect(touchMetrics(640, 360).stickRadius).toBe(50);
   });
 
-  it('has dash plus three skill buttons, in slot order', () => {
-    expect(touchMetrics(640, 360).buttons.map((b) => b.id)).toEqual(['dash', 'skill1', 'skill2', 'skill3']);
+  it('has dash, three skill buttons in slot order, then the potion button', () => {
+    expect(touchMetrics(640, 360).buttons.map((b) => b.id)).toEqual(['dash', 'skill1', 'skill2', 'skill3', 'potion']);
   });
 
   it.each([

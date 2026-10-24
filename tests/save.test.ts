@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { MAX_LEVEL } from '../src/logic/progression';
 import {
-  addCharm,
+  addGem,
+  dismissNotice,
   addCoins,
   applyLevelClear,
   defaultSave,
@@ -24,8 +25,11 @@ describe('parseSave', () => {
     const save = aSave({
       progress: { level: 7, xp: 33 },
       coins: 120,
-      charms: { power: 2, swiftness: 1, vitality: 3 },
-      weapons: { owned: [STARTING_WEAPON, 'brokenWand'] },
+      gems: { red: 2, green: 1, blue: 3 },
+      potions: 2,
+      revive: true,
+      shop: { rotation: 4 },
+      weapons: { owned: [STARTING_WEAPON, 'brokenWand'], levels: { brokenWand: 3 } },
       loadout: { weapon: 'brokenWand', slots: ['fireball', null, 'frostNova'] },
       skills: { owned: [{ id: 'fireball', level: 2 }, { id: 'frostNova', level: 1 }] },
       levels: { cleared: ['ruins'], bestTimes: { ruins: 91000 } },
@@ -45,7 +49,7 @@ describe('parseSave', () => {
     const parsed = parseSave(json);
     expect(parsed.coins).toBe(0);
     expect(parsed.progress).toEqual({ level: 4, xp: 0 });
-    expect(parsed.charms).toEqual({ power: 2, swiftness: 0, vitality: 0 });
+    expect(parsed.gems).toEqual({ red: 2, green: 0, blue: 0 });
   });
 
   it('clamps level and floors fractional numbers', () => {
@@ -56,7 +60,7 @@ describe('parseSave', () => {
 
   it('always owns the starting weapon and repairs an unowned loadout weapon', () => {
     const parsed = parseSave(JSON.stringify({ version: 6, weapons: { owned: ['brokenWand', 5, 'brokenWand'] }, loadout: { weapon: 'goldenSword' } }));
-    expect(parsed.weapons).toEqual({ owned: [STARTING_WEAPON, 'brokenWand'] });
+    expect(parsed.weapons).toEqual({ owned: [STARTING_WEAPON, 'brokenWand'], levels: {} });
     expect(parsed.loadout.weapon).toBe(STARTING_WEAPON);
   });
 
@@ -76,18 +80,19 @@ describe('parseSave', () => {
 });
 
 describe('save transforms', () => {
-  it('addCoins and addCharm are immutable', () => {
+  it('addCoins and addGem are immutable', () => {
     const save = aSave();
     expect(addCoins(save, 5).coins).toBe(5);
     expect(addCoins(save, -5).coins).toBe(0);
-    expect(addCharm(save, 'power').charms.power).toBe(1);
+    expect(addGem(save, 'red').gems.red).toBe(1);
+    expect(addGem(save, 'blue', 3).gems.blue).toBe(3);
     expect(save.coins).toBe(0);
-    expect(save.charms.power).toBe(0);
+    expect(save.gems.red).toBe(0);
   });
 
   it('grantWeapon adds once and equips', () => {
     const save = grantWeapon(grantWeapon(aSave(), 'brokenWand'), 'brokenWand');
-    expect(save.weapons).toEqual({ owned: [STARTING_WEAPON, 'brokenWand'] });
+    expect(save.weapons).toEqual({ owned: [STARTING_WEAPON, 'brokenWand'], levels: {} });
     expect(save.loadout.weapon).toBe('brokenWand');
     expect(grantWeapon(aSave(), 'brokenWand', false).loadout.weapon).toBe(STARTING_WEAPON);
   });
@@ -104,7 +109,7 @@ describe('save transforms', () => {
   });
 
   it('applyLevelClear only equips a reward weapon that is newly owned', () => {
-    const owned = aSave({ weapons: { owned: [STARTING_WEAPON, 'brokenWand', 'goldenSword'] }, loadout: { weapon: 'goldenSword', slots: [null, null, null] } });
+    const owned = aSave({ weapons: { owned: [STARTING_WEAPON, 'brokenWand', 'goldenSword'], levels: {} }, loadout: { weapon: 'goldenSword', slots: [null, null, null] } });
     expect(applyLevelClear(owned, { levelId: 'ruins', rewardWeaponId: 'brokenWand' }).loadout.weapon).toBe('goldenSword');
   });
 });
@@ -145,8 +150,8 @@ describe('save repair and migration', () => {
   it('migrates a version 1 save to the current version keeping its data', () => {
     const v1 = { version: 1, progress: { level: 3, xp: 10 }, coins: 7, levels: { cleared: ['ruins'] } };
     const migrated = parseSave(JSON.stringify(v1));
-    expect(SAVE_VERSION).toBe(6);
-    expect(migrated.version).toBe(6);
+    expect(SAVE_VERSION).toBe(7);
+    expect(migrated.version).toBe(7);
     expect(migrated.coins).toBe(7);
     expect(migrated.levels.cleared).toEqual(['ruins']);
     expect(migrated.settings).toEqual(defaultSave().settings);
@@ -236,7 +241,7 @@ describe('migration to version 6', () => {
     const migrated = parseSave(JSON.stringify(v5));
     expect(migrated.skills.owned).toEqual([{ id: 'fireball', level: 1 }]);
     expect(migrated.loadout).toEqual({ weapon: 'brokenWand', slots: ['fireball', null, null] });
-    expect(migrated.version).toBe(6);
+    expect(migrated.version).toBe(7);
     expect(migrated).not.toHaveProperty('powers');
   });
 
@@ -269,5 +274,78 @@ describe('migration to version 6', () => {
   it('SaveSystem migrates through the same path when loading', () => {
     const storage = fakeStorage({ [SAVE_KEY]: JSON.stringify({ version: 5, levels: { cleared: ['desert'] }, powers: { unlocked: ['fireball'] } }) });
     expect(new SaveSystem(() => storage).data.loadout.slots[0]).toBe('fireball');
+  });
+});
+
+describe('migration to version 7', () => {
+  const v6 = {
+    version: 6,
+    coins: 40,
+    charms: { power: 3, swiftness: 1, vitality: 2 },
+    seen: ['charmOfPower', 'charmOfVitality', 'skill-fireball', 'levelUp2'],
+    skills: { owned: [{ id: 'fireball', level: 2 }] },
+    loadout: { weapon: STARTING_WEAPON, slots: ['fireball', null, null] },
+  };
+
+  it('turns charms into gems one to one and keeps skills', () => {
+    const migrated = parseSave(JSON.stringify(v6));
+    expect(migrated.gems).toEqual({ red: 3, green: 1, blue: 2 });
+    expect(migrated).not.toHaveProperty('charms');
+    expect(migrated.skills.owned).toEqual([{ id: 'fireball', level: 2 }]);
+    expect(migrated.loadout.slots).toEqual(['fireball', null, null]);
+    expect(migrated.coins).toBe(40);
+  });
+
+  it('renames seen charm cards to gem cards', () => {
+    expect(parseSave(JSON.stringify(v6)).seen).toEqual(['gemRed', 'gemBlue', 'skill-fireball', 'levelUp2']);
+  });
+
+  it('starts with no potions, no revive token, level 1 weapons and the first shop rotation', () => {
+    const migrated = parseSave(JSON.stringify(v6));
+    expect(migrated.potions).toBe(0);
+    expect(migrated.revive).toBe(false);
+    expect(migrated.weapons.levels).toEqual({});
+    expect(migrated.shop).toEqual({ rotation: 0 });
+  });
+
+  it('reads gems directly from a v7 save and ignores charms there', () => {
+    const migrated = parseSave(JSON.stringify({ version: 7, gems: { red: 1, green: 'x', blue: -4 }, charms: { power: 9 } }));
+    expect(migrated.gems).toEqual({ red: 1, green: 0, blue: 0 });
+  });
+
+  it('repairs junk economy fields and caps potions and weapon levels', () => {
+    const parsed = parseSave(JSON.stringify({ version: 7, potions: 99, revive: 'yes', shop: { rotation: -3 }, weapons: { owned: [STARTING_WEAPON, 'brokenWand'], levels: { brokenWand: 9, apprenticeStaff: 'z', ghost: 3 } } }));
+    expect(parsed.potions).toBe(3);
+    expect(parsed.revive).toBe(false);
+    expect(parsed.shop.rotation).toBe(0);
+    expect(parsed.weapons.levels).toEqual({ brokenWand: 5 });
+  });
+
+  it('a level clear advances the shop rotation', () => {
+    expect(applyLevelClear(defaultSave(), { levelId: 'ruins' }).shop.rotation).toBe(1);
+  });
+});
+
+describe('charm conversion notice', () => {
+  it('is pending for a migrated save that had charms', () => {
+    expect(parseSave(JSON.stringify({ version: 6, charms: { power: 1 } })).pendingNotices).toEqual(['charmsToGems']);
+  });
+
+  it('is not pending for new, empty-charm or v7 saves, or once seen', () => {
+    expect(defaultSave().pendingNotices).toEqual([]);
+    expect(parseSave(JSON.stringify({ version: 6, charms: { power: 0 } })).pendingNotices).toEqual([]);
+    expect(parseSave(JSON.stringify({ version: 7, gems: { red: 2 } })).pendingNotices).toEqual([]);
+    expect(parseSave(JSON.stringify({ version: 6, charms: { power: 1 }, seen: ['charmsToGems'] })).pendingNotices).toEqual([]);
+  });
+
+  it('survives a round trip until dismissed', () => {
+    const save = parseSave(JSON.stringify({ version: 6, charms: { vitality: 2 } }));
+    expect(parseSave(serialize(save)).pendingNotices).toEqual(['charmsToGems']);
+  });
+
+  it('dismissNotice clears it and marks it seen', () => {
+    const next = dismissNotice(parseSave(JSON.stringify({ version: 6, charms: { power: 1 } })), 'charmsToGems');
+    expect(next.pendingNotices).toEqual([]);
+    expect(next.seen).toContain('charmsToGems');
   });
 });

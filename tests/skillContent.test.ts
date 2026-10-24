@@ -9,8 +9,8 @@ import { FIREBALL } from '../src/logic/fireball';
 import { SCROLL_CHANCE } from '../src/logic/skillScroll';
 
 describe('skill definitions', () => {
-  it('has five skills with unique ids, keyed by id, and a description and icon each', () => {
-    expect(skillIds).toEqual(['fireball', 'frostNova', 'chainLightning', 'arcaneShield', 'blinkStrike']);
+  it('has ten skills with unique ids, keyed by id, and a description and icon each', () => {
+    expect(skillIds).toEqual(['fireball', 'frostNova', 'chainLightning', 'boomerangBlade', 'arcaneShield', 'poisonCloud', 'spiritWolf', 'blinkStrike', 'meteor', 'gravityWell']);
     for (const skill of skillList) {
       expect(skills[skill.id]).toBe(skill);
       expect(skill.description.length).toBeGreaterThan(10);

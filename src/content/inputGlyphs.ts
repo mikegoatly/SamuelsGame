@@ -14,6 +14,8 @@ export const Prompt = {
   key3: at(1, 19),
   keyE: at(2, 19),
   keyR: at(2, 20),
+  keyF: at(3, 21),
+  padY: at(0, 7),
   padLT: at(16, 7),
   padRT: at(16, 8),
   padLB: at(16, 9),
@@ -26,6 +28,11 @@ const SKILL_GLYPHS: Record<InputDevice, readonly [number, number, number]> = {
   gamepad: [Prompt.padLT, Prompt.padRB, Prompt.padLB],
   touch: [Prompt.tap, Prompt.tap, Prompt.tap],
 };
+
+const POTION_GLYPHS: Record<InputDevice, number> = { keyboard: Prompt.keyF, gamepad: Prompt.padY, touch: Prompt.tap };
+
+/** Glyph for the drink-potion control on `device`. */
+export const potionGlyph = (device: InputDevice): number => POTION_GLYPHS[device];
 
 /** Glyph telling the player how to cast skill `slot` (0..2) on `device`. */
 export const skillGlyph = (device: InputDevice, slot: number): number => SKILL_GLYPHS[device][slot] ?? Prompt.tap;

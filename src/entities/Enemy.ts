@@ -9,7 +9,7 @@ import { steerToward } from '../logic/angle';
 import { newBlinkState, pickBlinkPoint, stepBlink, type BlinkState } from '../logic/blink';
 import { chargeLaneLength, cloakAlpha, newChargeState, stepCharge, type ChargeState, type ChargeTuning } from '../logic/charge';
 import { rangedStance, spreadDirections } from '../logic/enemyAi';
-import { lineClear } from '../logic/lineOfSight';
+import { bodyClear, lineClear } from '../logic/lineOfSight';
 import { Navigator, PathBudget } from '../logic/navigator';
 import { applySlow, noSlow, slowFactor, type SlowState } from '../logic/slow';
 import { isFrontal, shieldedDamage } from '../logic/shield';
@@ -35,6 +35,7 @@ const WINDUP_TINT = 0xff5a3a;
 const SHIELD_TINT = 0xc8d8ff;
 const HIT_REVEAL_MS = 600;
 const FROST_TINT = 0x8fd8ff;
+const POISON_TINT = 0x8fe05a;
 const ORB_SCALE = 1.35;
 const ORB_TINT = 0xc070ff;
 const ORB_RANGE = 320;
@@ -78,6 +79,9 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
   protected forcedTint: number | null = null;
   private facing = 0;
   private slow: SlowState = noSlow();
+  private stunnedUntil = 0;
+  private poisonedUntil = 0;
+  private dotTint = POISON_TINT;
   private revealedUntil = 0;
   private readonly shieldImage?: Phaser.GameObjects.Image;
 
@@ -125,7 +129,8 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     super.preUpdate(time, delta);
     if (!this.alive) return;
     const now = this.clock.now;
-    if (now >= this.knockbackUntil) this.act(now);
+    if (this.stunned) this.setVelocity(0, 0);
+    else if (now >= this.knockbackUntil) this.act(now);
     if (this.def.shield) this.updateShield(delta);
     this.applyCloak(now);
     this.label.setPosition(this.x, this.y - this.displayHeight / 2 - 2);
@@ -154,7 +159,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
 
   tryContact(player: Player): void {
     const now = this.clock.now;
-    if (!this.alive || !this.armed || now < this.nextContactAt || now < this.knockbackUntil) return;
+    if (!this.alive || !this.armed || this.stunned || now < this.nextContactAt || now < this.knockbackUntil) return;
     const applied = player.takeDamage(damageToPlayer(this.def.baseDamage, this.level, player.level), this.x, this.y);
     if (applied !== 'none') this.nextContactAt = now + CONTACT_COOLDOWN_MS;
   }
@@ -253,6 +258,47 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
   private clearLane(): void {
     this.lane?.destroy();
     this.lane = undefined;
+  }
+
+  /** Frozen solid for `ms` (Frost Nova twist): no moving or attacking. Bosses are immune. */
+  stun(ms: number): void {
+    if (!this.alive || this.def.boss) return;
+    this.stunnedUntil = Math.max(this.stunnedUntil, this.clock.now + ms);
+    this.cancelDash();
+    this.applyBaseTint();
+    this.scene.time.delayedCall(ms + 30, () => this.alive && this.applyBaseTint());
+  }
+
+  get stunned(): boolean {
+    return this.clock.now < this.stunnedUntil;
+  }
+
+  /** Damage-over-time tick (poison, burning): no knockback or flash, and it never interrupts the enemy. */
+  takeDot(amount: number, css = '#8fe05a', tint = POISON_TINT): void {
+    if (!this.targetable) return;
+    this.hp -= amount;
+    this.poisonedUntil = this.clock.now + 400;
+    this.dotTint = tint;
+    floatText(this.scene, this.x, this.y - this.displayHeight / 2, String(amount), css, 7, 12, 500);
+    if (this.hp <= 0) this.die();
+    else {
+      this.applyBaseTint();
+      this.scene.time.delayedCall(430, () => this.alive && this.applyBaseTint());
+    }
+  }
+
+  /** Drags the enemy by (dx, dy) unless that would push it into a wall (Gravity Well). */
+  nudge(dx: number, dy: number): void {
+    if (!this.pullable) return;
+    const radius = this.bodyRadius();
+    const x = bodyClear({ x: this.x + dx, y: this.y }, radius, this.isBlocked) ? this.x + dx : this.x;
+    const y = bodyClear({ x, y: this.y + dy }, radius, this.isBlocked) ? this.y + dy : this.y;
+    this.setPosition(x, y);
+  }
+
+  /** Can Gravity Well drag this enemy right now? Not mid-dash, which would fight it. */
+  protected get pullable(): boolean {
+    return this.targetable && this.charge.phase !== 'dash';
   }
 
   /** Slows movement to `factor` of normal for `ms` (Frost Nova); a stronger running slow is kept. */
@@ -409,7 +455,8 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
   protected applyBaseTint(): void {
     if (this.charge.phase === 'windup') this.setTint(WINDUP_TINT);
     else if (this.forcedTint !== null) this.setTint(this.forcedTint);
-    else if (this.slowed) this.setTint(FROST_TINT);
+    else if (this.stunned || this.slowed) this.setTint(FROST_TINT);
+    else if (this.clock.now < this.poisonedUntil) this.setTint(this.dotTint);
     else if (this.baseTint === null) this.clearTint();
     else this.setTint(this.baseTint);
   }

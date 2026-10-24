@@ -4,7 +4,7 @@ export interface Circle extends Stick {
   r: number;
 }
 
-export type ButtonId = 'dash' | 'skill1' | 'skill2' | 'skill3';
+export type ButtonId = 'dash' | 'skill1' | 'skill2' | 'skill3' | 'potion';
 export const SKILL_BUTTONS = ['skill1', 'skill2', 'skill3'] as const;
 export type TouchRole = 'move' | 'aim' | ButtonId;
 
@@ -54,6 +54,7 @@ export function touchMetrics(width: number, height: number): TouchMetrics {
       { id: 'skill1', x: x - Math.round(r * 2.5), y: dashY + Math.round(r * 0.4), r },
       { id: 'skill2', x: x - Math.round(r * 2), y: dashY - Math.round(r * 1.6), r },
       { id: 'skill3', x, y: dashY - Math.round(r * 2.9), r },
+      { id: 'potion', x, y: dashY + Math.round(r * 2.2), r: Math.round(r * 0.8) },
     ],
     fullscreen: { x: width - 22, y: 22, r: 14 },
     pause: { x: width - 22, y: 58, r: 14 },

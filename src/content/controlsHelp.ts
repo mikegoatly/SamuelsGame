@@ -7,7 +7,7 @@ export interface ControlsPanel {
 
 export const GOAL_LINES = [
   'Fight through the rooms, then defeat each boss to clear the level.',
-  'Kill monsters to level up and pick up coins, potions and charms. Pick your weapon and three skills before each level.',
+  'Kill monsters to level up and pick up gold, potions and gems. Spend them at the Camp on upgrades, skills and potions.',
   "Don't rush ahead: monsters far above your level hit hard and barely feel your attacks.",
 ];
 
@@ -21,6 +21,7 @@ export const CONTROLS_HELP: Record<InputDevice, ControlsPanel> = {
       ['Skill 2', 'E / 2'],
       ['Skill 3', 'R / 3'],
       ['Dash', 'Space'],
+      ['Potion', 'F'],
       ['Pause', 'Esc'],
       ['Mute', 'M'],
     ],
@@ -34,6 +35,7 @@ export const CONTROLS_HELP: Record<InputDevice, ControlsPanel> = {
       ['Skill 2', 'RB'],
       ['Skill 3', 'LB'],
       ['Dash', 'A'],
+      ['Potion', 'Y'],
       ['Pause', 'Start'],
       ['Menus', 'D-pad, A, B'],
     ],
@@ -47,6 +49,7 @@ export const CONTROLS_HELP: Record<InputDevice, ControlsPanel> = {
       ['Skill 2', 'Button 2'],
       ['Skill 3', 'Button 3'],
       ['Dash', 'Dash button'],
+      ['Potion', 'Potion button'],
       ['Pause', 'Top right'],
       ['Menus', 'Tap'],
     ],

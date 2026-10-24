@@ -40,3 +40,9 @@ export function fireballVictims(
   });
   return victims;
 }
+
+/** `count` unit headings evenly around the circle, the first turned a half step off the travel `heading`. */
+export function splitDirections(heading: Point, count: number): Point[] {
+  const base = Math.atan2(heading.y, heading.x) + Math.PI / count;
+  return Array.from({ length: count }, (_, i) => ({ x: Math.cos(base + (i * Math.PI * 2) / count), y: Math.sin(base + (i * Math.PI * 2) / count) }));
+}

@@ -1,14 +1,15 @@
 import Phaser from 'phaser';
-import { charmCard } from '../content/cards';
+import { gemCard } from '../content/cards';
 import { items, RARITY_COLOR, type ItemDef } from '../content/items';
 import { lootTables } from '../content/lootTables';
 import { Pickup } from '../entities/Pickup';
 import type { Player } from '../entities/Player';
 import { skillIds } from '../content/skills';
-import { rollDrops } from '../logic/loot';
+import { GEM_LABEL, noGems, type Gems } from '../logic/gems';
+import { rollDrops, rollGemBurst } from '../logic/loot';
 import { rollSkillScroll, SCROLL_CHANCE } from '../logic/skillScroll';
 import { resolvePotion } from '../logic/pickups';
-import { addCharm } from '../logic/save';
+import { addGem } from '../logic/save';
 import type { CardPresenter } from './CardPresenter';
 import type { SkillAcquisition } from './SkillAcquisition';
 import type { GameClock } from './GameClock';
@@ -17,10 +18,13 @@ import { floatText } from './floatText';
 import { playSfx } from './sfx';
 import type { SaveSystem } from './SaveSystem';
 
-/** Coins collected this run; banked on clear/quit, discarded on death. */
+/** Coins collected this run (banked on clear/quit, discarded on death) and gems found (saved the moment they are picked up). */
 export interface RunState {
   coins: number;
+  gems: Gems;
 }
+
+export const newRun = (): RunState => ({ coins: 0, gems: noGems() });
 
 const DUPLICATE_SCROLL_COINS = 10;
 
@@ -50,7 +54,8 @@ export class LootSystem {
   dropFrom(tableId: string, x: number, y: number): void {
     const table = lootTables[tableId];
     if (!table) return;
-    for (const itemId of rollDrops(table, this.rng)) this.spawn(itemId, x, y);
+    const burst = table.gemBurst ? rollGemBurst(table.gemBurst, this.rng) : [];
+    for (const itemId of [...rollDrops(table, this.rng), ...burst]) this.spawn(itemId, x, y);
     const owned = [...this.save.data.skills.owned.map((skill) => skill.id), ...this.scrollsOnGround()];
     const scroll = rollSkillScroll(table.scrollChance ?? SCROLL_CHANCE.normal, skillIds, owned, this.rng);
     if (scroll) this.spawn(`scroll_${scroll}`, x, y);
@@ -68,14 +73,14 @@ export class LootSystem {
     const color = RARITY_COLOR[def.rarity];
     if (def.kind === 'coin') {
       this.addCoins(def.value);
-      at(`+${def.value} ${def.value === 1 ? 'coin' : 'coins'}`, color);
+      at(`+${def.value} gold`, color);
       playSfx(this.scene, 'coin', { rate: 1 + Math.min(def.value, 5) * 0.03 });
     } else if (def.kind === 'heal') {
       const result = resolvePotion(player.hp, player.maxHp, def.heal);
       player.heal(result.healed);
       if (result.bonusCoins > 0) {
         this.addCoins(result.bonusCoins);
-        at(`+${result.bonusCoins} coins`, RARITY_COLOR.common);
+        at(`+${result.bonusCoins} gold`, RARITY_COLOR.common);
       } else {
         at(`+${result.healed} HP`, '#ff8a8a');
       }
@@ -83,11 +88,12 @@ export class LootSystem {
     } else if (def.kind === 'skill') {
       this.learnSkill(def, at);
     } else {
-      this.save.update((save) => addCharm(save, def.charm));
-      this.events.emit('charms-changed', this.save.data.charms);
+      this.save.update((save) => addGem(save, def.gem));
+      this.run.gems[def.gem]++;
+      this.events.emit('gems-changed', this.save.data.gems);
       playSfx(this.scene, 'charm');
       if (this.offerCard(def)) return;
-      at(`${def.name}!`, color);
+      at(`+1 ${GEM_LABEL[def.gem]} gem`, color);
     }
   }
 
@@ -101,13 +107,13 @@ export class LootSystem {
     const name = def.name.replace(' Scroll', '');
     if (outcome === 'none') {
       this.addCoins(DUPLICATE_SCROLL_COINS);
-      at(`Already known +${DUPLICATE_SCROLL_COINS} coins`, RARITY_COLOR.common);
+      at(`Already known +${DUPLICATE_SCROLL_COINS} gold`, RARITY_COLOR.common);
     } else if (outcome === 'learned') at(`${name} learned!`, RARITY_COLOR[def.rarity]);
     else if (outcome === 'bag') at(`${name} (in bag)`, RARITY_COLOR[def.rarity]);
   }
 
-  private offerCard(def: Extract<ItemDef, { kind: 'charm' }>): boolean {
-    return this.cards.request(def.id, charmCard(def, this.save.data.charms[def.charm]));
+  private offerCard(def: Extract<ItemDef, { kind: 'gem' }>): boolean {
+    return this.cards.request(def.id, gemCard(def, this.save.data.gems[def.gem]));
   }
 
   private addCoins(amount: number): void {

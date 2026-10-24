@@ -1,20 +1,25 @@
 import Phaser from 'phaser';
 import type { ShieldSkill } from '../../content/skills';
 import type { EnemyProjectile } from '../../entities/EnemyProjectile';
-import { absorb, newShield, shieldActive, type ShieldState } from '../../logic/arcaneShield';
+import { absorb, newShield, shieldActive, shieldBurstDamage, type ShieldState } from '../../logic/arcaneShield';
+import { novaVictims } from '../../logic/frostNova';
+import { lineClear } from '../../logic/lineOfSight';
 import { feel } from '../feel';
 import { playSfx } from '../sfx';
 import { ringBurst, sparkBurst } from './skillFx';
+import { asTargets, hurtEnemy, liveEnemies, runOver } from './targets';
 import type { CastCall, SkillCaster, SkillWorld } from './types';
 
 const SHIELD = 0x8ab4ff;
 const BOLT_PADDING = 3;
 const FLICKER_MS = 600;
+const BURST_RADIUS = 70;
 
-/** Arcane Shield: a bubble that follows the player, destroys enemy bolts it touches and soaks up damage that still reaches the player. */
+/** Arcane Shield: a bubble that follows the player, destroys enemy bolts it touches and soaks up damage that still reaches the player. Level 5: it bursts outward when it ends, hurting and shoving enemies. */
 export class ArcaneShieldCaster implements SkillCaster<ShieldSkill> {
   private shield: ShieldState | null = null;
   private radius = 20;
+  private burstDamage = 0;
   private bubble?: Phaser.GameObjects.Arc;
 
   constructor(private readonly world: SkillWorld) {
@@ -27,6 +32,7 @@ export class ArcaneShieldCaster implements SkillCaster<ShieldSkill> {
     const { scene, player, clock } = this.world;
     this.end(false);
     this.radius = params.radius;
+    this.burstDamage = params.twist ? shieldBurstDamage(params.absorb) : 0;
     this.shield = newShield(clock.now, params.durationMs, params.absorb);
     player.damageAbsorber = (amount) => this.soak(amount);
     this.bubble = scene.add.circle(player.x, player.y, params.radius, SHIELD, 0.2).setStrokeStyle(2, 0xdbe8ff, 0.95).setDepth(12);
@@ -77,11 +83,25 @@ export class ArcaneShieldCaster implements SkillCaster<ShieldSkill> {
     this.bubble = undefined;
     if (!bubble) return;
     ringBurst(scene, bubble.x, bubble.y, this.radius * (broken ? 2.4 : 1.6), SHIELD, 300);
+    if (this.burstDamage > 0 && !runOver(this.world)) this.burst(bubble.x, bubble.y);
     if (broken) {
       sparkBurst(scene, bubble.x, bubble.y, SHIELD, 14, 90);
       playSfx(scene, 'shieldBreak');
       feel.shake(70, 0.002);
     }
     bubble.destroy();
+  }
+
+  private burst(x: number, y: number): void {
+    const { scene, isSolid } = this.world;
+    const enemies = liveEnemies(this.world.enemies);
+    const centre = { x, y };
+    for (const index of novaVictims(centre, BURST_RADIUS, asTargets(enemies))) {
+      const enemy = enemies[index]!;
+      if (lineClear(centre, enemy, isSolid)) hurtEnemy(this.world, enemy, this.burstDamage, x, y, 1, 2);
+    }
+    ringBurst(scene, x, y, BURST_RADIUS, 0xffffff, 380);
+    sparkBurst(scene, x, y, SHIELD, 16, BURST_RADIUS * 1.5);
+    feel.shake(110, 0.004);
   }
 }

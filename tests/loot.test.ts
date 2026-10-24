@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { dropChance, rollDrops } from '../src/logic/loot';
+import { dropChance, rollDrops, rollGemBurst } from '../src/logic/loot';
 import { pickWeighted } from '../src/logic/weighted';
 import { aLootTable, sequenceRng } from './builders';
 
@@ -54,5 +54,23 @@ describe('dropChance', () => {
   it('is the weight share of one roll', () => {
     expect(dropChance(aLootTable(), 'potion')).toBeCloseTo(0.08);
     expect(dropChance(aLootTable(), 'missing')).toBe(0);
+  });
+});
+
+describe('rollGemBurst', () => {
+  const burst = { min: 3, max: 5, weights: [1, 1, 2] as const };
+
+  it.each([
+    [0, 3],
+    [0.5, 4],
+    [0.99, 5],
+  ])('rolling %f gives %d gems', (roll, count) => {
+    expect(rollGemBurst(burst, sequenceRng(roll, 0)).length).toBe(count);
+  });
+
+  it('picks colours by weight', () => {
+    expect(rollGemBurst({ min: 1, max: 1, weights: [1, 1, 2] }, sequenceRng(0, 0.0))).toEqual(['gemRed']);
+    expect(rollGemBurst({ min: 1, max: 1, weights: [1, 1, 2] }, sequenceRng(0, 0.3))).toEqual(['gemGreen']);
+    expect(rollGemBurst({ min: 1, max: 1, weights: [1, 1, 2] }, sequenceRng(0, 0.9))).toEqual(['gemBlue']);
   });
 });

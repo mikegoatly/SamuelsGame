@@ -62,6 +62,16 @@ export class Boss extends Enemy {
     if (this.alive) this.events.emit('boss-hp', this.hp, this.maxHp);
   }
 
+  /** Bosses only drift while walking; lunges, slams, burrows and teleports are never interrupted. */
+  protected override get pullable(): boolean {
+    return super.pullable && this.brain.mode === 'chase';
+  }
+
+  override takeDot(amount: number, css?: string, tint?: number): void {
+    super.takeDot(amount, css, tint);
+    if (this.alive) this.events.emit('boss-hp', this.hp, this.maxHp);
+  }
+
   override tryContact(player: Player): void {
     if (!this.targetable) return;
     if (this.brain.mode === 'dash') {

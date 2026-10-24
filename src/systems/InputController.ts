@@ -16,6 +16,8 @@ export interface InputSource {
   /** Skill slot buttons 1..3: true while held, or once for a tap that landed between frames. */
   readonly skills: readonly boolean[];
   readonly dash: boolean;
+  /** Potion key/button: true while held (the controller turns it into a single press). */
+  readonly potion: boolean;
   rumble?(durationMs: number, weak: number, strong: number): void;
 }
 
@@ -27,7 +29,10 @@ export class InputController {
   fire = false;
   readonly skills: boolean[] = Array.from({ length: SLOT_COUNT }, () => false);
   dash = false;
+  /** True on the frame the potion control goes down. */
+  potion = false;
 
+  private potionHeld = false;
   private readonly sources: InputSource[];
   private readonly swallow = new InputSwallow();
 
@@ -48,15 +53,19 @@ export class InputController {
     this.moveVector.reset();
     this.fire = this.dash = false;
     this.skills.fill(false);
+    let potionDown = false;
 
     for (const source of this.sources) {
       source.update(scene);
       this.moveVector.add(source.moveVector);
       this.fire ||= source.fire;
       this.dash ||= source.dash;
+      potionDown ||= source.potion;
       source.skills.forEach((pressed, i) => (this.skills[i] ||= pressed));
       this.mergeAim(source, origin);
     }
+    this.potion = potionDown && !this.potionHeld;
+    this.potionHeld = potionDown;
     if (this.swallow.suppress(this.fire || this.dash || this.skills.some(Boolean))) {
       this.fire = this.dash = false;
       this.skills.fill(false);

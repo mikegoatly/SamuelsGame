@@ -17,7 +17,7 @@ npm run gen-maps   # regenerate public/assets/maps/*.tmj (ruins, desert, palace)
 
 ## Features
 
-Three levels (Ruins, Desert, Palace) with bosses, loot, charms and permanent saves; Apprentice Staff, Broken Wand, Golden Sword and five skills (Fireball, Frost Nova, Chain Lightning, Arcane Shield, Blink Strike) chosen on a loadout screen;
+Three levels (Ruins, Desert, Palace) with bosses, loot, gems and permanent saves; Apprentice Staff, Broken Wand, Golden Sword and ten skills (Fireball, Frost Nova, Chain Lightning, Boomerang Blade, Arcane Shield, Poison Cloud, Spirit Wolf, Blink Strike, Meteor, Gravity Well) chosen on a loadout screen;
 keyboard/mouse, gamepad and touch; title screen, How to Play (highlights the device you used last) and Settings (music and effects volume
 in 10% steps, master mute, "Reduce shake / flashes"); Kenney sound effects with random variants and pitch, menu music and a victory jingle;
 hit-stop, budgeted screen shake, hurt and low-HP vignettes, death particles, dust and muzzle flashes; boss intro banners.
@@ -33,6 +33,7 @@ hit-stop, budgeted screen shake, hurt and low-HP vignettes, death particles, dus
 | Skill 2 | E or 2 | Button 2 | RB |
 | Skill 3 | R or 3 | Button 3 | LB |
 | Dash | Space | Arrow button, right edge | A |
+| Drink potion | F | Potion button under Dash | Y |
 | Pause | Esc | Pause button, top right | Start |
 | Menus | Mouse / arrows or WASD + Enter, Esc = back | Tap | D-pad / left stick + A, B = back |
 | Fullscreen | Top-right button | Top-right button | - |
@@ -58,9 +59,9 @@ Frame indices for the Tiny Dungeon sheet are documented in `src/content/assetKey
 
 Main menu -> level select (cards: locked / cleared / red "Under-levelled!" when player level < recommended - 1) -> game.
 Pause offers Resume or Quit to level select. Levels are data in `src/content/levels/`; `GameScene` starts from `{ levelId }`.
-Progress (level, XP), charms, owned weapons and cleared levels are saved in `localStorage` (`samuels-game-save`, versioned,
+Progress (level, XP), gems, owned weapons and cleared levels are saved in `localStorage` (`samuels-game-save`, versioned,
 tolerant parsing in `src/logic/save.ts`). Coins picked up in a run are banked on quit/clear and lost on death.
-You start with the Apprentice Staff; Broken Wand is the Ruins reward. Enemies drop coins, potions and permanent charms
+You start with the Apprentice Staff; Broken Wand is the Ruins reward. Enemies drop coins, potions and gems
 (`src/content/lootTables.ts`). To reset: `localStorage.removeItem('samuels-game-save')`.
 
 ## Level 1: Broken Wand (Ruins)
@@ -109,6 +110,16 @@ one caster per kind lives in `src/systems/skills/`.
 | Chain Lightning | Nearest enemy in a 70 degree cone, then up to 4 jumps within 70px (line of sight, 15% falloff per jump) | 5s | Mad King (first clear) |
 | Arcane Shield | 3s bubble: destroys enemy bolts, absorbs 40 damage | 12s | Stone Guardian (first clear) |
 | Blink Strike | Teleport up to 90px toward the aim (stops at walls), damages enemies on the path, 0.4s i-frames | 7s | Skill scroll only |
+| Boomerang Blade | Thrown 140px along the aim, returns to you; each enemy is cut once outbound and once on return, walls turn it back | 3.5s | Skill scroll only |
+| Poison Cloud | 60px cloud 70px ahead for 4s; one refreshed poison per enemy ticking every 0.5s (no stacking) | 9s | Skill scroll only |
+| Spirit Wolf | Ally wolf for 10s that paths to the nearest enemy and bites every 0.7s; takes no damage, not an enemy, ignores doors and pickups | 14s | Skill scroll only |
+| Meteor | Marks a 44px circle up to 120px ahead, lands after 1s: 60 base damage with falloff, big shake | 12s | Skill scroll only |
+| Gravity Well | 70px vortex 90px ahead for 2s: drags enemies in (bosses at 25%), small damage ticks | 11s | Skill scroll only |
+
+Level 5 twists (the per-level tables carry a `twist` flag): Fireball splits into 3 mini fireballs; Frost Nova freezes non-boss enemies for 1s;
+Chain Lightning leaves a static field at each jump; Boomerang throws two blades in a V; Arcane Shield bursts outward when it ends;
+Poison Cloud follows you; Spirit Wolf summons two wolves; Blink Strike leaves a damaging afterimage; Meteor leaves burning ground; Gravity Well collapses with an explosion.
+Lingering effects share `src/systems/skills/ZoneField.ts`; the pure maths is in `src/logic/{boomerang,dot,zone,gravityWell,aimPoint,spiritWolf}.ts`.
 
 Skill scrolls drop rarely (0.5% per kill, 3% from bosses) for a skill you do not own. With a free slot it is equipped and an item card shows;
 with all three slots full a swap prompt pauses the game: pick the slot to replace or keep the skill in the bag (it stays owned).
@@ -127,3 +138,15 @@ the equipped weapon becomes the loadout weapon, skill rewards of already cleared
 
 Volumes and the shake toggle live in the save (`settings`, save v4). Effects go through `playSfx(scene, id)` (`src/systems/sfx.ts`, definitions in
 `src/content/sfxDefs.ts`); music through the game-wide `MusicPlayer` (`musicOf(game)`), which crossfades and follows the music volume.
+
+## Economy and the Camp (v2 phase 2)
+
+- **Gems** replace the old passive charms: red (Power), green (Swiftness), blue (Vitality). They are spent, never passive. Normal kills drop one ~4% of the time
+  (colour leans to the level theme: ruins blue, desert green, palace red); bosses add a burst of 3-5. The first gem of each colour shows an item card.
+- **Camp** (`CampScene`): Level Select has a Camp button and the results screen has Visit Camp. Tabs: Upgrades and Shop (left/right or tap), gold and gems on top, scrolling list (wheel, arrows, tap).
+  - Upgrades: every owned weapon and skill goes level 1 to 5. Going from level L costs `round(60 * L^1.6 * tier)` gold (tier x1 / 1.25 / 1.5) plus L gems of the item colour
+    (skills: offence red, utility green, defence and support blue; weapons red; mapping in `src/content/upgradeInfo.ts`). The preview reads the per-level tables, e.g. Fireball 1 to 2: Damage 30 -> 36, Cooldown 2.5s -> 2.35s.
+  - Weapons gain +12% damage and +5% fire rate per level. Level 5 twists: staff bolts pierce one enemy, wand bolts split in two on hit (60% damage), sword swings send a short slash wave. Skill twists are in `skills.ts`.
+  - Shop: 3 unowned skills for 150 / 250 / 400 gold (tier 1 / 2 / 3), rotating after every level clear (seeded from the save); Health Potions (40 gold, carry 3, heal 40% HP); one Revive Token (300 gold).
+- **In a level**: F / gamepad Y / the touch potion button drinks a carried potion (only when hurt). With a Revive Token you rise once at 50% HP with 2s of i-frames; the token is consumed.
+- Save v7: `gems`, `potions`, `revive`, `shop.rotation`, `weapons.levels`. v6 charms convert one to one (power to red, swiftness to green, vitality to blue) and seen card ids are renamed.

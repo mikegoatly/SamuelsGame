@@ -24,6 +24,11 @@ export const SKILL_ICON_SOURCES: Record<string, string> = {
   chainLightning: 'fx/skill-lightning.png',
   arcaneShield: 'fx/skill-shield.png',
   blinkStrike: 'fx/skill-blink.png',
+  boomerangBlade: 'fx/skill-slash.png',
+  poisonCloud: 'fx/skill-poison.png',
+  spiritWolf: 'fx/skill-wolf.png',
+  meteor: 'fx/skill-meteor.png',
+  gravityWell: 'fx/skill-gravity.png',
 };
 
 export const Music = {
@@ -82,6 +87,8 @@ export const Frame = {
   wand: 129,
   staff: 125,
   sword: 104,
+  blade: 105,
+  wolf: 124,
   coin: 102,
   ring: 101,
   potionSmall: 127,

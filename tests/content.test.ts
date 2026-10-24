@@ -7,7 +7,8 @@ import { dropChance } from '../src/logic/loot';
 import { STARTING_WEAPON } from '../src/logic/save';
 import { desert } from '../src/content/levels/desert';
 import { ruins } from '../src/content/levels/ruins';
-import { skills } from '../src/content/skills';
+import { SKILL_ICON_SOURCES } from '../src/content/assetKeys';
+import { skillList, skills } from '../src/content/skills';
 import { weapons } from '../src/content/weapons';
 import { isUnderLevelled } from '../src/logic/levelRules';
 
@@ -43,11 +44,11 @@ describe('content integrity', () => {
     expect(weapons.brokenWand!.baseDamage).toBeGreaterThan(weapons.apprenticeStaff!.baseDamage);
   });
 
-  it('drop rates: potions ~10%, charms ~2% for bats, better for cyclops', () => {
+  it('drop rates: potions ~10%, gems ~4% for bats, better for cyclops', () => {
     const charmChance = (table: string) =>
-      ['charmOfPower', 'charmOfSwiftness', 'charmOfVitality'].reduce((sum, id) => sum + dropChance(lootTables[table]!, id), 0);
+      ['gemRed', 'gemGreen', 'gemBlue'].reduce((sum, id) => sum + dropChance(lootTables[table]!, id), 0);
     expect(dropChance(lootTables.bat!, 'healthPotionSmall')).toBeCloseTo(0.1);
-    expect(charmChance('bat')).toBeCloseTo(0.02);
+    expect(charmChance('bat')).toBeCloseTo(0.04);
     expect(charmChance('cyclops')).toBeGreaterThan(charmChance('bat'));
   });
 
@@ -101,5 +102,16 @@ describe('desert content', () => {
     expect(getEnemy('mummy').baseHp).toBeGreaterThan(getEnemy('cyclops').baseHp);
     expect(getEnemy('mummy').speed).toBeLessThanOrEqual(getEnemy('cyclops').speed);
     expect(getEnemy('vulture').behaviour).toBe('erratic');
+  });
+});
+
+describe('skill tables', () => {
+  it('has ten skills with a distinct icon source and level 5 only twist', () => {
+    expect(skillList).toHaveLength(10);
+    expect(new Set(skillList.map((s) => SKILL_ICON_SOURCES[s.id])).size).toBe(10);
+    for (const skill of skillList) {
+      expect(skill.params.map((p) => p.twist), skill.id).toEqual([false, false, false, false, true]);
+      expect(skill.cooldownMs[4], skill.id).toBeLessThan(skill.cooldownMs[0]);
+    }
   });
 });

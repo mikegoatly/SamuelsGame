@@ -57,3 +57,26 @@ export function muzzleFlash(scene: Phaser.Scene, x: number, y: number, angle: nu
   const flash = scene.add.image(x, y, Tex.muzzle).setRotation(angle).setScale(0.07).setTint(tint).setBlendMode(Phaser.BlendModes.ADD).setDepth(12);
   scene.tweens.add({ targets: flash, alpha: 0, scale: 0.12, duration: 90, onComplete: () => flash.destroy() });
 }
+
+const SPLIT_TINT = 0xd8b8ff;
+const CELEBRATE_TINTS = [0xffe066, 0xffffff, 0xb48cff, 0x7dffb0];
+
+/** Tiny spark ring where a wand bolt splits in two. */
+export function fxSplit(scene: Phaser.Scene, x: number, y: number): void {
+  const sparks = shared(scene, 'split', Tex.star, 8, { speed: { min: 20, max: 60 }, lifespan: 260, scale: { start: 0.04, end: 0 }, blendMode: Phaser.BlendModes.ADD });
+  emit(sparks, x, y, SPLIT_TINT, 6);
+}
+
+/** Camp purchase and upgrade feedback: a burst of coloured stars. */
+export function celebrate(scene: Phaser.Scene, x: number, y: number, tint = CELEBRATE_TINTS[0]!): void {
+  const stars = shared(scene, 'celebrate', Tex.star, 200, {
+    speed: { min: 50, max: 150 },
+    lifespan: 650,
+    scale: { start: 0.09, end: 0 },
+    rotate: { min: 0, max: 360 },
+    gravityY: 60,
+    blendMode: Phaser.BlendModes.ADD,
+  });
+  emit(stars, x, y, tint, 14);
+  CELEBRATE_TINTS.forEach((color, i) => scene.time.delayedCall(i * 70, () => stars.active && emit(stars, x, y, color, 5)));
+}

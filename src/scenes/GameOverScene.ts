@@ -28,7 +28,7 @@ export class GameOverScene extends MenuScene {
     this.cameras.main.fadeIn(300);
     menuText(this, cx, height * 0.2, 'You fell', 48, '#ff6b6b');
     menuText(this, cx, height * 0.2 + 44, `Level ${level} - ${progress}`, 16, '#ffffff');
-    menuText(this, cx, height * 0.2 + 64, lostCoins > 0 ? `Lost ${lostCoins} ${lostCoins === 1 ? "coin" : "coins"} from this run` : 'Your level and charms are kept', 16, '#b0b0c8');
+    menuText(this, cx, height * 0.2 + 64, lostCoins > 0 ? `Lost ${lostCoins} gold from this run` : 'Your level and gems are kept', 16, '#b0b0c8');
     const retry = new MenuButton(this, cx, height * 0.6, 200, 34, 'Retry', () => this.inputReady() && this.scene.start('Game', { levelId }));
     const select = new MenuButton(this, cx, height * 0.6 + 44, 200, 34, 'Level select', () => this.inputReady() && this.scene.start('LevelSelect'));
     this.menu = new MenuList(this, [retry, select], { onBack: () => this.scene.start('LevelSelect') });

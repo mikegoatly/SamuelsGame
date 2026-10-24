@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { Tex } from '../../content/assetKeys';
+import { EXPLOSION_FRAMES, Tex } from '../../content/assetKeys';
 import type { Point } from '../../logic/geometry';
 
 /** Expanding outline that fades, for novas and shield breaks. */
@@ -52,4 +52,18 @@ export function lightningBolt(scene: Phaser.Scene, points: readonly Point[], col
     g.strokePath();
   }
   scene.tweens.add({ targets: g, alpha: 0, duration: ms, onComplete: () => g.destroy() });
+}
+
+const EXPLOSION_FPS = 28;
+
+/** The pixel explosion animation with a fading ring, sized to `radius`. */
+export function explosionBlast(scene: Phaser.Scene, x: number, y: number, radius: number, tint = 0xff9a40, ringColor = 0xff7a2a): void {
+  const key = 'fireball-explosion';
+  if (!scene.anims.exists(key)) {
+    scene.anims.create({ key, frames: EXPLOSION_FRAMES.map((frame) => ({ key: Tex.explosion, frame })), frameRate: EXPLOSION_FPS });
+  }
+  const sprite = scene.add.sprite(x, y, Tex.explosion, EXPLOSION_FRAMES[0]).setDepth(9).setTint(tint).setScale((radius * 2.4) / 96);
+  sprite.play(key).once(Phaser.Animations.Events.ANIMATION_COMPLETE, () => sprite.destroy());
+  const ring = scene.add.circle(x, y, radius, ringColor, 0.18).setStrokeStyle(2, 0xffc060, 0.9).setDepth(8);
+  scene.tweens.add({ targets: ring, alpha: 0, scale: 1.2, duration: 260, onComplete: () => ring.destroy() });
 }

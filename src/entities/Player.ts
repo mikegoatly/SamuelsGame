@@ -5,13 +5,15 @@ import type { WeaponDef } from '../content/weapons';
 import { speedFactorAt } from '../logic/hazards';
 import type { Rect } from '../logic/geometry';
 import { PlayerTimers } from '../logic/playerTimers';
-import { computePlayerStats, type Charms, type PlayerStats } from '../logic/stats';
+import { reviveHp, REVIVE_IFRAMES_MS } from '../logic/potions';
+import { computePlayerStats, type PlayerStats } from '../logic/stats';
 import { dustPuff, muzzleFlash } from '../systems/fx';
 import { feel } from '../systems/feel';
 import type { GameClock } from '../systems/GameClock';
 import type { GameEvents } from '../systems/GameEvents';
 import type { InputController } from '../systems/InputController';
 import type { ProgressionSystem } from '../systems/ProgressionSystem';
+import { floatText } from '../systems/floatText';
 import { playSfx } from '../systems/sfx';
 import { fireProjectile } from './Projectile';
 
@@ -37,6 +39,10 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   skillHandler?: (slot: number, x: number, y: number, aim: Phaser.Math.Vector2) => void;
   /** Soaks up incoming damage (Arcane Shield): returns how much still gets through. */
   damageAbsorber?: (amount: number) => number;
+  /** Asked when HP hits 0: true means a Revive Token was spent and the player gets back up. */
+  reviver?: () => boolean;
+  /** Called on the frame the potion key is pressed. */
+  potionHandler?: () => void;
   /** Set when the run is ending: no more shooting or casting. */
   actionsLocked = false;
   /** Called on each melee swing; the melee system finds and hurts whatever the cone touches. */
@@ -63,7 +69,6 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     private readonly progression: ProgressionSystem,
     private readonly events: GameEvents,
     weapon: WeaponDef,
-    private readonly getCharms: () => Charms,
     private readonly clock: GameClock,
   ) {
     super(scene, x, y, Tex.tiles, Frame.hero);
@@ -73,10 +78,9 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this.setSize(10, 10).setOffset(3, 5).setDepth(10).setPushable(false);
     this.wand = scene.add.image(x, y, Tex.tiles, weapon.frame).setDepth(11);
     this.showWeapon();
-    this.stats = computePlayerStats(progression.level, getCharms());
+    this.stats = computePlayerStats(progression.level);
     this.maxHp = this.hp = this.stats.maxHp;
     events.on('level-up', () => this.onLevelUp());
-    events.on('charms-changed', () => this.refreshStats());
   }
 
   get level(): number {
@@ -92,7 +96,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   }
 
   takeDamage(amount: number, fromX: number, fromY: number): DamageResult {
-    if (this.dead || this.invulnerable || GOD_MODE) return 'none';
+    if (this.dead || this.actionsLocked || this.invulnerable || GOD_MODE) return 'none';
     const through = this.damageAbsorber ? this.damageAbsorber(amount) : amount;
     if (through <= 0) {
       this.timers.grantInvulnerability(this.clock.now, ABSORB_IFRAMES_MS);
@@ -107,7 +111,10 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this.setVelocity(away.x, away.y);
     this.events.emit('player-hurt');
     this.events.emit('hp-changed', this.hp, this.maxHp);
-    if (this.hp <= 0) this.die();
+    if (this.hp <= 0) {
+      if (this.reviver?.()) this.revive();
+      else this.die();
+    }
     return 'hurt';
   }
 
@@ -125,6 +132,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
       this.setVelocity(this.controls.moveVector.x * speed, this.controls.moveVector.y * speed);
     }
 
+    if (!this.actionsLocked && this.controls.potion) this.potionHandler?.();
     if (!this.actionsLocked) this.handleFire(now);
     if (!this.actionsLocked) this.controls.skills.forEach((pressed, slot) => pressed && this.skillHandler?.(slot, this.x, this.y - 2, this.aimDirection));
     this.updateVisuals(now);
@@ -151,19 +159,18 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
 
   private onLevelUp(): void {
     if (this.dead) return;
-    this.stats = computePlayerStats(this.level, this.getCharms());
+    this.stats = computePlayerStats(this.level);
     this.maxHp = this.hp = this.stats.maxHp;
     this.events.emit('hp-changed', this.hp, this.maxHp);
   }
 
-  /** Charms stack permanently; extra max HP is granted as current HP too. */
-  private refreshStats(): void {
-    if (this.dead) return;
-    const gained = Math.max(0, computePlayerStats(this.level, this.getCharms()).maxHp - this.maxHp);
-    this.stats = computePlayerStats(this.level, this.getCharms());
-    this.maxHp = this.stats.maxHp;
-    this.hp = Math.min(this.maxHp, this.hp + gained);
+  /** Revive Token: back up at half HP with a couple of seconds of i-frames. */
+  private revive(): void {
+    this.hp = reviveHp(this.maxHp);
+    this.timers.grantInvulnerability(this.clock.now, REVIVE_IFRAMES_MS);
     this.events.emit('hp-changed', this.hp, this.maxHp);
+    floatText(this.scene, this.x, this.y - 16, 'REVIVED!', '#ffe066', 16, 24, 1500);
+    playSfx(this.scene, 'levelUp');
   }
 
   private die(): void {

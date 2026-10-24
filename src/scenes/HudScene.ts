@@ -1,10 +1,10 @@
 import Phaser from 'phaser';
 import { ControlFrame, Frame, Tex } from '../content/assetKeys';
 import { items } from '../content/items';
+import { GEM_COLOURS, gemItemId, type Gems } from '../logic/gems';
 import { getWeapon } from '../content/weapons';
 import type { Player } from '../entities/Player';
 import type { PlayerProgress } from '../logic/progression';
-import type { CharmId, Charms } from '../logic/stats';
 import type { SkillSystem } from '../systems/SkillSystem';
 import type { GameEvents } from '../systems/GameEvents';
 import type { LootSystem } from '../systems/LootSystem';
@@ -15,6 +15,7 @@ import { saveSystem } from '../systems/SaveSystem';
 import { BossIntro } from '../ui/BossIntro';
 import { gameText } from '../ui/gameText';
 import { DamageVignette } from '../ui/DamageVignette';
+import { PotionSlot } from '../ui/PotionSlot';
 import { SkillBar } from '../ui/SkillBar';
 import { TouchControlsView } from '../ui/TouchControlsView';
 
@@ -34,7 +35,6 @@ const BAR_WIDTH = 140;
 const FULLSCREEN_SIZE = 28;
 const FULLSCREEN_MARGIN = 8;
 const PAUSE_Y = 58;
-const CHARM_ITEMS: Record<CharmId, string> = { power: 'charmOfPower', swiftness: 'charmOfSwiftness', vitality: 'charmOfVitality' };
 
 export class HudScene extends Phaser.Scene {
   private bars!: Phaser.GameObjects.Graphics;
@@ -49,9 +49,10 @@ export class HudScene extends Phaser.Scene {
   private fullscreenButton!: Phaser.GameObjects.Image;
   private pauseButton!: Phaser.GameObjects.Container;
   private coinText!: Phaser.GameObjects.Text;
-  private charmIcons!: Phaser.GameObjects.Container;
+  private gemIcons!: Phaser.GameObjects.Container;
   private touchView!: TouchControlsView;
   private skillBar!: SkillBar;
+  private potionSlot!: PotionSlot;
   private xpRatio = 0;
   private weaponIcon!: Phaser.GameObjects.Image;
   private weaponText!: Phaser.GameObjects.Text;
@@ -65,6 +66,7 @@ export class HudScene extends Phaser.Scene {
   create(data: HudData): void {
     const { events, progression, player, director, loot, skills, roomTotal, bossName } = data;
     this.skillBar = new SkillBar(this, skills);
+    this.potionSlot = new PotionSlot(this);
     this.vignette = new DamageVignette(this);
     const intro = (this.intro = new BossIntro(this));
     this.bars = this.add.graphics();
@@ -78,9 +80,9 @@ export class HudScene extends Phaser.Scene {
     this.createPauseButton(events);
     this.add.image(BAR_X + 5, 58, Tex.tiles, Frame.coin).setTint(0xffd84a);
     this.coinText = this.makeText(BAR_X + 16, 58, '#ffe066', 16).setOrigin(0, 0.5);
-    this.charmIcons = this.add.container(BAR_X, 78);
+    this.gemIcons = this.add.container(BAR_X, 78);
     this.showCoins(loot.totalCoins);
-    this.showCharms(saveSystem.data.charms);
+    this.showGems(saveSystem.data.gems);
     this.touchView = new TouchControlsView(this);
     this.createWeaponIndicator(player.weapon.id);
     this.layout();
@@ -109,7 +111,7 @@ export class HudScene extends Phaser.Scene {
     });
     events.on('xp-changed', (progress) => this.showProgress(progress, progression.xpForNextLevel));
     events.on('coins-changed', (total) => this.showCoins(total));
-    events.on('charms-changed', (charms) => this.showCharms(charms));
+    events.on('gems-changed', (gems) => this.showGems(gems));
     events.on('wave-started', (wave) => this.waveText.setText(`Wave ${wave}`));
     events.on('room-started', (order, total) => this.waveText.setText(`Room ${order}/${total}`));
     events.on('boss-started', () => {
@@ -135,6 +137,7 @@ export class HudScene extends Phaser.Scene {
     this.vignette.update(delta, this.hp.value / this.hp.max, saveSystem.data.settings.reduceShake);
     this.touchView.update();
     this.skillBar.update();
+    this.potionSlot.update();
   }
 
   /** Bottom-left readout of the basic weapon picked on the loadout screen. */
@@ -206,15 +209,15 @@ export class HudScene extends Phaser.Scene {
     this.coinText.setText(String(total));
   }
 
-  private showCharms(charms: Charms): void {
-    this.charmIcons.removeAll(true);
+  private showGems(gems: Gems): void {
+    this.gemIcons.removeAll(true);
     let x = 0;
-    for (const id of Object.keys(CHARM_ITEMS) as CharmId[]) {
-      if (charms[id] <= 0) continue;
-      const item = items[CHARM_ITEMS[id]]!;
+    for (const id of GEM_COLOURS) {
+      if (gems[id] <= 0) continue;
+      const item = items[gemItemId(id)]!;
       const icon = this.add.image(x + 5, 0, Tex.tiles, item.frame).setTint(item.tint ?? 0xffffff);
-      const count = this.makeText(x + 13, 0, '#ffffff', 16).setOrigin(0, 0.5).setText(`x${charms[id]}`);
-      this.charmIcons.add([icon, count]);
+      const count = this.makeText(x + 13, 0, '#ffffff', 16).setOrigin(0, 0.5).setText(`x${gems[id]}`);
+      this.gemIcons.add([icon, count]);
       x += 40;
     }
   }

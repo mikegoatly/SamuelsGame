@@ -1,13 +1,17 @@
 import { MAX_LEVEL, type PlayerProgress } from './progression';
 import { xpToNextLevel } from './xp';
-import { noCharms, type CharmId, type Charms } from './stats';
+import { CHARM_TO_GEM, GEM_COLOURS, LEGACY_CARD_IDS, noGems, totalGems, type GemColour, type Gems } from './gems';
 
 import type { CardMode } from './itemCards';
 import { emptySlots, equipInSlot, firstEmptySlot, sanitizeSlots, type Loadout } from './loadout';
 
-/** v6: `skills` + `loadout` replace `powers` and `weapons.equipped`. v5: `seen` + `itemCards`; v4: volumes + reduceShake; v2: `settings`. Older saves load through the same tolerant parse. */
-export const SAVE_VERSION = 6;
+/** v7: `gems` replace `charms`; `potions`, `revive`, `shop`, `weapons.levels` added. v6: `skills` + `loadout` replace `powers` and `weapons.equipped`. v5: `seen` + `itemCards`; v4: volumes + reduceShake; v2: `settings`. Older saves load through the same tolerant parse. */
+export const SAVE_VERSION = 7;
+/** First version whose skills and loadout need no conversion from powers. */
+const SKILLS_VERSION = 6;
 export const MAX_SKILL_LEVEL = 5;
+export const MAX_POTIONS = 3;
+export const CHARMS_NOTICE = 'charmsToGems';
 export const STARTING_WEAPON = 'apprenticeStaff';
 
 export interface Settings {
@@ -32,8 +36,16 @@ export interface SaveData {
   version: typeof SAVE_VERSION;
   progress: PlayerProgress;
   coins: number;
-  charms: Charms;
-  weapons: { owned: string[] };
+  gems: Gems;
+  weapons: { owned: string[]; /** Upgrade level per weapon id; missing means 1. */ levels: Record<string, number> };
+  /** Carry-in health potions bought at the Camp. */
+  potions: number;
+  /** A Revive Token is held: revives once at 50% HP on death in a level. */
+  revive: boolean;
+  /** Camp shop stock rotates each time this goes up (every level clear). */
+  shop: { rotation: number };
+  /** One-time notices waiting to be shown (e.g. charms became gems). */
+  pendingNotices: string[];
   skills: { owned: OwnedSkill[] };
   /** Basic weapon and the three skill slots chosen on the loadout screen. */
   loadout: Loadout;
@@ -48,8 +60,12 @@ export function defaultSave(): SaveData {
     version: SAVE_VERSION,
     progress: { level: 1, xp: 0 },
     coins: 0,
-    charms: noCharms(),
-    weapons: { owned: [STARTING_WEAPON] },
+    gems: noGems(),
+    weapons: { owned: [STARTING_WEAPON], levels: {} },
+    potions: 0,
+    revive: false,
+    shop: { rotation: 0 },
+    pendingNotices: [],
     skills: { owned: [] },
     loadout: { weapon: STARTING_WEAPON, slots: emptySlots() },
     levels: { cleared: [] },
@@ -82,6 +98,27 @@ function parseOwnedSkills(value: unknown): OwnedSkill[] {
   return owned;
 }
 
+/** v7 stores `gems`; older saves held `charms`, which convert one to one. */
+function parseGems(raw: Record<string, unknown>): Gems {
+  const gems = noGems();
+  const modern = typeof raw.version === 'number' && raw.version >= SAVE_VERSION;
+  const source = modern ? raw.gems : raw.charms;
+  if (!isRecord(source)) return gems;
+  if (modern) for (const colour of GEM_COLOURS) gems[colour] = wholeNumber(source[colour], 0);
+  else for (const [charm, colour] of Object.entries(CHARM_TO_GEM)) gems[colour] = wholeNumber(source[charm], 0);
+  return gems;
+}
+
+function parseWeaponLevels(value: unknown, owned: readonly string[]): Record<string, number> {
+  const levels: Record<string, number> = {};
+  if (!isRecord(value)) return levels;
+  for (const id of owned) {
+    const level = wholeNumber(value[id], 1, 1, MAX_SKILL_LEVEL);
+    if (level > 1) levels[id] = level;
+  }
+  return levels;
+}
+
 /** Tolerant: junk, partial or old data falls back to defaults field by field; never throws. */
 export function parseSave(json: string | null | undefined, legacyRewards: LegacySkillRewards = {}, isKnownSkill: (id: string) => boolean = () => true): SaveData {
   const save = defaultSave();
@@ -98,13 +135,14 @@ export function parseSave(json: string | null | undefined, legacyRewards: Legacy
     save.progress = { level, xp: level >= MAX_LEVEL ? 0 : Math.min(wholeNumber(raw.progress.xp, 0), xpToNextLevel(level) - 1) };
   }
   save.coins = wholeNumber(raw.coins, 0);
-  if (isRecord(raw.charms)) {
-    for (const id of Object.keys(save.charms) as CharmId[]) save.charms[id] = wholeNumber(raw.charms[id], 0);
-  }
+  save.gems = parseGems(raw);
+  save.potions = wholeNumber(raw.potions, 0, 0, MAX_POTIONS);
+  save.revive = raw.revive === true;
+  if (isRecord(raw.shop)) save.shop = { rotation: wholeNumber(raw.shop.rotation, 0) };
   if (isRecord(raw.weapons)) {
     const owned = strings(raw.weapons.owned);
     if (!owned.includes(STARTING_WEAPON)) owned.unshift(STARTING_WEAPON);
-    save.weapons = { owned };
+    save.weapons = { owned, levels: parseWeaponLevels(raw.weapons.levels, owned) };
   }
   if (isRecord(raw.levels)) {
     save.levels.cleared = strings(raw.levels.cleared);
@@ -126,7 +164,9 @@ export function parseSave(json: string | null | undefined, legacyRewards: Legacy
       itemCards: raw.settings.itemCards === 'always' ? 'always' : 'first',
     };
   }
-  save.seen = strings(raw.seen);
+  save.seen = strings(raw.seen).map((id) => LEGACY_CARD_IDS[id] ?? id);
+  const converted = !(typeof raw.version === 'number' && raw.version >= SAVE_VERSION) && totalGems(save.gems) > 0 && !save.seen.includes(CHARMS_NOTICE);
+  save.pendingNotices = [...new Set([...strings(raw.pendingNotices).filter((id) => !save.seen.includes(id)), ...(converted ? [CHARMS_NOTICE] : [])])];
   return parseSkills(save, raw, legacyRewards, isKnownSkill);
 }
 
@@ -134,7 +174,7 @@ export function parseSave(json: string | null | undefined, legacyRewards: Legacy
 function parseSkills(save: SaveData, raw: Record<string, unknown>, legacyRewards: LegacySkillRewards, isKnown: (id: string) => boolean): SaveData {
   const owned = save.weapons.owned;
   const chosenWeapon = (id: unknown): string => (typeof id === 'string' && owned.includes(id) ? id : STARTING_WEAPON);
-  if (!(typeof raw.version === 'number' && raw.version >= SAVE_VERSION)) {
+  if (!(typeof raw.version === 'number' && raw.version >= SKILLS_VERSION)) {
     const equipped = isRecord(raw.weapons) ? raw.weapons.equipped : undefined;
     let next: SaveData = { ...save, loadout: { weapon: chosenWeapon(equipped), slots: emptySlots() } };
     const powers = isRecord(raw.powers) ? strings(raw.powers.unlocked) : [];
@@ -158,14 +198,22 @@ export const addCoins = (save: SaveData, amount: number): SaveData => ({
   coins: save.coins + Math.max(0, Math.floor(amount)),
 });
 
-export const addCharm = (save: SaveData, id: CharmId): SaveData => ({
+export const addGem = (save: SaveData, colour: GemColour, amount = 1): SaveData => ({
   ...save,
-  charms: { ...save.charms, [id]: save.charms[id] + 1 },
+  gems: { ...save.gems, [colour]: save.gems[colour] + Math.max(0, Math.floor(amount)) },
 });
+
+export const dismissNotice = (save: SaveData, id: string): SaveData => ({
+  ...save,
+  pendingNotices: save.pendingNotices.filter((n) => n !== id),
+  seen: save.seen.includes(id) ? save.seen : [...save.seen, id],
+});
+
+export const weaponLevel = (save: SaveData, weaponId: string): number => save.weapons.levels[weaponId] ?? 1;
 
 export function grantWeapon(save: SaveData, weaponId: string, equip = true): SaveData {
   const owned = save.weapons.owned.includes(weaponId) ? save.weapons.owned : [...save.weapons.owned, weaponId];
-  return { ...save, weapons: { owned }, loadout: equip ? { ...save.loadout, weapon: weaponId } : save.loadout };
+  return { ...save, weapons: { ...save.weapons, owned }, loadout: equip ? { ...save.loadout, weapon: weaponId } : save.loadout };
 }
 
 export const equipWeapon = (save: SaveData, weaponId: string): SaveData =>
@@ -212,5 +260,5 @@ export function applyLevelClear(save: SaveData, clear: LevelClear): SaveData {
   if (clear.timeMs !== undefined && clear.timeMs > 0 && (best === undefined || clear.timeMs < best)) {
     levels.bestTimes = { ...next.levels.bestTimes, [clear.levelId]: clear.timeMs };
   }
-  return { ...next, levels };
+  return { ...next, levels, shop: { rotation: next.shop.rotation + 1 } };
 }

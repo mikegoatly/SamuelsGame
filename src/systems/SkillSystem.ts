@@ -9,6 +9,7 @@ import { ArcaneShieldCaster } from './skills/ArcaneShieldCaster';
 import { BlinkStrikeCaster } from './skills/BlinkStrikeCaster';
 import { ChainLightningCaster } from './skills/ChainLightningCaster';
 import { FireballCaster } from './skills/FireballCaster';
+import { ExtraCasters } from './skills/extraCasters';
 import { FrostNovaCaster } from './skills/FrostNovaCaster';
 import type { SkillWorld } from './skills/types';
 
@@ -39,6 +40,7 @@ export class SkillSystem {
       chain: new ChainLightningCaster(o),
       shield: new ArcaneShieldCaster(o),
       blink: new BlinkStrikeCaster(o),
+      extra: new ExtraCasters(o),
     };
     o.player.skillHandler = (slot, x, y, aim) => this.cast(slot, x, y, aim);
     this.reload();
@@ -85,6 +87,8 @@ export class SkillSystem {
         return this.casters.shield.cast({ ...call, skill, params: skillParams(skill, level) });
       case 'blink':
         return this.casters.blink.cast({ ...call, skill, params: skillParams(skill, level) });
+      default:
+        return this.casters.extra.cast(skill, call);
     }
   }
 

@@ -28,7 +28,7 @@ export abstract class MenuScene extends Phaser.Scene {
     this.menu?.update();
   }
 
-  private rebuild(): void {
+  protected rebuild(): void {
     const focus = this.menu?.focusIndex;
     this.menu?.destroy();
     this.tweens.killAll();

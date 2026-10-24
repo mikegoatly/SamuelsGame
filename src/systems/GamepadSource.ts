@@ -14,6 +14,7 @@ export class GamepadSource implements InputSource {
   fire = false;
   readonly skills: boolean[] = Array.from({ length: SLOT_COUNT }, () => false);
   dash = false;
+  potion = false;
 
   private readonly lastAim = new Phaser.Math.Vector2(1, 0);
   private padAiming = false;
@@ -27,7 +28,7 @@ export class GamepadSource implements InputSource {
 
   update(scene: Phaser.Scene): void {
     this.moveVector.reset();
-    this.fire = this.dash = false;
+    this.fire = this.dash = this.potion = false;
     this.skills.fill(false);
     const pad = this.activePad(scene);
     if (!pad) return;
@@ -49,6 +50,7 @@ export class GamepadSource implements InputSource {
     this.skills[1] = pastThreshold(pad.R1, TRIGGER_THRESHOLD);
     this.skills[2] = pastThreshold(pad.L1, TRIGGER_THRESHOLD);
     this.dash = pad.A;
+    this.potion = pad.Y;
   }
 
   rumble(durationMs: number, weak: number, strong: number): void {

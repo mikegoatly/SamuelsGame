@@ -35,16 +35,17 @@ export class TouchSource implements InputSource {
   fire = false;
   readonly skills: boolean[] = Array.from({ length: SLOT_COUNT }, () => false);
   dash = false;
+  potion = false;
 
   readonly state: TouchState = {
     visible: false,
     move: newStick(),
     aim: newStick(),
-    buttons: { dash: false, skill1: false, skill2: false, skill3: false },
+    buttons: { dash: false, skill1: false, skill2: false, skill3: false, potion: false },
   };
 
   /** Remembers taps shorter than a frame, like the keyboard latches. */
-  private readonly latches: Record<ButtonId, KeyLatch> = { dash: new KeyLatch(), skill1: new KeyLatch(), skill2: new KeyLatch(), skill3: new KeyLatch() };
+  private readonly latches: Record<ButtonId, KeyLatch> = { dash: new KeyLatch(), skill1: new KeyLatch(), skill2: new KeyLatch(), skill3: new KeyLatch(), potion: new KeyLatch() };
 
   private readonly lastAim = new Phaser.Math.Vector2(1, 0);
   private hasAimed = false;
@@ -99,6 +100,7 @@ export class TouchSource implements InputSource {
       }
     }
     this.dash = this.latches.dash.read();
+    this.potion = this.latches.potion.read();
     SKILL_BUTTONS.forEach((id, i) => (this.skills[i] = this.latches[id].read()));
   }
 

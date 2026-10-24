@@ -1,22 +1,21 @@
 import Phaser from 'phaser';
 import { Frame, Music } from '../content/assetKeys';
 import { CAMERA_ZOOM } from '../content/config';
-import { GOD_DAMAGE_MULTIPLIER, GOD_MODE } from '../debug';
 import { getLevel, type LevelConfig } from '../content/levels';
 import { getEnemy } from '../content/enemies';
 import { rewardsOf } from '../content/rewards';
-import { getWeapon } from '../content/weapons';
+import { getWeapon, weaponAtLevel } from '../content/weapons';
 import { EnemyProjectiles, type EnemyProjectile } from '../entities/EnemyProjectile';
 import type { Enemy } from '../entities/Enemy';
 import { Player } from '../entities/Player';
-import { createProjectilePool, Projectile } from '../entities/Projectile';
+import { createProjectilePool, type Projectile } from '../entities/Projectile';
 import { levelUpCard } from '../content/cards';
 import { CardPresenter } from '../systems/CardPresenter';
 import { RewardPickup } from '../entities/RewardPickup';
-import { damageToEnemy } from '../logic/combat';
 import { rectCenter } from '../logic/geometry';
 import { solidAt } from '../logic/solidity';
-import { addCoins, applyLevelClear, withProgress } from '../logic/save';
+import { addCoins, applyLevelClear, weaponLevel, withProgress } from '../logic/save';
+import { withRevive } from '../logic/campPurchases';
 import { feel } from '../systems/feel';
 import { GameClock } from '../systems/GameClock';
 import { EnemyFactory } from '../systems/EnemyFactory';
@@ -24,7 +23,9 @@ import { GameEvents } from '../systems/GameEvents';
 import { floatText } from '../systems/floatText';
 import { InputController } from '../systems/InputController';
 import type { LevelDirector } from '../systems/LevelDirector';
-import { LootSystem, type RunState } from '../systems/LootSystem';
+import { LootSystem, newRun, type RunState } from '../systems/LootSystem';
+import { PotionSystem } from '../systems/PotionSystem';
+import { registerBoltHits } from '../systems/BoltHits';
 import { MeleeSystem } from '../systems/MeleeSystem';
 import { musicOf, type MusicPlayer } from '../systems/MusicPlayer';
 import { ProgressionSystem } from '../systems/ProgressionSystem';
@@ -53,7 +54,7 @@ export class GameScene extends Phaser.Scene {
   private player!: Player;
   private level!: LevelConfig;
   private progression!: ProgressionSystem;
-  private run: RunState = { coins: 0 };
+  private run: RunState = newRun();
   private startedAt = 0;
   private kills = 0;
   private clock!: GameClock;
@@ -67,7 +68,7 @@ export class GameScene extends Phaser.Scene {
     this.ending = false;
     this.kills = 0;
     this.level = getLevel(data.levelId ?? 'arena');
-    this.run = { coins: 0 };
+    this.run = newRun();
     this.clock = new GameClock(this);
     feel.bind(this, this.clock);
     this.startedAt = 0;
@@ -78,7 +79,7 @@ export class GameScene extends Phaser.Scene {
     const { walls, playerStart } = map;
     const projectiles = createProjectilePool(this);
     const shots = new EnemyProjectiles(this);
-    const weapon = getWeapon(save.loadout.weapon);
+    const weapon = weaponAtLevel(getWeapon(save.loadout.weapon), weaponLevel(save, save.loadout.weapon));
     const controls = new InputController(this);
     this.cards = new CardPresenter({ scene: this.scene, isEnding: () => this.ending, onClosed: () => controls.swallowUntilReleased() }, saveSystem);
     const player = new Player(
@@ -90,10 +91,11 @@ export class GameScene extends Phaser.Scene {
       progression,
       events,
       weapon,
-      () => saveSystem.data.charms,
       this.clock,
     );
     this.player = player;
+    player.reviver = () => this.useRevive();
+    new PotionSystem(this, player, saveSystem);
     player.slowZones = map.slowZones;
     const enemies = (this.enemies = this.physics.add.group({ allowGravity: false }));
     const lookups = [walls, ...map.solid].map((layer) => (x: number, y: number) => layer.getTileAtWorldXY(x, y));
@@ -104,19 +106,11 @@ export class GameScene extends Phaser.Scene {
     this.acquisition = new SkillAcquisition(this, saveSystem, skills, this.cards);
     const loot = new LootSystem(this, player, events, this.run, saveSystem, this.clock, this.cards, this.acquisition);
 
-    new MeleeSystem({ scene: this, player, enemies, shots, isSolid });
+    new MeleeSystem({ scene: this, player, enemies, shots, projectiles, isSolid });
     if (map.spikes.length > 0) new SpikeSystem(this, player, this.clock, map.spikes);
 
     this.addColliders(map, player, enemies, projectiles, shots);
-    this.physics.add.overlap(projectiles, enemies, (boltObj, enemyObj) => {
-      const bolt = boltObj as Projectile;
-      const enemy = enemyObj as Enemy;
-      if (!bolt.active || !enemy.alive || !enemy.targetable) return;
-      const multiplier = GOD_MODE ? GOD_DAMAGE_MULTIPLIER : 1;
-      const damage = damageToEnemy(bolt.weapon.baseDamage, progression.level, enemy.level, player.stats.damageMultiplier) * multiplier;
-      enemy.takeHit(damage, bolt.body!.velocity.x, bolt.body!.velocity.y);
-      bolt.kill();
-    });
+    registerBoltHits(this, projectiles, enemies, player);
     this.physics.add.overlap(player, shots.group, (_, boltObj) => {
       const bolt = boltObj as EnemyProjectile;
       if (!bolt.active) return;
@@ -214,6 +208,7 @@ export class GameScene extends Phaser.Scene {
         timeMs,
         kills: this.kills,
         coins,
+        gems: this.run.gems,
         xp: this.progression.gainedXp,
         level: this.progression.level,
         rewards: rewardsOf(this.level),
@@ -299,6 +294,13 @@ export class GameScene extends Phaser.Scene {
     this.scene.launch('Pause');
   }
 
+  /** Player.reviver: spends the Revive Token if one is held. */
+  private useRevive(): boolean {
+    if (!saveSystem.data.revive) return false;
+    saveSystem.update((save) => withRevive(save, false));
+    return true;
+  }
+
   private persistProgress(): void {
     saveSystem.update((save) => withProgress(save, this.progression.progress));
   }
@@ -316,6 +318,7 @@ export class GameScene extends Phaser.Scene {
   private endRun(director: LevelDirector): void {
     if (this.ending) return;
     this.ending = true;
+    this.player.actionsLocked = true;
     this.cards.cancel();
     feel.lock();
     director.stop();

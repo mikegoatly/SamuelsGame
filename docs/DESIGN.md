@@ -42,11 +42,11 @@ weights, monster level range, boss id, reward id, unlock requirement (previous l
   - damage taken × `clamp(1 + 0.15 × gap, 0.7, 2.5)`
 - Drops: each enemy def references a loot table (`content/lootTables.ts`): `rolls` independent rolls, each picks
   one entry (or nothing) by weight (per-mille). `rollDrops(table, rng, luck)` in `logic/loot.ts`; luck inflates rare/epic weights.
-  Rarity: common (coins), rare (potions), epic (charms). Rates per roll: slime ~62% coins, 11% potion, 2% charm;
-  bat 60% coin, 10% potion, 2% charm; cyclops 60% coins/piles, 20% potion (7% large), 5% charm.
+  Rarity: common (coins), rare (potions), epic (charms). Rates per roll: slime ~62% coins, 11% potion, 4% gem;
+  bat 60% coin, 10% potion, 4% gem; cyclops 60% coins/piles, 20% potion (7% large), 7% gem.
 - Items (`content/items.ts`): coin (1), coin pile (5), health potion small/large (+25/+60 HP, at full HP converts to 2 coins),
-  Charm of Power (+5% weapon dmg), Swiftness (+4% move speed), Vitality (+10 max HP); charms stack permanently.
-  `computePlayerStats(level, charms)` gives maxHp, moveSpeed, damageMultiplier (weapon damage modifier).
+  Gems (red Power, green Swiftness, blue Vitality) are spendable upgrade material (v2 phase 2), no passive bonus.
+  `computePlayerStats(level)` gives maxHp, moveSpeed, damageMultiplier; weapon upgrade levels scale damage and fire rate (`weaponAtLevel`).
 - Pickups pop out of dead enemies, magnet to the player within 40px, auto-collect on overlap, blink then despawn after 20s.
 
 ### Save & run state
@@ -177,7 +177,7 @@ tests/                    Vitest specs for logic/
 - Spike traps (`logic/spikes.ts`, `systems/SpikeSystem`): 3.2s cycle on the pause-safe GameClock, down -> 0.7s red-blinking warning -> up 0.9s; only up spikes hurt (14% max HP, i-frames and dash respected).
 - Enemies: palaceGuard (shield: frontal hits take 55% less, shield turns at 1.3 rad/s so flanking works; `logic/shield.ts`), royalArcher (`leadAim` predictive shots),
   darkMage (`logic/blink.ts`: blinks 85px when the player is within 62px, then fires a slow homing orb; `logic/angle.ts steerToward`), assassin (charger, alpha 0.14 while stalking via `cloakAlpha`, revealed on windup/hit).
-  Palace loot pays 3.5-4 coins/kill, 11-17% large potions, 6-10% charms.
+  Palace loot pays 3.5-4 coins/kill, 11-17% large potions, 8-11% gems.
 - Mad King (Lv16, base HP 1800 = 8550, scale 3): phase 1 (x1.1 speed) 3-lunge combos (0.65s red lane, then 0.5s re-aimed follow-ups, 400ms dashes), 16-bolt ring every 3.6s, double counter-rotating 14-bolt spirals, 2 guards every 24s;
   phase 2 (<=50%, x1.3 speed) swaps spirals for a 6-orb seeking ring every 2.8s (`seek` attack: `logic/homing.ts`, 1.3 rad/s for 3.2s at 0.8x bolt speed, so they can be outrun; walls and sword swings destroy them), 2-lunge combos, a 12-bolt ring and teleport between three thrones
   (vanish 0.8s, warning ring at the destination, shockwave on arrival; destinations clamped to the arena and unblocked). The brain keeps the running sequence in `BossState.current`,
@@ -199,3 +199,10 @@ tests/                    Vitest specs for logic/
 - HUD: bottom-centre skill bar with a cooldown sweep and the Input Prompts glyph (`content/inputGlyphs.ts`) of the device used last (`systems/inputDevice.ts`).
 - `LoadoutScene` (Level select -> Loadout -> Game) and `SkillSwapScene` (modal through `CardPresenter`, default focus is Keep in bag) use `MenuList`, so mouse, touch, keyboard and gamepad all work.
 - Save v6 (`skills.owned`, `loadout`), migration in `parseSave` (powers, equipped weapon, rewards of cleared levels via `LegacySkillRewards`). Scrolls: `logic/skillScroll.ts`, chance per loot table (`scrollChance`, bosses 3%, default 0.5%).
+
+## Economy (v2 phase 2)
+
+Pure logic: `logic/upgrades.ts` (costs, weapon tables, stat diff lines), `shop.ts` (seeded stock, prices), `campPurchases.ts` (upgrade, buy skill/potion/revive on a save),
+`potions.ts`, `weaponTwists.ts` (pierce counting, split angles), `gems.ts`. Content: `content/upgradeInfo.ts` (gem colour, tier and twist per skill/weapon id), `campOffers.ts`
+(rows and panel text from a save), `upgradePreview.ts`. UI: `CampScene` with `CampRow`, `TabBar`, `Wallet`. In level: `PotionSystem`, `BoltHits` (player bolt damage, pierce, split),
+sword wave through `MeleeSystem`. Boss tables use `gemBurst`.

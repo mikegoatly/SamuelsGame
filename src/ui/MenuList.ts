@@ -101,7 +101,9 @@ export class MenuList {
   private handleKey(event: KeyboardEvent): void {
     const direction = KEY_DIRECTIONS[event.code];
     if (direction) this.move(direction);
-    else if (event.code === 'Enter' || event.code === 'Space' || event.code === 'NumpadEnter') this.confirm();
+    else if (event.code === 'Enter' || event.code === 'Space' || event.code === 'NumpadEnter') {
+      if (!event.repeat) this.confirm();
+    }
     else if (event.code === 'Escape' || event.code === 'Backspace') this.back();
   }
 

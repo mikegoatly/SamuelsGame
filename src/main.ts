@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { VIEW_HEIGHT, VIEW_WIDTH } from './content/config';
+import { CampScene } from './scenes/CampScene';
 import { BootScene } from './scenes/BootScene';
 import { GameOverScene } from './scenes/GameOverScene';
 import { GameScene } from './scenes/GameScene';
@@ -12,6 +13,7 @@ import { HudScene } from './scenes/HudScene';
 import { PreloadScene } from './scenes/PreloadScene';
 import { HowToPlayScene } from './scenes/HowToPlayScene';
 import { ItemCardScene } from './scenes/ItemCardScene';
+import { NoticeScene } from './scenes/NoticeScene';
 import { SettingsScene } from './scenes/SettingsScene';
 import { SkillSwapScene } from './scenes/SkillSwapScene';
 import { installDeviceTracker } from './systems/inputDevice';
@@ -29,7 +31,7 @@ const game = new Phaser.Game({
   input: { gamepad: true },
   physics: { default: 'arcade', arcade: { gravity: { x: 0, y: 0 } } },
   scale: { mode: Phaser.Scale.EXPAND, autoCenter: Phaser.Scale.CENTER_BOTH },
-  scene: [BootScene, PreloadScene, MainMenuScene, HowToPlayScene, SettingsScene, LevelSelectScene, LoadoutScene, GameScene, HudScene, PauseScene, ItemCardScene, SkillSwapScene, LevelCompleteScene, GameOverScene],
+  scene: [BootScene, PreloadScene, MainMenuScene, HowToPlayScene, SettingsScene, LevelSelectScene, CampScene, LoadoutScene, GameScene, HudScene, PauseScene, ItemCardScene, NoticeScene, SkillSwapScene, LevelCompleteScene, GameOverScene],
 });
 
 applySavedMute(game);

@@ -11,6 +11,11 @@ class Feel {
   private locked = false;
   private frozen = false;
 
+  /** True once the run is ending (level complete or death): skill effects must stop. */
+  get isLocked(): boolean {
+    return this.locked;
+  }
+
   get reduced(): boolean {
     return this.budget.reduced;
   }

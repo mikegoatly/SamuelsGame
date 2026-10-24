@@ -17,8 +17,8 @@ export class ItemCardScene extends MenuScene {
   private card = EMPTY;
   private wired = false;
 
-  constructor() {
-    super('ItemCard');
+  constructor(key = 'ItemCard') {
+    super(key);
   }
 
   init(card: CardData): void {
@@ -56,11 +56,16 @@ export class ItemCardScene extends MenuScene {
     this.tweens.add({ targets: prompt, alpha: 0.3, duration: 700, yoyo: true, repeat: -1 });
   }
 
+  /** Continue pressed: tell the game to carry on. */
+  protected close(): void {
+    (this.scene.get('Game') as GameScene).closeCard();
+  }
+
   private wireInput(): void {
     if (this.wired) return;
     this.wired = true;
     const dismiss = (): void => {
-      if (this.inputReady(INPUT_DELAY_MS)) (this.scene.get('Game') as GameScene).closeCard();
+      if (this.inputReady(INPUT_DELAY_MS)) this.close();
     };
     this.input.keyboard?.on('keydown', dismiss);
     this.input.on('pointerdown', dismiss);

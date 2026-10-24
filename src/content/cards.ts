@@ -1,14 +1,14 @@
 import { RARITY_COLOR, type ItemDef } from './items';
 import { Frame } from './assetKeys';
 import { playerMaxHp } from '../logic/combat';
-import { charmCardText, type CardData } from '../logic/itemCards';
+import { gemCardText, type CardData } from '../logic/itemCards';
 import { skillCooldown, type SkillDef } from './skills';
 
-type CharmItem = Extract<ItemDef, { kind: 'charm' }>;
+type GemItem = Extract<ItemDef, { kind: 'gem' }>;
 
-export function charmCard(item: CharmItem, count: number): CardData {
-  const { effect, total } = charmCardText(item.charm, count);
-  return { title: item.name, subtitle: 'Epic charm', color: RARITY_COLOR[item.rarity], frame: item.frame, tint: item.tint ?? null, lines: [effect, total] };
+export function gemCard(item: GemItem, count: number): CardData {
+  const { effect, total } = gemCardText(item.gem, count);
+  return { title: item.name, subtitle: 'Epic gem', color: RARITY_COLOR[item.rarity], frame: item.frame, tint: item.tint ?? null, lines: [effect, total] };
 }
 
 export const levelUpCard = (level: number): CardData => ({

@@ -1,16 +1,16 @@
 import { describe, expect, it } from 'vitest';
-import { CardQueue, charmCardText, markSeen, shouldQueueCard, shouldShowCard } from '../src/logic/itemCards';
+import { CardQueue, gemCardText, markSeen, shouldQueueCard, shouldShowCard } from '../src/logic/itemCards';
 import { defaultSave, parseSave, serialize } from '../src/logic/save';
 
 describe('shouldShowCard', () => {
   it('always shows in always mode', () => {
-    expect(shouldShowCard('always', ['charmOfPower'], 'charmOfPower')).toBe(true);
+    expect(shouldShowCard('always', ['gemRed'], 'gemRed')).toBe(true);
   });
 
   it('shows only unseen ids in first mode', () => {
-    expect(shouldShowCard('first', [], 'charmOfPower')).toBe(true);
-    expect(shouldShowCard('first', ['charmOfPower'], 'charmOfPower')).toBe(false);
-    expect(shouldShowCard('first', ['charmOfPower'], 'charmOfSwiftness')).toBe(true);
+    expect(shouldShowCard('first', [], 'gemRed')).toBe(true);
+    expect(shouldShowCard('first', ['gemRed'], 'gemRed')).toBe(false);
+    expect(shouldShowCard('first', ['gemRed'], 'gemGreen')).toBe(true);
   });
 });
 
@@ -38,11 +38,11 @@ describe('save migration', () => {
   });
 });
 
-describe('charmCardText', () => {
-  it('describes the effect and the running total', () => {
-    expect(charmCardText('power', 3)).toEqual({ effect: '+5% weapon damage. Permanent, stacks.', total: 'Power charms: 3 = +15% damage' });
-    expect(charmCardText('swiftness', 2).total).toBe('Swiftness charms: 2 = +8% move speed');
-    expect(charmCardText('vitality', 1).total).toBe('Vitality charms: 1 = +10 max HP');
+describe('gemCardText', () => {
+  it('explains how to spend gems and shows the running total', () => {
+    expect(gemCardText('red', 3)).toEqual({ effect: 'Spend at the Camp to upgrade skills and weapons.', total: 'Power gems: 3' });
+    expect(gemCardText('green', 2).total).toBe('Swiftness gems: 2');
+    expect(gemCardText('blue', 1).total).toBe('Vitality gems: 1');
   });
 });
 

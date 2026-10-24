@@ -13,3 +13,6 @@ export function absorb(shield: ShieldState, amount: number): number {
   shield.remaining -= soaked;
   return amount - soaked;
 }
+
+/** Level 5 expiry burst: half the shield's capacity, so it grows with the skill level. */
+export const shieldBurstDamage = (capacity: number): number => Math.round(capacity * 0.5);

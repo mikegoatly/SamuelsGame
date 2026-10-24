@@ -3,7 +3,7 @@ import { KeyLatch } from '../logic/keyLatch';
 import { SLOT_COUNT } from '../logic/loadout';
 import type { InputSource } from './InputController';
 
-const KEY_NAMES = ['UP', 'DOWN', 'LEFT', 'RIGHT', 'W', 'A', 'S', 'D', 'SPACE', 'ONE', 'TWO', 'THREE', 'E', 'R', 'RMB'] as const;
+const KEY_NAMES = ['UP', 'DOWN', 'LEFT', 'RIGHT', 'W', 'A', 'S', 'D', 'SPACE', 'ONE', 'TWO', 'THREE', 'E', 'R', 'F', 'RMB'] as const;
 type KeyName = (typeof KEY_NAMES)[number];
 const SKILL_KEYS: readonly (readonly KeyName[])[] = [['RMB', 'ONE'], ['E', 'TWO'], ['R', 'THREE']];
 const RIGHT_BUTTON = 2;
@@ -14,6 +14,7 @@ export class KeyboardMouseSource implements InputSource {
   fire = false;
   readonly skills: boolean[] = Array.from({ length: SLOT_COUNT }, () => false);
   dash = false;
+  potion = false;
 
   private readonly latches = Object.fromEntries(KEY_NAMES.map((name) => [name, new KeyLatch()])) as Record<KeyName, KeyLatch>;
   private readonly mouseAim = new Phaser.Math.Vector2();
@@ -32,7 +33,7 @@ export class KeyboardMouseSource implements InputSource {
     scene.input.mouse?.disableContextMenu();
     const keyboard = scene.input.keyboard!;
     keyboard.createCursorKeys();
-    keyboard.addKeys({ w: 'W', a: 'A', s: 'S', d: 'D', space: 'SPACE', one: 'ONE', two: 'TWO', three: 'THREE', e: 'E', r: 'R' });
+    keyboard.addKeys({ w: 'W', a: 'A', s: 'S', d: 'D', space: 'SPACE', one: 'ONE', two: 'TWO', three: 'THREE', e: 'E', r: 'R', f: 'F' });
     for (const name of KEY_NAMES.filter((n) => n !== 'RMB')) {
       keyboard.on(`keydown-${name}`, () => this.latches[name].down());
       keyboard.on(`keyup-${name}`, () => this.latches[name].up());
@@ -46,6 +47,7 @@ export class KeyboardMouseSource implements InputSource {
     const held = (...names: readonly KeyName[]): number => Number(names.map((name) => this.latches[name].read()).some(Boolean));
     this.moveVector.set(held('RIGHT', 'D') - held('LEFT', 'A'), held('DOWN', 'S') - held('UP', 'W'));
     this.dash = this.latches.SPACE.read();
+    this.potion = this.latches.F.read();
     SKILL_KEYS.forEach((names, i) => (this.skills[i] = held(...names) > 0));
 
     this.fire = false;
