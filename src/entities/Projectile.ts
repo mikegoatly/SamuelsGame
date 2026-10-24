@@ -1,10 +1,8 @@
 import Phaser from 'phaser';
 import { Tex } from '../content/assetKeys';
+import { magicBolt } from '../content/weapons';
 
 export class Projectile extends Phaser.Physics.Arcade.Sprite {
-  static readonly SPEED = 320;
-  static readonly RANGE = 260;
-
   private readonly spawn = new Phaser.Math.Vector2();
 
   constructor(scene: Phaser.Scene, x: number, y: number) {
@@ -15,7 +13,7 @@ export class Projectile extends Phaser.Physics.Arcade.Sprite {
     this.enableBody(true, x, y, true, true);
     this.spawn.set(x, y);
     this.setCircle(3, 2, 2);
-    this.setVelocity(direction.x * Projectile.SPEED, direction.y * Projectile.SPEED);
+    this.setVelocity(direction.x * magicBolt.speed, direction.y * magicBolt.speed);
   }
 
   kill(): void {
@@ -24,7 +22,7 @@ export class Projectile extends Phaser.Physics.Arcade.Sprite {
 
   override preUpdate(time: number, delta: number): void {
     super.preUpdate(time, delta);
-    if (this.active && Phaser.Math.Distance.Between(this.x, this.y, this.spawn.x, this.spawn.y) > Projectile.RANGE) {
+    if (this.active && Phaser.Math.Distance.Between(this.x, this.y, this.spawn.x, this.spawn.y) > magicBolt.range) {
       this.kill();
     }
   }

@@ -2,6 +2,7 @@ export const Tex = {
   tiles: 'tiny-dungeon',
   controls: 'controls',
   bolt: 'bolt',
+  puff: 'puff',
 } as const;
 
 export const Sfx = {
@@ -27,4 +28,5 @@ export const Frame = {
   crab: 110,
   bat: 120,
   ghost: 121,
+  spider: 122,
 } as const;

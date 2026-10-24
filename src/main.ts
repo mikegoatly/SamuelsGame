@@ -1,7 +1,9 @@
 import Phaser from 'phaser';
 import { VIEW_HEIGHT, VIEW_WIDTH } from './content/config';
 import { BootScene } from './scenes/BootScene';
+import { GameOverScene } from './scenes/GameOverScene';
 import { GameScene } from './scenes/GameScene';
+import { HudScene } from './scenes/HudScene';
 import { PreloadScene } from './scenes/PreloadScene';
 
 
@@ -15,5 +17,5 @@ new Phaser.Game({
   roundPixels: true,
   physics: { default: 'arcade', arcade: { gravity: { x: 0, y: 0 } } },
   scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH },
-  scene: [BootScene, PreloadScene, GameScene],
+  scene: [BootScene, PreloadScene, GameScene, HudScene, GameOverScene],
 });

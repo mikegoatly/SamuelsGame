@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { xpToNextLevel } from '../src/logic/xp';
+import { xpReward, xpToNextLevel } from '../src/logic/xp';
 
 describe('xpToNextLevel', () => {
   it.each([
@@ -16,5 +16,20 @@ describe('xpToNextLevel', () => {
     for (let level = 1; level < 50; level++) {
       expect(xpToNextLevel(level + 1)).toBeGreaterThan(xpToNextLevel(level));
     }
+  });
+});
+
+describe('xpReward', () => {
+  it.each([
+    [1, 1, 5],
+    [3, 3, 15],
+    [4, 1, 20],
+    [3, 4, 12],
+    [3, 5, 9],
+    [1, 3, 3],
+    [1, 20, 1],
+    [2, 50, 1],
+  ])('monster %i vs player %i => %i xp', (monsterLevel, playerLevel, expected) => {
+    expect(xpReward(monsterLevel, playerLevel)).toBe(expected);
   });
 });

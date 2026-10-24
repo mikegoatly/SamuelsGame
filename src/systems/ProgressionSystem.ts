@@ -1,0 +1,32 @@
+import { addXp, type PlayerProgress } from '../logic/progression';
+import { xpReward, xpToNextLevel } from '../logic/xp';
+import type { GameEvents } from './GameEvents';
+
+export class ProgressionSystem {
+  private current: PlayerProgress = { level: 1, xp: 0 };
+
+  constructor(private readonly events: GameEvents) {}
+
+  get progress(): PlayerProgress {
+    return this.current;
+  }
+
+  get level(): number {
+    return this.current.level;
+  }
+
+  get xpForNextLevel(): number {
+    return xpToNextLevel(this.current.level);
+  }
+
+  awardKill(monsterLevel: number): void {
+    this.gain(xpReward(monsterLevel, this.current.level));
+  }
+
+  gain(amount: number): void {
+    const { progress, levelsGained } = addXp(this.current, amount);
+    this.current = progress;
+    this.events.emit('xp-changed', progress);
+    if (levelsGained > 0) this.events.emit('level-up', progress.level);
+  }
+}
