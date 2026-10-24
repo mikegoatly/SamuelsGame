@@ -147,7 +147,7 @@ describe('mad king balance', () => {
   const hp = enemyMaxHp(madKing.baseHp, level);
   const secondsToKill = (playerLevel: number, accuracy: number): number => {
     const wand = damageToEnemy(brokenWand.baseDamage, playerLevel, level) * (1000 / brokenWand.fireRateMs) * accuracy;
-    const fire = (fireballDamage(brokenWand.baseDamage, playerLevel, level) / (FIREBALL.cooldownMs / 1000)) * accuracy;
+    const fire = (fireballDamage(FIREBALL.damage, playerLevel, level) / (FIREBALL.cooldownMs / 1000)) * accuracy;
     return hp / (wand + fire);
   };
 

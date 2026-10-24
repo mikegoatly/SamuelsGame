@@ -10,6 +10,7 @@ export class PlayerTimers {
   private nextDashAt = 0;
   private dashEndsAt = 0;
   private invulnerableUntil = 0;
+  private grantedUntil = 0;
   private knockbackUntil = 0;
   private nextFireAt = 0;
 
@@ -33,12 +34,22 @@ export class PlayerTimers {
     this.knockbackUntil = now + this.tuning.knockbackMs;
   }
 
+  /** Extra i-frames from a skill (blink); does not play the hurt blink. */
+  grantInvulnerability(now: number, ms: number): void {
+    this.grantedUntil = Math.max(this.grantedUntil, now + ms);
+  }
+
+  /** True while skill-granted i-frames are running. */
+  granted(now: number): boolean {
+    return now < this.grantedUntil;
+  }
+
   isDashing(now: number): boolean {
     return now < this.dashEndsAt;
   }
 
   invulnerable(now: number): boolean {
-    return this.isDashing(now) || now < this.invulnerableUntil;
+    return this.isDashing(now) || now < this.invulnerableUntil || now < this.grantedUntil;
   }
 
   inKnockback(now: number): boolean {

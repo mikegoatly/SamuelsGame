@@ -16,6 +16,7 @@ export const palace: LevelConfig = {
   bossId: 'madKing',
   bossLevel: 16,
   rewardWeaponId: 'goldenSword',
+  rewardSkillIds: ['chainLightning'],
   unlockedBy: 'desert',
   mapKey: MapKey.palace,
   music: Music.palace,

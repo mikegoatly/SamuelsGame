@@ -1,6 +1,11 @@
-import { defaultSave, parseSave, serialize, type SaveData } from '../logic/save';
+import { levels } from '../content/levels';
+import { getSkill } from '../content/skills';
+import { defaultSave, parseSave, serialize, type LegacySkillRewards, type SaveData } from '../logic/save';
 
 export const SAVE_KEY = 'samuels-game-save';
+
+/** Skill rewards of every level, so saves from before skills existed receive them for levels already cleared. */
+const LEGACY_REWARDS: LegacySkillRewards = Object.fromEntries(levels.filter((l) => l.rewardSkillIds).map((l) => [l.id, l.rewardSkillIds!]));
 
 type StorageLike = Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>;
 
@@ -33,7 +38,7 @@ export class SaveSystem {
 
   private read(): SaveData {
     try {
-      return parseSave(this.storage()?.getItem(SAVE_KEY));
+      return parseSave(this.storage()?.getItem(SAVE_KEY), LEGACY_REWARDS, (id) => getSkill(id) !== undefined);
     } catch {
       return defaultSave();
     }

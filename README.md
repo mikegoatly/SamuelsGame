@@ -17,7 +17,7 @@ npm run gen-maps   # regenerate public/assets/maps/*.tmj (ruins, desert, palace)
 
 ## Features
 
-Three levels (Ruins, Desert, Palace) with bosses, loot, charms and permanent saves; Apprentice Staff, Broken Wand + Fireball, Golden Sword;
+Three levels (Ruins, Desert, Palace) with bosses, loot, charms and permanent saves; Apprentice Staff, Broken Wand, Golden Sword and five skills (Fireball, Frost Nova, Chain Lightning, Arcane Shield, Blink Strike) chosen on a loadout screen;
 keyboard/mouse, gamepad and touch; title screen, How to Play (highlights the device you used last) and Settings (music and effects volume
 in 10% steps, master mute, "Reduce shake / flashes"); Kenney sound effects with random variants and pitch, menu music and a victory jingle;
 hit-stop, budgeted screen shake, hurt and low-HP vignettes, death particles, dust and muzzle flashes; boss intro banners.
@@ -29,8 +29,9 @@ hit-stop, budgeted screen shake, hurt and low-HP vignettes, death particles, dus
 | Move | WASD / arrows | Left half: floating stick | Left stick / D-pad |
 | Aim | Mouse | Right half: floating stick (last-used device wins) | Right stick |
 | Fire | Left mouse button | Right stick past ~50% | RT or right stick past ~50% |
-| Alt fire (Fireball, once unlocked; wand only) | Right mouse button | Star button, right edge (hidden until unlocked, greyed while cooling down or when a non-wand weapon is held) | LT |
-| Swap weapon | Q / mouse wheel | Small button under Dash (with 2+ weapons) | Y or RB (next), LB (previous) |
+| Skill 1 | Right mouse button or 1 | Button 1 (fans out left of Dash) | LT |
+| Skill 2 | E or 2 | Button 2 | RB |
+| Skill 3 | R or 3 | Button 3 | LB |
 | Dash | Space | Arrow button, right edge | A |
 | Pause | Esc | Pause button, top right | Start |
 | Menus | Mouse / arrows or WASD + Enter, Esc = back | Tap | D-pad / left stick + A, B = back |
@@ -83,8 +84,8 @@ Dev only: `npm run dev` then `?debug=godmode` makes the player invulnerable with
 quicksand that slows the player to 50%) and the Sand Rat arena. Enemies: scorpions (pause, red lane warning, straight dash),
 bandits (3-bolt spread), mummies (slow tanks), vultures (erratic). The Sand Rat (Lv 10) burrows (untargetable, dust trail),
 erupts under the player after a warning ring, spits bolt fans and, below 50% HP, calls scorpions. Its reward unlocks
-the Fireball power (`powers.unlocked` in the save): with a wand-type weapon, alt-fire throws a slow fireball that explodes on
-impact or at max range (radius 40, falloff to 40% at the edge, ~3x bolt damage, 2.5s cooldown). Clearing the desert unlocks the Palace.
+the Fireball skill (see Skills below): a slow fireball that explodes on
+impact or at max range (radius 40, falloff to 40% at the edge, 2.5s cooldown). Clearing the desert unlocks the Palace.
 
 ## Level 3: Killer Palace
 
@@ -92,8 +93,27 @@ impact or at max range (radius 40, falloff to 40% at the edge, ~3x bolt damage, 
 timed spike traps (warning blink, then raised spikes hurt) and a throne room with a colonnade. Enemies: palace guards (shield blocks 55% from the front; get round the side),
 royal archers (lead their shots), dark mages (blink away when you get close, then fire slow homing orbs) and assassins (nearly invisible until they strike).
 The Mad King (Lv 16) lunges along a red lane, fires spinning blade rings, calls guards and, below 50% HP, teleports between thrones and fires spirals.
-Reward: the Golden Sword, a melee weapon (~100 degree swing, hits everything in the arc once, strong knockback, swats enemy bolts). Cycle weapons with Q / wheel / Y / swap button;
-the fireball only works with the wand. After clearing the palace a locked "???" card teases the next chapter. Music: `palace.mp3` and `boss-palace.mp3` (copied by `copy-assets`).
+Reward: the Golden Sword, a melee weapon (~100 degree swing, hits everything in the arc once, strong knockback, swats enemy bolts). It also teaches Chain Lightning. After clearing the palace a locked "???" card teases the next chapter. Music: `palace.mp3` and `boss-palace.mp3` (copied by `copy-assets`).
+
+## Skills and loadout (v2 phase 1)
+
+Before each level the Loadout screen (between level select and the game) picks the basic weapon and three skills from what you own
+(Start saves the choice, Skip plays with the last saved loadout). Skills work with any weapon and are data in `src/content/skills.ts`
+(`cooldownMs` and `params` are per-level tables, level 1 for now). `SkillSystem` owns the slots and cooldowns on the pause-safe `GameClock`;
+one caster per kind lives in `src/systems/skills/`.
+
+| Skill | Effect (level 1) | Cooldown | How to get it |
+|---|---|---|---|
+| Fireball | Slow orb, 40px blast with falloff, 30 base damage | 2.5s | Lost Desert boss |
+| Frost Nova | Ring (56px) around you, small damage, enemies slowed 50% for 3s | 8s | Skill scroll only |
+| Chain Lightning | Nearest enemy in a 70 degree cone, then up to 4 jumps within 70px (line of sight, 15% falloff per jump) | 5s | Mad King (first clear) |
+| Arcane Shield | 3s bubble: destroys enemy bolts, absorbs 40 damage | 12s | Stone Guardian (first clear) |
+| Blink Strike | Teleport up to 90px toward the aim (stops at walls), damages enemies on the path, 0.4s i-frames | 7s | Skill scroll only |
+
+Skill scrolls drop rarely (0.5% per kill, 3% from bosses) for a skill you do not own. With a free slot it is equipped and an item card shows;
+with all three slots full a swap prompt pauses the game: pick the slot to replace or keep the skill in the bag (it stays owned).
+The save (v6) stores `skills.owned: {id, level}[]` and `loadout {weapon, slots}`; older saves migrate (unlocked fireball power becomes the level 1 skill in slot 1,
+the equipped weapon becomes the loadout weapon, skill rewards of already cleared levels are granted).
 
 ## Adding a new level
 

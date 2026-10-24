@@ -15,6 +15,11 @@ import type { ProgressionSystem } from '../systems/ProgressionSystem';
 import { playSfx } from '../systems/sfx';
 import { fireProjectile } from './Projectile';
 
+/** What a hit did: nothing (i-frames, dead), soaked by a shield, or hurt the player. */
+export type DamageResult = 'none' | 'absorbed' | 'hurt';
+
+const ABSORB_IFRAMES_MS = 500;
+
 export class Player extends Phaser.Physics.Arcade.Sprite {
   static readonly DASH_SPEED = 260;
   static readonly DASH_MS = 150;
@@ -28,8 +33,12 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   dead = false;
   /** Quicksand patches (world px) that slow movement. */
   slowZones: Rect[] = [];
-  /** Called when alt-fire is held; the power system decides whether anything happens. */
-  altFireHandler?: (x: number, y: number, direction: Phaser.Math.Vector2) => void;
+  /** Called each frame a skill slot button is pressed; the skill system decides whether anything happens. */
+  skillHandler?: (slot: number, x: number, y: number, aim: Phaser.Math.Vector2) => void;
+  /** Soaks up incoming damage (Arcane Shield): returns how much still gets through. */
+  damageAbsorber?: (amount: number) => number;
+  /** Set when the run is ending: no more shooting or casting. */
+  actionsLocked = false;
   /** Called on each melee swing; the melee system finds and hurts whatever the cone touches. */
   meleeHandler?: (x: number, y: number, aim: number, weapon: WeaponDef) => void;
   weapon: WeaponDef;
@@ -82,9 +91,14 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     return this.timers.invulnerable(this.clock.now);
   }
 
-  takeDamage(amount: number, fromX: number, fromY: number): boolean {
-    if (this.dead || this.invulnerable || GOD_MODE) return false;
-    this.hp = Math.max(0, this.hp - amount);
+  takeDamage(amount: number, fromX: number, fromY: number): DamageResult {
+    if (this.dead || this.invulnerable || GOD_MODE) return 'none';
+    const through = this.damageAbsorber ? this.damageAbsorber(amount) : amount;
+    if (through <= 0) {
+      this.timers.grantInvulnerability(this.clock.now, ABSORB_IFRAMES_MS);
+      return 'absorbed';
+    }
+    this.hp = Math.max(0, this.hp - through);
     this.timers.hurt(this.clock.now);
     playSfx(this.scene, 'hurt');
     feel.shake(100, 0.004);
@@ -94,7 +108,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this.events.emit('player-hurt');
     this.events.emit('hp-changed', this.hp, this.maxHp);
     if (this.hp <= 0) this.die();
-    return true;
+    return 'hurt';
   }
 
   override preUpdate(time: number, delta: number): void {
@@ -111,16 +125,16 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
       this.setVelocity(this.controls.moveVector.x * speed, this.controls.moveVector.y * speed);
     }
 
-    if (this.controls.weaponCycle !== 0) this.events.emit('weapon-cycle', this.controls.weaponCycle > 0 ? 1 : -1);
-    this.handleFire(now);
-    if (this.controls.altFire) this.altFireHandler?.(this.x, this.y - 2, this.aimDirection);
+    if (!this.actionsLocked) this.handleFire(now);
+    if (!this.actionsLocked) this.controls.skills.forEach((pressed, slot) => pressed && this.skillHandler?.(slot, this.x, this.y - 2, this.aimDirection));
     this.updateVisuals(now);
   }
 
-  /** Swaps the held weapon; the sprite follows. */
-  equip(weapon: WeaponDef): void {
-    this.weapon = weapon;
-    this.showWeapon();
+  /** Teleports (Blink Strike) and grants brief i-frames. */
+  blinkTo(x: number, y: number, iframesMs: number): void {
+    this.setPosition(x, y);
+    (this.body as Phaser.Physics.Arcade.Body).reset(x, y);
+    this.timers.grantInvulnerability(this.clock.now, iframesMs);
   }
 
   private showWeapon(): void {
@@ -204,7 +218,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
 
   private updateVisuals(time: number): void {
     const hurt = this.timers.blinking(time);
-    const alpha = this.isDashing ? 0.5 : hurt && Math.floor(time / 70) % 2 === 0 ? 0.35 : 1;
+    const alpha = this.isDashing || this.timers.granted(time) ? 0.5 : hurt && Math.floor(time / 70) % 2 === 0 ? 0.35 : 1;
     this.setFlipX(this.aimDirection.x < 0);
     this.setAlpha(alpha);
     const angle = this.weaponAngle(time);

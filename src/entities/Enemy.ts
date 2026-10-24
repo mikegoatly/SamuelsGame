@@ -11,6 +11,7 @@ import { chargeLaneLength, cloakAlpha, newChargeState, stepCharge, type ChargeSt
 import { rangedStance, spreadDirections } from '../logic/enemyAi';
 import { lineClear } from '../logic/lineOfSight';
 import { Navigator, PathBudget } from '../logic/navigator';
+import { applySlow, noSlow, slowFactor, type SlowState } from '../logic/slow';
 import { isFrontal, shieldedDamage } from '../logic/shield';
 import { deathBurst } from '../systems/fx';
 import { feel } from '../systems/feel';
@@ -33,6 +34,7 @@ const DEFAULT_CHARGE: ChargeTuning = { triggerRange: 110, windupMs: 600, dashMs:
 const WINDUP_TINT = 0xff5a3a;
 const SHIELD_TINT = 0xc8d8ff;
 const HIT_REVEAL_MS = 600;
+const FROST_TINT = 0x8fd8ff;
 const ORB_SCALE = 1.35;
 const ORB_TINT = 0xc070ff;
 const ORB_RANGE = 320;
@@ -75,6 +77,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
   /** Tint that survives the hit flash (e.g. a boss winding up a lunge). */
   protected forcedTint: number | null = null;
   private facing = 0;
+  private slow: SlowState = noSlow();
   private revealedUntil = 0;
   private readonly shieldImage?: Phaser.GameObjects.Image;
 
@@ -153,7 +156,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     const now = this.clock.now;
     if (!this.alive || !this.armed || now < this.nextContactAt || now < this.knockbackUntil) return;
     const applied = player.takeDamage(damageToPlayer(this.def.baseDamage, this.level, player.level), this.x, this.y);
-    if (applied) this.nextContactAt = now + CONTACT_COOLDOWN_MS;
+    if (applied !== 'none') this.nextContactAt = now + CONTACT_COOLDOWN_MS;
   }
 
   /** `direction` is the way the blow travels; `knockback` scales the shove (sword > bolt). */
@@ -243,7 +246,8 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
   private beginDash(tuning: ChargeTuning): void {
     this.clearLane();
     this.applyBaseTint();
-    this.setVelocity(this.chargeDirection.x * tuning.dashSpeed, this.chargeDirection.y * tuning.dashSpeed);
+    const dashSpeed = tuning.dashSpeed * this.speedFactor;
+    this.setVelocity(this.chargeDirection.x * dashSpeed, this.chargeDirection.y * dashSpeed);
   }
 
   private clearLane(): void {
@@ -251,9 +255,26 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     this.lane = undefined;
   }
 
+  /** Slows movement to `factor` of normal for `ms` (Frost Nova); a stronger running slow is kept. */
+  applySlow(factor: number, ms: number): void {
+    if (!this.alive) return;
+    this.slow = applySlow(this.slow, this.clock.now, factor, ms);
+    this.applyBaseTint();
+    this.scene.time.delayedCall(ms + 30, () => this.alive && this.applyBaseTint());
+  }
+
+  protected get speedFactor(): number {
+    return slowFactor(this.slow, this.clock.now);
+  }
+
+  private get slowed(): boolean {
+    return this.speedFactor < 1;
+  }
+
   /** Walks toward the player, round walls and pillars when a straight line would snag (skipped by `usePath = false`). */
   protected chase(time: number, speed = this.def.speed, usePath = true): void {
     const walks = usePath && this.def.behaviour !== 'erratic';
+    speed *= this.speedFactor;
     const goal = this.navigator && walks ? this.navigator.aim(time, this, this.target, this.bodyRadius(), speed) : this.target;
     this.desired.set(goal.x - this.x, goal.y - this.y);
     if (this.desired.lengthSq() < 1) return;
@@ -281,16 +302,17 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     const strafe = stance === 'hold' ? Math.sin(time / 650 + this.wobblePhase) * 0.5 : 0;
     const ux = dx / distance;
     const uy = dy / distance;
+    const speed = this.def.speed * this.speedFactor;
     if (stance === 'approach' && this.navigator && !lineClear(this, this.target, this.isBlocked)) {
-      const goal = this.navigator.aim(time, this, this.target, this.bodyRadius(), this.def.speed);
+      const goal = this.navigator.aim(time, this, this.target, this.bodyRadius(), speed);
       const gx = goal.x - this.x;
       const gy = goal.y - this.y;
       const length = Math.hypot(gx, gy) || 1;
-      this.setVelocity((gx / length) * this.def.speed, (gy / length) * this.def.speed);
+      this.setVelocity((gx / length) * speed, (gy / length) * speed);
       this.setFlipX(dx < 0);
       return;
     }
-    this.setVelocity((ux * radial - uy * strafe) * this.def.speed, (uy * radial + ux * strafe) * this.def.speed);
+    this.setVelocity((ux * radial - uy * strafe) * speed, (uy * radial + ux * strafe) * speed);
     this.setFlipX(dx < 0);
     if (this.armed && time >= this.nextShotAt && distance <= SHOOT_DISTANCE) {
       this.nextShotAt = time + (this.def.fireEveryMs ?? 1800);
@@ -387,6 +409,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
   protected applyBaseTint(): void {
     if (this.charge.phase === 'windup') this.setTint(WINDUP_TINT);
     else if (this.forcedTint !== null) this.setTint(this.forcedTint);
+    else if (this.slowed) this.setTint(FROST_TINT);
     else if (this.baseTint === null) this.clearTint();
     else this.setTint(this.baseTint);
   }

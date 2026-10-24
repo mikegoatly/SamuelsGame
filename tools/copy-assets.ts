@@ -22,6 +22,13 @@ const files: Array<[string, string]> = [
   ['2D assets/Explosion Pack/Spritesheets/spritesheet_pixelExplosion.png', 'fx/explosion.png'],
   ['2D assets/Explosion Pack/Spritesheets/spritesheet_pixelExplosion.xml', 'fx/explosion.xml'],
   ['2D assets/Explosion Pack/License.txt', 'fx/License.txt'],
+  ['Icons/Input Prompts Pixel 16×/Tilemap/tilemap_packed.png', 'controls/prompts.png'],
+  ['Icons/Input Prompts Pixel 16×/License.txt', 'controls/Prompts-License.txt'],
+  ['2D assets/Particle Pack/PNG (Transparent)/flame_05.png', 'fx/skill-flame.png'],
+  ['2D assets/Particle Pack/PNG (Transparent)/star_08.png', 'fx/skill-frost.png'],
+  ['2D assets/Particle Pack/PNG (Transparent)/spark_06.png', 'fx/skill-lightning.png'],
+  ['2D assets/Particle Pack/PNG (Transparent)/circle_03.png', 'fx/skill-shield.png'],
+  ['2D assets/Particle Pack/PNG (Transparent)/twirl_02.png', 'fx/skill-blink.png'],
 ];
 
 const sci = 'Audio/Sci-Fi Sounds/Audio';
@@ -71,6 +78,16 @@ const sfx: Array<[string, string]> = [
   [`${ui}/back_001.ogg`, 'uiback_0.ogg'],
   [`${ui}/back_002.ogg`, 'uiback_1.ogg'],
   [`${jingle}/jingles-steel_05.ogg`, 'victory.ogg'],
+  [`${sci}/forceField_002.ogg`, 'frostnova_0.ogg'],
+  [`${sci}/forceField_003.ogg`, 'frostnova_1.ogg'],
+  [`${sci}/laserRetro_002.ogg`, 'zap_0.ogg'],
+  [`${sci}/laserRetro_003.ogg`, 'zap_1.ogg'],
+  [`${sci}/forceField_001.ogg`, 'shield_0.ogg'],
+  [`${sci}/impactMetal_000.ogg`, 'shieldhit_0.ogg'],
+  [`${sci}/impactMetal_001.ogg`, 'shieldhit_1.ogg'],
+  [`${sci}/forceField_004.ogg`, 'shieldbreak_0.ogg'],
+  [`${sci}/spaceEngineSmall_000.ogg`, 'blink_0.ogg'],
+  [`${sci}/spaceEngineSmall_001.ogg`, 'blink_1.ogg'],
 ];
 for (const [src, dest] of sfx) files.push([src, `audio/${dest}`]);
 

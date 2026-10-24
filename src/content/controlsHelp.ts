@@ -7,7 +7,7 @@ export interface ControlsPanel {
 
 export const GOAL_LINES = [
   'Fight through the rooms, then defeat each boss to clear the level.',
-  'Kill monsters to level up and pick up coins, potions and charms.',
+  'Kill monsters to level up and pick up coins, potions and charms. Pick your weapon and three skills before each level.',
   "Don't rush ahead: monsters far above your level hit hard and barely feel your attacks.",
 ];
 
@@ -17,9 +17,10 @@ export const CONTROLS_HELP: Record<InputDevice, ControlsPanel> = {
     lines: [
       ['Move', 'W A S D'],
       ['Aim / fire', 'Mouse / left click'],
-      ['Alt fire', 'Right click'],
+      ['Skill 1', 'Right click / 1'],
+      ['Skill 2', 'E / 2'],
+      ['Skill 3', 'R / 3'],
       ['Dash', 'Space'],
-      ['Swap weapon', 'Q / wheel'],
       ['Pause', 'Esc'],
       ['Mute', 'M'],
     ],
@@ -29,9 +30,10 @@ export const CONTROLS_HELP: Record<InputDevice, ControlsPanel> = {
     lines: [
       ['Move', 'Left stick'],
       ['Aim / fire', 'Right stick / RT'],
-      ['Alt fire', 'LT'],
+      ['Skill 1', 'LT'],
+      ['Skill 2', 'RB'],
+      ['Skill 3', 'LB'],
       ['Dash', 'A'],
-      ['Swap weapon', 'Y / LB / RB'],
       ['Pause', 'Start'],
       ['Menus', 'D-pad, A, B'],
     ],
@@ -41,9 +43,10 @@ export const CONTROLS_HELP: Record<InputDevice, ControlsPanel> = {
     lines: [
       ['Move', 'Left stick'],
       ['Aim / fire', 'Right stick'],
-      ['Alt fire', 'Fire button'],
+      ['Skill 1', 'Button 1'],
+      ['Skill 2', 'Button 2'],
+      ['Skill 3', 'Button 3'],
       ['Dash', 'Dash button'],
-      ['Swap weapon', 'Swap button'],
       ['Pause', 'Top right'],
       ['Menus', 'Tap'],
     ],

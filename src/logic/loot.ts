@@ -12,6 +12,8 @@ export interface LootTable {
   id: string;
   /** Independent rolls per kill; each roll yields at most one item. */
   rolls: number;
+  /** Chance per kill of a skill scroll; defaults to SCROLL_CHANCE.normal. */
+  scrollChance?: number;
   /** Weight of "no drop" for a roll; weights are relative to this and the entries. */
   nothingWeight: number;
   entries: readonly LootEntry[];

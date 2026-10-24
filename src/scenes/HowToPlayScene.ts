@@ -25,7 +25,7 @@ export class HowToPlayScene extends MenuScene {
     const active = lastInputDevice();
     const panelWidth = Math.min(200, (width - 20 - 2 * PANEL_GAP) / DEVICE_ORDER.length);
     const panelTop = 118;
-    const panelHeight = Math.min(170, height - panelTop - 56);
+    const panelHeight = Math.min(184, height - panelTop - 52);
     DEVICE_ORDER.forEach((device, i) => {
       const x = cx + (i - 1) * (panelWidth + PANEL_GAP);
       const highlighted = device === active;
@@ -35,7 +35,7 @@ export class HowToPlayScene extends MenuScene {
         .setStrokeStyle(2, highlighted ? 0xb48cff : 0x4a4468);
       menuText(this, x, panelTop + 16, panel.title, 14, highlighted ? '#ffe066' : '#9090b0');
       panel.lines.forEach(([action, how], row) => {
-        const y = panelTop + 40 + row * 17;
+        const y = panelTop + 36 + row * 16;
         menuText(this, x - panelWidth / 2 + 8, y, action, 11, highlighted ? '#c8c8e8' : '#7878a0').setOrigin(0, 0.5);
         menuText(this, x + panelWidth / 2 - 8, y, how, 11, highlighted ? '#ffffff' : '#8888a8').setOrigin(1, 0.5);
       });

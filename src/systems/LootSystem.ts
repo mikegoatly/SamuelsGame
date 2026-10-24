@@ -4,10 +4,13 @@ import { items, RARITY_COLOR, type ItemDef } from '../content/items';
 import { lootTables } from '../content/lootTables';
 import { Pickup } from '../entities/Pickup';
 import type { Player } from '../entities/Player';
+import { skillIds } from '../content/skills';
 import { rollDrops } from '../logic/loot';
+import { rollSkillScroll, SCROLL_CHANCE } from '../logic/skillScroll';
 import { resolvePotion } from '../logic/pickups';
 import { addCharm } from '../logic/save';
 import type { CardPresenter } from './CardPresenter';
+import type { SkillAcquisition } from './SkillAcquisition';
 import type { GameClock } from './GameClock';
 import type { GameEvents } from './GameEvents';
 import { floatText } from './floatText';
@@ -18,6 +21,8 @@ import type { SaveSystem } from './SaveSystem';
 export interface RunState {
   coins: number;
 }
+
+const DUPLICATE_SCROLL_COINS = 10;
 
 export class LootSystem {
   readonly group: Phaser.Physics.Arcade.Group;
@@ -30,6 +35,7 @@ export class LootSystem {
     private readonly save: SaveSystem,
     private readonly clock: GameClock,
     private readonly cards: Pick<CardPresenter, 'request'>,
+    private readonly acquisition: Pick<SkillAcquisition, 'learn'>,
     private readonly rng: () => number = Math.random,
   ) {
     this.group = scene.physics.add.group({ allowGravity: false });
@@ -45,6 +51,9 @@ export class LootSystem {
     const table = lootTables[tableId];
     if (!table) return;
     for (const itemId of rollDrops(table, this.rng)) this.spawn(itemId, x, y);
+    const owned = [...this.save.data.skills.owned.map((skill) => skill.id), ...this.scrollsOnGround()];
+    const scroll = rollSkillScroll(table.scrollChance ?? SCROLL_CHANCE.normal, skillIds, owned, this.rng);
+    if (scroll) this.spawn(`scroll_${scroll}`, x, y);
   }
 
   spawn(itemId: string, x: number, y: number): void {
@@ -71,6 +80,8 @@ export class LootSystem {
         at(`+${result.healed} HP`, '#ff8a8a');
       }
       playSfx(this.scene, 'potion');
+    } else if (def.kind === 'skill') {
+      this.learnSkill(def, at);
     } else {
       this.save.update((save) => addCharm(save, def.charm));
       this.events.emit('charms-changed', this.save.data.charms);
@@ -78,6 +89,21 @@ export class LootSystem {
       if (this.offerCard(def)) return;
       at(`${def.name}!`, color);
     }
+  }
+
+  /** Skills whose scroll is already lying on the floor, so a second one is not dropped. */
+  private scrollsOnGround(): string[] {
+    return (this.group.getChildren() as Pickup[]).flatMap((pickup) => (pickup.active && pickup.def.kind === 'skill' ? [pickup.def.skillId] : []));
+  }
+
+  private learnSkill(def: Extract<ItemDef, { kind: 'skill' }>, at: (text: string, color: string) => void): void {
+    const outcome = this.acquisition.learn(def.skillId);
+    const name = def.name.replace(' Scroll', '');
+    if (outcome === 'none') {
+      this.addCoins(DUPLICATE_SCROLL_COINS);
+      at(`Already known +${DUPLICATE_SCROLL_COINS} coins`, RARITY_COLOR.common);
+    } else if (outcome === 'learned') at(`${name} learned!`, RARITY_COLOR[def.rarity]);
+    else if (outcome === 'bag') at(`${name} (in bag)`, RARITY_COLOR[def.rarity]);
   }
 
   private offerCard(def: Extract<ItemDef, { kind: 'charm' }>): boolean {

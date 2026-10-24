@@ -45,4 +45,15 @@ describe('PlayerTimers', () => {
       expect(t.tryDash(1100)).toBe(false);
     }
   });
+
+  it('granted invulnerability lasts its duration without the hurt blink, and never shortens a longer one', () => {
+    const t = timers();
+    t.grantInvulnerability(1000, 400);
+    expect(t.invulnerable(1399)).toBe(true);
+    expect(t.invulnerable(1400)).toBe(false);
+    expect(t.blinking(1100)).toBe(false);
+    t.hurt(1000);
+    t.grantInvulnerability(1000, 100);
+    expect(t.invulnerable(1500)).toBe(true);
+  });
 });

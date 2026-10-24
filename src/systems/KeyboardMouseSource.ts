@@ -1,20 +1,20 @@
 import Phaser from 'phaser';
-import { KeyLatch, WheelThrottle } from '../logic/keyLatch';
+import { KeyLatch } from '../logic/keyLatch';
+import { SLOT_COUNT } from '../logic/loadout';
 import type { InputSource } from './InputController';
 
-const WHEEL_INTERVAL_MS = 200;
-const KEY_NAMES = ['UP', 'DOWN', 'LEFT', 'RIGHT', 'W', 'A', 'S', 'D', 'SPACE', 'Q'] as const;
+const KEY_NAMES = ['UP', 'DOWN', 'LEFT', 'RIGHT', 'W', 'A', 'S', 'D', 'SPACE', 'ONE', 'TWO', 'THREE', 'E', 'R', 'RMB'] as const;
 type KeyName = (typeof KEY_NAMES)[number];
+const SKILL_KEYS: readonly (readonly KeyName[])[] = [['RMB', 'ONE'], ['E', 'TWO'], ['R', 'THREE']];
+const RIGHT_BUTTON = 2;
 
 export class KeyboardMouseSource implements InputSource {
   readonly moveVector = new Phaser.Math.Vector2();
   readonly aimVector = null;
   fire = false;
-  altFire = false;
+  readonly skills: boolean[] = Array.from({ length: SLOT_COUNT }, () => false);
   dash = false;
-  weaponCycle = 0;
 
-  private readonly wheel = new WheelThrottle(WHEEL_INTERVAL_MS);
   private readonly latches = Object.fromEntries(KEY_NAMES.map((name) => [name, new KeyLatch()])) as Record<KeyName, KeyLatch>;
   private readonly mouseAim = new Phaser.Math.Vector2();
   private mouseMoved = false;
@@ -32,23 +32,23 @@ export class KeyboardMouseSource implements InputSource {
     scene.input.mouse?.disableContextMenu();
     const keyboard = scene.input.keyboard!;
     keyboard.createCursorKeys();
-    keyboard.addKeys({ w: 'W', a: 'A', s: 'S', d: 'D', space: 'SPACE', q: 'Q' });
-    for (const name of KEY_NAMES) {
+    keyboard.addKeys({ w: 'W', a: 'A', s: 'S', d: 'D', space: 'SPACE', one: 'ONE', two: 'TWO', three: 'THREE', e: 'E', r: 'R' });
+    for (const name of KEY_NAMES.filter((n) => n !== 'RMB')) {
       keyboard.on(`keydown-${name}`, () => this.latches[name].down());
       keyboard.on(`keyup-${name}`, () => this.latches[name].up());
     }
+    scene.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => pointer.button === RIGHT_BUTTON && this.latches.RMB.down());
+    scene.input.on('pointerup', (pointer: Phaser.Input.Pointer) => pointer.button === RIGHT_BUTTON && this.latches.RMB.up());
     window.addEventListener('blur', () => Object.values(this.latches).forEach((latch) => latch.reset()));
-    scene.input.on('wheel', (_pointer: Phaser.Input.Pointer, _over: unknown, _dx: number, dy: number) => this.wheel.add(dy));
   }
 
   update(scene: Phaser.Scene): void {
-    const held = (...names: KeyName[]): number => Number(names.map((name) => this.latches[name].read()).some(Boolean));
+    const held = (...names: readonly KeyName[]): number => Number(names.map((name) => this.latches[name].read()).some(Boolean));
     this.moveVector.set(held('RIGHT', 'D') - held('LEFT', 'A'), held('DOWN', 'S') - held('UP', 'W'));
-
     this.dash = this.latches.SPACE.read();
-    this.weaponCycle = this.latches.Q.take() ? 1 : this.wheel.take(scene.time.now);
+    SKILL_KEYS.forEach((names, i) => (this.skills[i] = held(...names) > 0));
 
-    this.fire = this.altFire = false;
+    this.fire = false;
     const pointer = scene.input.mousePointer;
     if (!pointer) return;
     if (pointer.x !== this.lastX || pointer.y !== this.lastY) this.mouseMoved = true;
@@ -60,7 +60,6 @@ export class KeyboardMouseSource implements InputSource {
     if (down && !this.wasDown) this.pressStartedOnUi = this.isOverHud(scene, pointer);
     this.wasDown = down;
     this.fire = down && !this.pressStartedOnUi;
-    this.altFire = pointer.rightButtonDown();
   }
 
   /** True when the pointer is over an interactive HUD object (pause/fullscreen buttons), so the click is not a shot. */

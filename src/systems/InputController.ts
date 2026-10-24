@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { SLOT_COUNT } from '../logic/loadout';
 import { InputSwallow } from '../logic/inputSwallow';
 import { GamepadSource } from './GamepadSource';
 import { KeyboardMouseSource } from './KeyboardMouseSource';
@@ -12,10 +13,9 @@ export interface InputSource {
   /** Aim as a direction (touch stick / gamepad). */
   readonly aimVector: Phaser.Math.Vector2 | null;
   readonly fire: boolean;
-  readonly altFire: boolean;
+  /** Skill slot buttons 1..3: true while held, or once for a tap that landed between frames. */
+  readonly skills: readonly boolean[];
   readonly dash: boolean;
-  /** +1 / -1 on the frame a weapon swap was requested, else 0. */
-  readonly weaponCycle: number;
   rumble?(durationMs: number, weak: number, strong: number): void;
 }
 
@@ -25,9 +25,8 @@ export class InputController {
   readonly aimVector = new Phaser.Math.Vector2(1, 0);
   readonly aimWorldPoint = new Phaser.Math.Vector2();
   fire = false;
-  altFire = false;
+  readonly skills: boolean[] = Array.from({ length: SLOT_COUNT }, () => false);
   dash = false;
-  weaponCycle = 0;
 
   private readonly sources: InputSource[];
   private readonly swallow = new InputSwallow();
@@ -36,7 +35,7 @@ export class InputController {
     this.sources = sources ?? [new KeyboardMouseSource(scene), new GamepadSource(), new TouchSource(scene)];
   }
 
-  /** Drops fire, dash and swap input until released, e.g. after a click or key dismissed a modal. */
+  /** Drops fire, dash and skill input until released, e.g. after a click or key dismissed a modal. */
   swallowUntilReleased(): void {
     this.swallow.arm();
   }
@@ -47,21 +46,20 @@ export class InputController {
 
   update(scene: Phaser.Scene, origin: Phaser.Math.Vector2): void {
     this.moveVector.reset();
-    this.fire = this.altFire = this.dash = false;
-    this.weaponCycle = 0;
+    this.fire = this.dash = false;
+    this.skills.fill(false);
 
     for (const source of this.sources) {
       source.update(scene);
       this.moveVector.add(source.moveVector);
       this.fire ||= source.fire;
-      this.altFire ||= source.altFire;
       this.dash ||= source.dash;
-      if (this.weaponCycle === 0) this.weaponCycle = source.weaponCycle;
+      source.skills.forEach((pressed, i) => (this.skills[i] ||= pressed));
       this.mergeAim(source, origin);
     }
-    if (this.swallow.suppress(this.fire || this.altFire || this.dash || this.weaponCycle !== 0)) {
-      this.fire = this.altFire = this.dash = false;
-      this.weaponCycle = 0;
+    if (this.swallow.suppress(this.fire || this.dash || this.skills.some(Boolean))) {
+      this.fire = this.dash = false;
+      this.skills.fill(false);
     }
     if (this.moveVector.lengthSq() > 1) this.moveVector.normalize();
   }

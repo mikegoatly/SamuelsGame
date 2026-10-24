@@ -171,7 +171,8 @@ export class Boss extends Enemy {
   private startLunge(speed: number): void {
     this.clearTelegraph();
     this.lungeResolved = false;
-    this.setVelocity(this.lungeDirection.x * speed, this.lungeDirection.y * speed);
+    const slowed = speed * this.speedFactor;
+    this.setVelocity(this.lungeDirection.x * slowed, this.lungeDirection.y * slowed);
     playSfx(this.scene, 'slam', { volume: 0.7 });
   }
 

@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { SLOT_COUNT } from '../logic/loadout';
 import { applyDeadzone, pastThreshold } from '../logic/stick';
 import type { InputSource } from './InputController';
 
@@ -11,11 +12,9 @@ export class GamepadSource implements InputSource {
   readonly moveVector = new Phaser.Math.Vector2();
   readonly aimWorldPoint = null;
   fire = false;
-  altFire = false;
+  readonly skills: boolean[] = Array.from({ length: SLOT_COUNT }, () => false);
   dash = false;
-  weaponCycle = 0;
 
-  private swapHeld = false;
   private readonly lastAim = new Phaser.Math.Vector2(1, 0);
   private padAiming = false;
   private pointerX = 0;
@@ -28,13 +27,10 @@ export class GamepadSource implements InputSource {
 
   update(scene: Phaser.Scene): void {
     this.moveVector.reset();
-    this.fire = this.altFire = this.dash = false;
-    this.weaponCycle = 0;
+    this.fire = this.dash = false;
+    this.skills.fill(false);
     const pad = this.activePad(scene);
-    if (!pad) {
-      this.swapHeld = false;
-      return;
-    }
+    if (!pad) return;
 
     const left = applyDeadzone(pad.leftStick.x, pad.leftStick.y);
     this.moveVector.set(
@@ -49,17 +45,10 @@ export class GamepadSource implements InputSource {
     if (aimMagnitude > 0) this.lastAim.set(right.x, right.y).normalize();
 
     this.fire = pastThreshold(pad.R2, TRIGGER_THRESHOLD) || pastThreshold(aimMagnitude, AIM_FIRE_THRESHOLD);
-    this.altFire = pastThreshold(pad.L2, TRIGGER_THRESHOLD);
+    this.skills[0] = pastThreshold(pad.L2, TRIGGER_THRESHOLD);
+    this.skills[1] = pastThreshold(pad.R1, TRIGGER_THRESHOLD);
+    this.skills[2] = pastThreshold(pad.L1, TRIGGER_THRESHOLD);
     this.dash = pad.A;
-    this.readSwap(pad);
-  }
-
-  /** Y or RB cycles forward, LB backward; edge-triggered. */
-  private readSwap(pad: Pad): void {
-    const forward = pad.Y || pad.R1 > TRIGGER_THRESHOLD;
-    const held = forward || pad.L1 > TRIGGER_THRESHOLD;
-    if (held && !this.swapHeld) this.weaponCycle = forward ? 1 : -1;
-    this.swapHeld = held;
   }
 
   rumble(durationMs: number, weak: number, strong: number): void {

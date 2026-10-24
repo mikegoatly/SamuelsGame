@@ -7,7 +7,9 @@ import {
   defaultSave,
   grantWeapon,
   parseSave,
-  unlockPower,
+  equipSkillInSlot,
+  grantSkill,
+  skillLevel,
   withMuted,
   serialize,
   SAVE_VERSION,
@@ -23,7 +25,9 @@ describe('parseSave', () => {
       progress: { level: 7, xp: 33 },
       coins: 120,
       charms: { power: 2, swiftness: 1, vitality: 3 },
-      weapons: { owned: [STARTING_WEAPON, 'brokenWand'], equipped: 'brokenWand' },
+      weapons: { owned: [STARTING_WEAPON, 'brokenWand'] },
+      loadout: { weapon: 'brokenWand', slots: ['fireball', null, 'frostNova'] },
+      skills: { owned: [{ id: 'fireball', level: 2 }, { id: 'frostNova', level: 1 }] },
       levels: { cleared: ['ruins'], bestTimes: { ruins: 91000 } },
     });
     expect(parseSave(serialize(save))).toEqual(save);
@@ -50,14 +54,15 @@ describe('parseSave', () => {
     expect(parseSave(JSON.stringify({ coins: 7.9 })).coins).toBe(7);
   });
 
-  it('always owns the starting weapon and repairs an unowned equipped weapon', () => {
-    const parsed = parseSave(JSON.stringify({ weapons: { owned: ['brokenWand', 5, 'brokenWand'], equipped: 'goldenSword' } }));
-    expect(parsed.weapons).toEqual({ owned: [STARTING_WEAPON, 'brokenWand'], equipped: STARTING_WEAPON });
+  it('always owns the starting weapon and repairs an unowned loadout weapon', () => {
+    const parsed = parseSave(JSON.stringify({ version: 6, weapons: { owned: ['brokenWand', 5, 'brokenWand'] }, loadout: { weapon: 'goldenSword' } }));
+    expect(parsed.weapons).toEqual({ owned: [STARTING_WEAPON, 'brokenWand'] });
+    expect(parsed.loadout.weapon).toBe(STARTING_WEAPON);
   });
 
-  it('keeps an owned equipped weapon', () => {
-    const parsed = parseSave(JSON.stringify({ weapons: { owned: [STARTING_WEAPON, 'brokenWand'], equipped: 'brokenWand' } }));
-    expect(parsed.weapons.equipped).toBe('brokenWand');
+  it('keeps an owned loadout weapon', () => {
+    const parsed = parseSave(JSON.stringify({ version: 6, weapons: { owned: [STARTING_WEAPON, 'brokenWand'] }, loadout: { weapon: 'brokenWand' } }));
+    expect(parsed.loadout.weapon).toBe('brokenWand');
   });
 
   it('drops non-string and duplicate cleared ids and bad best times', () => {
@@ -82,14 +87,15 @@ describe('save transforms', () => {
 
   it('grantWeapon adds once and equips', () => {
     const save = grantWeapon(grantWeapon(aSave(), 'brokenWand'), 'brokenWand');
-    expect(save.weapons).toEqual({ owned: [STARTING_WEAPON, 'brokenWand'], equipped: 'brokenWand' });
-    expect(grantWeapon(aSave(), 'brokenWand', false).weapons.equipped).toBe(STARTING_WEAPON);
+    expect(save.weapons).toEqual({ owned: [STARTING_WEAPON, 'brokenWand'] });
+    expect(save.loadout.weapon).toBe('brokenWand');
+    expect(grantWeapon(aSave(), 'brokenWand', false).loadout.weapon).toBe(STARTING_WEAPON);
   });
 
   it('applyLevelClear banks coins, grants the reward, records the clear and best time', () => {
     const first = applyLevelClear(aSave({ coins: 10 }), { levelId: 'ruins', rewardWeaponId: 'brokenWand', timeMs: 90_000, runCoins: 25 });
     expect(first.coins).toBe(35);
-    expect(first.weapons.equipped).toBe('brokenWand');
+    expect(first.loadout.weapon).toBe('brokenWand');
     expect(first.levels).toEqual({ cleared: ['ruins'], bestTimes: { ruins: 90_000 } });
 
     const slower = applyLevelClear(first, { levelId: 'ruins', timeMs: 120_000 });
@@ -98,8 +104,8 @@ describe('save transforms', () => {
   });
 
   it('applyLevelClear only equips a reward weapon that is newly owned', () => {
-    const owned = aSave({ weapons: { owned: [STARTING_WEAPON, 'brokenWand', 'goldenSword'], equipped: 'goldenSword' } });
-    expect(applyLevelClear(owned, { levelId: 'ruins', rewardWeaponId: 'brokenWand' }).weapons.equipped).toBe('goldenSword');
+    const owned = aSave({ weapons: { owned: [STARTING_WEAPON, 'brokenWand', 'goldenSword'] }, loadout: { weapon: 'goldenSword', slots: [null, null, null] } });
+    expect(applyLevelClear(owned, { levelId: 'ruins', rewardWeaponId: 'brokenWand' }).loadout.weapon).toBe('goldenSword');
   });
 });
 
@@ -139,8 +145,8 @@ describe('save repair and migration', () => {
   it('migrates a version 1 save to the current version keeping its data', () => {
     const v1 = { version: 1, progress: { level: 3, xp: 10 }, coins: 7, levels: { cleared: ['ruins'] } };
     const migrated = parseSave(JSON.stringify(v1));
-    expect(SAVE_VERSION).toBe(5);
-    expect(migrated.version).toBe(5);
+    expect(SAVE_VERSION).toBe(6);
+    expect(migrated.version).toBe(6);
     expect(migrated.coins).toBe(7);
     expect(migrated.levels.cleared).toEqual(['ruins']);
     expect(migrated.settings).toEqual(defaultSave().settings);
@@ -156,23 +162,112 @@ describe('settings', () => {
   });
 });
 
-describe('powers', () => {
-  it('start locked, unlock idempotently and round-trip', () => {
-    expect(defaultSave().powers.unlocked).toEqual([]);
-    const once = unlockPower(defaultSave(), 'fireball');
-    expect(unlockPower(once, 'fireball').powers.unlocked).toEqual(['fireball']);
-    expect(parseSave(serialize(once)).powers.unlocked).toEqual(['fireball']);
+describe('skills', () => {
+  it('start unowned with empty slots', () => {
+    expect(defaultSave().skills.owned).toEqual([]);
+    expect(defaultSave().loadout.slots).toEqual([null, null, null]);
   });
 
-  it('repairs junk and migrates saves that predate powers', () => {
-    expect(parseSave(JSON.stringify({ powers: 7 })).powers.unlocked).toEqual([]);
-    expect(parseSave(JSON.stringify({ powers: { unlocked: ['fireball', 3, 'fireball'] } })).powers.unlocked).toEqual(['fireball']);
-    expect(parseSave(JSON.stringify({ version: 2, coins: 4 })).powers.unlocked).toEqual([]);
+  it('grantSkill adds at level 1 once and equips into the first empty slot', () => {
+    const once = grantSkill(defaultSave(), 'fireball');
+    expect(grantSkill(once, 'fireball')).toBe(once);
+    expect(once.skills.owned).toEqual([{ id: 'fireball', level: 1 }]);
+    expect(once.loadout.slots).toEqual(['fireball', null, null]);
+    expect(grantSkill(once, 'frostNova').loadout.slots).toEqual(['fireball', 'frostNova', null]);
+    expect(skillLevel(once, 'fireball')).toBe(1);
+    expect(skillLevel(once, 'frostNova')).toBe(0);
   });
 
-  it('a level clear grants its reward power', () => {
-    const next = applyLevelClear(defaultSave(), { levelId: 'desert', rewardPowerId: 'fireball' });
-    expect(next.powers.unlocked).toContain('fireball');
+  it('leaves a skill in the bag when every slot is full, or when asked not to equip', () => {
+    const full = aSave({ skills: { owned: ['a', 'b', 'c'].map((id) => ({ id, level: 1 })) }, loadout: { weapon: STARTING_WEAPON, slots: ['a', 'b', 'c'] } });
+    const next = grantSkill(full, 'd');
+    expect(next.loadout.slots).toEqual(['a', 'b', 'c']);
+    expect(skillLevel(next, 'd')).toBe(1);
+    expect(grantSkill(defaultSave(), 'd', false).loadout.slots).toEqual([null, null, null]);
+  });
+
+  it('equipSkillInSlot replaces a slot with an owned skill and ignores unowned ones', () => {
+    const save = grantSkill(grantSkill(defaultSave(), 'a'), 'b');
+    expect(equipSkillInSlot(save, 0, 'b').loadout.slots).toEqual(['b', 'a', null]);
+    expect(equipSkillInSlot(save, 2, 'zzz')).toBe(save);
+  });
+
+  it('round-trips and repairs junk', () => {
+    const save = grantSkill(defaultSave(), 'fireball');
+    expect(parseSave(serialize(save))).toEqual(save);
+    expect(parseSave(JSON.stringify({ version: 6, skills: 7, loadout: 3 })).skills.owned).toEqual([]);
+    const junk = parseSave(JSON.stringify({ version: 6, skills: { owned: [{ id: 'a', level: 99 }, { id: 'a', level: 2 }, { id: 5 }, 'x', { id: 'b', level: 'z' }] } }));
+    expect(junk.skills.owned).toEqual([{ id: 'a', level: 5 }, { id: 'b', level: 1 }]);
+  });
+
+  it('drops unowned or duplicate ids from the saved slots', () => {
+    const parsed = parseSave(JSON.stringify({ version: 6, skills: { owned: [{ id: 'a', level: 1 }] }, loadout: { slots: ['a', 'a', 'ghost'] } }));
+    expect(parsed.loadout.slots).toEqual(['a', null, null]);
+  });
+
+  it('a level clear grants its reward skills into free slots', () => {
+    const next = applyLevelClear(defaultSave(), { levelId: 'desert', rewardSkillIds: ['fireball', 'arcaneShield'] });
+    expect(next.skills.owned.map((s) => s.id)).toEqual(['fireball', 'arcaneShield']);
+    expect(next.loadout.slots).toEqual(['fireball', 'arcaneShield', null]);
     expect(next.levels.cleared).toContain('desert');
+    expect(applyLevelClear(next, { levelId: 'desert', rewardSkillIds: ['fireball'] }).skills.owned).toHaveLength(2);
+  });
+});
+
+describe('unknown skill ids', () => {
+  it('are dropped from owned skills and slots when a validator is supplied', () => {
+    const raw = JSON.stringify({ version: 6, skills: { owned: [{ id: 'a', level: 1 }, { id: 'ghost', level: 3 }] }, loadout: { slots: ['ghost', 'a', null] } });
+    const parsed = parseSave(raw, {}, (id) => id === 'a');
+    expect(parsed.skills.owned).toEqual([{ id: 'a', level: 1 }]);
+    expect(parsed.loadout.slots).toEqual([null, 'a', null]);
+  });
+
+  it('are not granted from legacy powers or rewards either', () => {
+    const raw = JSON.stringify({ version: 5, powers: { unlocked: ['ghost', 'a'] } });
+    expect(parseSave(raw, {}, (id) => id === 'a').skills.owned).toEqual([{ id: 'a', level: 1 }]);
+  });
+});
+
+describe('migration to version 6', () => {
+  const legacyRewards = { ruins: ['arcaneShield'], desert: ['fireball'], palace: ['chainLightning'] };
+
+  it('turns an unlocked fireball power into an owned level 1 skill equipped in slot 1', () => {
+    const v5 = { version: 5, powers: { unlocked: ['fireball'] }, weapons: { owned: [STARTING_WEAPON, 'brokenWand'], equipped: 'brokenWand' } };
+    const migrated = parseSave(JSON.stringify(v5));
+    expect(migrated.skills.owned).toEqual([{ id: 'fireball', level: 1 }]);
+    expect(migrated.loadout).toEqual({ weapon: 'brokenWand', slots: ['fireball', null, null] });
+    expect(migrated.version).toBe(6);
+    expect(migrated).not.toHaveProperty('powers');
+  });
+
+  it.each([1, 2, 3, 4])('migrates a v%i shape without powers to no skills and the starting weapon', (version) => {
+    const migrated = parseSave(JSON.stringify({ version, coins: 12, progress: { level: 2, xp: 1 }, weapons: { owned: [STARTING_WEAPON], equipped: STARTING_WEAPON } }));
+    expect(migrated.coins).toBe(12);
+    expect(migrated.skills.owned).toEqual([]);
+    expect(migrated.loadout).toEqual({ weapon: STARTING_WEAPON, slots: [null, null, null] });
+  });
+
+  it('keeps an owned equipped weapon and repairs an unowned one', () => {
+    const owned = parseSave(JSON.stringify({ version: 5, weapons: { owned: ['goldenSword'], equipped: 'goldenSword' } }));
+    expect(owned.loadout.weapon).toBe('goldenSword');
+    const unowned = parseSave(JSON.stringify({ version: 5, weapons: { owned: [], equipped: 'goldenSword' } }));
+    expect(unowned.loadout.weapon).toBe(STARTING_WEAPON);
+  });
+
+  it('grants the skill rewards of levels cleared before skills existed, after the fireball power', () => {
+    const v5 = { version: 5, levels: { cleared: ['ruins', 'desert', 'palace'] }, powers: { unlocked: ['fireball'] } };
+    const migrated = parseSave(JSON.stringify(v5), legacyRewards);
+    expect(migrated.skills.owned.map((s) => s.id)).toEqual(['fireball', 'arcaneShield', 'chainLightning']);
+    expect(migrated.loadout.slots).toEqual(['fireball', 'arcaneShield', 'chainLightning']);
+  });
+
+  it('does not re-grant rewards for a v6 save the player has since changed', () => {
+    const v6 = { version: 6, levels: { cleared: ['ruins'] }, skills: { owned: [] } };
+    expect(parseSave(JSON.stringify(v6), legacyRewards).skills.owned).toEqual([]);
+  });
+
+  it('SaveSystem migrates through the same path when loading', () => {
+    const storage = fakeStorage({ [SAVE_KEY]: JSON.stringify({ version: 5, levels: { cleared: ['desert'] }, powers: { unlocked: ['fireball'] } }) });
+    expect(new SaveSystem(() => storage).data.loadout.slots[0]).toBe('fireball');
   });
 });

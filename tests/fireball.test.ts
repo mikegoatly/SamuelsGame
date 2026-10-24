@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { FIREBALL, aoeFalloff, fireballDamage, fireballStatus, fireballVictims } from '../src/logic/fireball';
+import { FIREBALL, aoeFalloff, fireballDamage, fireballVictims } from '../src/logic/fireball';
 import { damageToEnemy } from '../src/logic/combat';
 import { expectClose } from './builders';
 
@@ -14,30 +14,16 @@ describe('aoeFalloff', () => {
 });
 
 describe('fireballDamage', () => {
-  it('is about triple a bolt, scaled by level gap and the damage multiplier', () => {
+  it('is about triple a 10 damage bolt at base, scaled by level gap and the damage modifier', () => {
     const bolt = damageToEnemy(10, 6, 6);
-    const ball = fireballDamage(10, 6, 6);
+    const ball = fireballDamage(FIREBALL.damage, 6, 6);
     expect(ball).toBeGreaterThanOrEqual(bolt * 2.9);
     expect(ball).toBeLessThanOrEqual(bolt * 3.1);
-    expect(fireballDamage(10, 6, 9)).toBeLessThan(fireballDamage(10, 6, 6));
-    expect(fireballDamage(10, 6, 6, 1.5)).toBeGreaterThan(ball);
-  });
-});
-
-describe('fireballStatus', () => {
-  it('is unavailable without the power or a wand-type weapon', () => {
-    expect(fireballStatus({ unlocked: false, castsPowers: true, now: 0, readyAt: 0 }).available).toBe(false);
-    expect(fireballStatus({ unlocked: true, castsPowers: false, now: 0, readyAt: 0 }).available).toBe(false);
+    expect(fireballDamage(FIREBALL.damage, 6, 9)).toBeLessThan(ball);
+    expect(fireballDamage(FIREBALL.damage, 6, 6, 1.5)).toBeGreaterThan(ball);
   });
 
-  it('reports cooldown progress and becomes ready at the ready time', () => {
-    const mid = fireballStatus({ unlocked: true, castsPowers: true, now: 1000, readyAt: 2500 });
-    expect(mid).toMatchObject({ available: true, ready: false });
-    expectClose(mid.fraction, 0.4);
-    expect(fireballStatus({ unlocked: true, castsPowers: true, now: 2500, readyAt: 2500 })).toMatchObject({ ready: true, fraction: 1 });
-  });
-
-  it('cooldown is about 2.5 seconds', () => {
+  it('level 1 stats are about 2.5 seconds and radius 40, independent of any weapon', () => {
     expect(FIREBALL.cooldownMs).toBe(2500);
     expect(FIREBALL.radius).toBe(40);
   });
@@ -52,5 +38,11 @@ describe('fireballVictims', () => {
     ]);
     expect(victims.map((v) => v.index)).toEqual([0, 1]);
     expect(victims[0]!.multiplier).toBeGreaterThan(victims[1]!.multiplier);
+  });
+
+  it('honours a custom radius and edge multiplier', () => {
+    const victims = fireballVictims({ x: 0, y: 0 }, [{ x: 60, y: 0, reach: 5 }], 60, 0.5);
+    expect(victims).toHaveLength(1);
+    expect(victims[0]!.multiplier).toBeCloseTo(aoeFalloff(55, 60, 0.5));
   });
 });

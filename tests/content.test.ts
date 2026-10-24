@@ -3,12 +3,12 @@ import { enemies, getEnemy } from '../src/content/enemies';
 import { items } from '../src/content/items';
 import { levels } from '../src/content/levels';
 import { lootTables } from '../src/content/lootTables';
-import { weapons } from '../src/content/weapons';
 import { dropChance } from '../src/logic/loot';
 import { STARTING_WEAPON } from '../src/logic/save';
 import { desert } from '../src/content/levels/desert';
 import { ruins } from '../src/content/levels/ruins';
-import { powers } from '../src/content/powers';
+import { skills } from '../src/content/skills';
+import { weapons } from '../src/content/weapons';
 import { isUnderLevelled } from '../src/logic/levelRules';
 
 describe('content integrity', () => {
@@ -51,13 +51,11 @@ describe('content integrity', () => {
     expect(charmChance('cyclops')).toBeGreaterThan(charmChance('bat'));
   });
 
-  it('levels reference real powers and boss definitions; only the wand casts powers', () => {
+  it('levels reference real skills and boss definitions', () => {
     for (const level of levels) {
-      if (level.rewardPowerId) expect(powers[level.rewardPowerId]).toBeDefined();
+      for (const id of level.rewardSkillIds ?? []) expect(skills[id], id).toBeDefined();
       if (level.bossId) expect(getEnemy(level.bossId).boss).toBe(true);
     }
-    expect(weapons.brokenWand!.castsPowers).toBe(true);
-    expect(weapons.apprenticeStaff!.castsPowers).toBeFalsy();
   });
 });
 
@@ -72,7 +70,7 @@ describe('desert content', () => {
   };
 
   it('is the level 5 to 9 desert that rewards the fireball and unlocks after the ruins', () => {
-    expect(desert).toMatchObject({ recommendedLevel: 5, monsterLevelRange: [5, 9], rewardPowerId: 'fireball', unlockedBy: 'ruins', bossLevel: 10 });
+    expect(desert).toMatchObject({ recommendedLevel: 5, monsterLevelRange: [5, 9], rewardSkillIds: ['fireball'], unlockedBy: 'ruins', bossLevel: 10 });
     expect(desert.mapKey).toBe('desert');
     expect(desert.music).toBeDefined();
     expect(desert.bossMusic).toBe(ruins.bossMusic);

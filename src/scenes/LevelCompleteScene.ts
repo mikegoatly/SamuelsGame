@@ -14,7 +14,7 @@ export interface LevelCompleteData {
   coins: number;
   xp: number;
   level: number;
-  reward?: Reward;
+  rewards?: Reward[];
 }
 
 const INPUT_DELAY_MS = 700;
@@ -39,7 +39,7 @@ export class LevelCompleteScene extends MenuScene {
   protected build(): void {
     const { width, height } = this.scale;
     const cx = width / 2;
-    const { title, timeMs, kills, coins, xp, level, reward } = this.result;
+    const { title, timeMs, kills, coins, xp, level, rewards = [] } = this.result;
     this.cameras.main.fadeIn(400);
     menuText(this, cx, height * 0.16, title, 32, '#ffe066');
     const rows: [string, string][] = [
@@ -50,16 +50,16 @@ export class LevelCompleteScene extends MenuScene {
       ['Level now', String(level)],
     ];
     rows.forEach(([label, value], i) => {
-      const y = height * 0.32 + i * 24;
+      const y = height * 0.28 + i * 21;
       menuText(this, cx - 12, y, label, 16, '#b0b0c8').setOrigin(1, 0.5);
       menuText(this, cx + 12, y, value, 16, '#ffffff').setOrigin(0, 0.5);
     });
-    if (reward) this.showReward(cx, height * 0.32 + rows.length * 24 + 22, reward);
-    const next = new MenuButton(this, cx, height * 0.82, 200, 34, 'Continue', () => this.leave());
+    rewards.forEach((reward, i) => this.showReward(cx, height * 0.28 + rows.length * 21 + 18 + i * 26, reward));
+    const next = new MenuButton(this, cx, height * 0.88, 200, 34, 'Continue', () => this.leave());
     this.menu = new MenuList(this, [next], { onBack: () => this.leave() });
   }
 
-  /** Icon plus headline for the weapon or power this level handed out. */
+  /** Icon plus headline for a weapon or skill this level handed out. */
   private showReward(cx: number, y: number, reward: Reward): void {
     const icon = this.add.image(cx - 8, y, Tex.tiles, reward.frame).setScale(2);
     if (reward.tint !== null) icon.setTint(reward.tint);

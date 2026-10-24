@@ -14,7 +14,17 @@ export const Tex = {
   muzzle: 'fx-muzzle',
   vignette: 'vignette',
   palaceTiles: 'tiny-dungeon-palace',
+  prompts: 'prompts',
 } as const;
+
+/** Particle sprites the skill icons are built from (PreloadScene tints them), by skill id. */
+export const SKILL_ICON_SOURCES: Record<string, string> = {
+  fireball: 'fx/skill-flame.png',
+  frostNova: 'fx/skill-frost.png',
+  chainLightning: 'fx/skill-lightning.png',
+  arcaneShield: 'fx/skill-shield.png',
+  blinkStrike: 'fx/skill-blink.png',
+};
 
 export const Music = {
   menu: 'music-menu',
@@ -99,7 +109,6 @@ export const ControlFrame = {
   stickBase: 'flatDark10.png',
   stickKnob: 'flatDark00.png',
   dash: 'flatDark24.png',
-  altFire: 'flatDark27.png',
-  swap: 'flatDark28.png',
+  skill: 'flatDark27.png',
   fullscreen: 'flatDark29.png',
 } as const;

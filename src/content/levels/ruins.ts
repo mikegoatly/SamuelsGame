@@ -17,6 +17,7 @@ export const ruins: LevelConfig = {
   bossId: 'stoneGuardian',
   bossLevel: 5,
   rewardWeaponId: 'brokenWand',
+  rewardSkillIds: ['arcaneShield'],
   mapKey: MapKey.ruins,
   music: Music.ruins,
   bossMusic: Music.boss,

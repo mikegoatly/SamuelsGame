@@ -3,7 +3,7 @@ import { Tex } from '../content/assetKeys';
 
 const TRAIL_TINT = 0xff9030;
 
-/** The in-flight fireball: a glowing orb with an ember trail. Movement and impact are driven by FireballSystem. */
+/** The in-flight fireball: a glowing orb with an ember trail. Movement and impact are driven by FireballCaster. */
 export class Fireball extends Phaser.GameObjects.Image {
   readonly velocity: Phaser.Math.Vector2;
   travelled = 0;

@@ -4,7 +4,7 @@ import { CAMERA_ZOOM } from '../content/config';
 import { GOD_DAMAGE_MULTIPLIER, GOD_MODE } from '../debug';
 import { getLevel, type LevelConfig } from '../content/levels';
 import { getEnemy } from '../content/enemies';
-import { rewardOf } from '../content/rewards';
+import { rewardsOf } from '../content/rewards';
 import { getWeapon } from '../content/weapons';
 import { EnemyProjectiles, type EnemyProjectile } from '../entities/EnemyProjectile';
 import type { Enemy } from '../entities/Enemy';
@@ -15,11 +15,11 @@ import { CardPresenter } from '../systems/CardPresenter';
 import { RewardPickup } from '../entities/RewardPickup';
 import { damageToEnemy } from '../logic/combat';
 import { rectCenter } from '../logic/geometry';
+import { solidAt } from '../logic/solidity';
 import { addCoins, applyLevelClear, withProgress } from '../logic/save';
 import { feel } from '../systems/feel';
 import { GameClock } from '../systems/GameClock';
 import { EnemyFactory } from '../systems/EnemyFactory';
-import { FireballSystem } from '../systems/FireballSystem';
 import { GameEvents } from '../systems/GameEvents';
 import { floatText } from '../systems/floatText';
 import { InputController } from '../systems/InputController';
@@ -31,9 +31,10 @@ import { ProgressionSystem } from '../systems/ProgressionSystem';
 import { RoomFlowSystem } from '../systems/RoomFlowSystem';
 import { saveSystem } from '../systems/SaveSystem';
 import { playSfx } from '../systems/sfx';
+import { SkillAcquisition } from '../systems/SkillAcquisition';
+import { SkillSystem } from '../systems/SkillSystem';
 import { SpawnSystem } from '../systems/SpawnSystem';
 import { SpikeSystem } from '../systems/SpikeSystem';
-import { WeaponSwitcher } from '../systems/WeaponSwitcher';
 import { buildLevelMap, type LevelMap } from './RoomBuilder';
 
 export interface GameSceneData {
@@ -48,6 +49,8 @@ const REWARD_ARM_MS = 1200;
 export class GameScene extends Phaser.Scene {
   private ending = false;
   private cards!: CardPresenter;
+  private acquisition!: SkillAcquisition;
+  private player!: Player;
   private level!: LevelConfig;
   private progression!: ProgressionSystem;
   private run: RunState = { coins: 0 };
@@ -75,7 +78,7 @@ export class GameScene extends Phaser.Scene {
     const { walls, playerStart } = map;
     const projectiles = createProjectilePool(this);
     const shots = new EnemyProjectiles(this);
-    const weapon = getWeapon(save.weapons.equipped);
+    const weapon = getWeapon(save.loadout.weapon);
     const controls = new InputController(this);
     this.cards = new CardPresenter({ scene: this.scene, isEnding: () => this.ending, onClosed: () => controls.swallowUntilReleased() }, saveSystem);
     const player = new Player(
@@ -90,23 +93,18 @@ export class GameScene extends Phaser.Scene {
       () => saveSystem.data.charms,
       this.clock,
     );
+    this.player = player;
     player.slowZones = map.slowZones;
     const enemies = (this.enemies = this.physics.add.group({ allowGravity: false }));
-    const isSolid = (x: number, y: number): boolean => [walls, ...map.solid].some((layer) => layer.getTileAtWorldXY(x, y) !== null);
+    const lookups = [walls, ...map.solid].map((layer) => (x: number, y: number) => layer.getTileAtWorldXY(x, y));
+    const isSolid = (x: number, y: number): boolean => solidAt(walls, lookups, x, y);
     const factory = new EnemyFactory(this, enemies, { target: player, events, shots, clock: this.clock, isBlocked: isSolid });
     const director = this.createDirector(map, player, factory, events);
-    const loot = new LootSystem(this, player, events, this.run, saveSystem, this.clock, this.cards);
-    const fireball = new FireballSystem({
-      scene: this,
-      player,
-      enemies,
-      clock: this.clock,
-      unlocked: () => saveSystem.data.powers.unlocked.includes('fireball'),
-      isSolid,
-    });
+    const skills = new SkillSystem({ scene: this, player, enemies, shots, clock: this.clock, isSolid, save: saveSystem });
+    this.acquisition = new SkillAcquisition(this, saveSystem, skills, this.cards);
+    const loot = new LootSystem(this, player, events, this.run, saveSystem, this.clock, this.cards, this.acquisition);
 
     new MeleeSystem({ scene: this, player, enemies, shots, isSolid });
-    new WeaponSwitcher(player, events, saveSystem);
     if (map.spikes.length > 0) new SpikeSystem(this, player, this.clock, map.spikes);
 
     this.addColliders(map, player, enemies, projectiles, shots);
@@ -151,7 +149,7 @@ export class GameScene extends Phaser.Scene {
     camera.startFollow(player, true, 0.15, 0.15);
     camera.fadeIn(250);
 
-    this.scene.launch('Hud', { events, progression, player, director, loot, fireball, roomTotal: map.world?.rooms.length, bossName: this.level.bossId ? getEnemy(this.level.bossId).name : undefined });
+    this.scene.launch('Hud', { events, progression, player, director, loot, skills, roomTotal: map.world?.rooms.length, bossName: this.level.bossId ? getEnemy(this.level.bossId).name : undefined });
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       director.stop();
       musicOf(this.game).fadeOut();
@@ -172,6 +170,12 @@ export class GameScene extends Phaser.Scene {
     this.cards.close();
   }
 
+  /** The skill swap prompt's answer: replace `slot` with `skillId`, or null to keep it in the bag. */
+  resolveSwap(skillId: string, slot: number | null): void {
+    this.acquisition.resolveSwap(skillId, slot);
+    this.cards.close();
+  }
+
   private offerLevelUpCard(level: number): void {
     this.cards.request(`levelUp${level}`, levelUpCard(level));
   }
@@ -186,6 +190,7 @@ export class GameScene extends Phaser.Scene {
   completeLevel(): void {
     if (this.ending) return;
     this.ending = true;
+    this.player.actionsLocked = true;
     this.cards.cancel();
     feel.lock();
     this.physics.pause();
@@ -195,7 +200,7 @@ export class GameScene extends Phaser.Scene {
       applyLevelClear(withProgress(save, this.progression.progress), {
         levelId: this.level.id,
         rewardWeaponId: this.level.rewardWeaponId,
-        rewardPowerId: this.level.rewardPowerId,
+        rewardSkillIds: this.level.rewardSkillIds,
         runCoins: coins,
         timeMs,
       }),
@@ -211,7 +216,7 @@ export class GameScene extends Phaser.Scene {
         coins,
         xp: this.progression.gainedXp,
         level: this.progression.level,
-        reward: rewardOf(this.level),
+        rewards: rewardsOf(this.level),
       }),
     );
   }
@@ -227,7 +232,7 @@ export class GameScene extends Phaser.Scene {
       level: this.level,
       world,
       doors,
-      isBlocked: (x, y) => walls.getTileAtWorldXY(x, y) !== null,
+      isBlocked: (x, y) => solidAt(walls, [(px, py) => walls.getTileAtWorldXY(px, py)], x, y),
     });
   }
 
@@ -269,7 +274,7 @@ export class GameScene extends Phaser.Scene {
       this.dismissMinions();
       this.progression.gain(BOSS_XP_BONUS);
       const { x, y } = rectCenter(arena.rect);
-      const prize = rewardOf(this.level);
+      const prize = rewardsOf(this.level)[0];
       const reward = new RewardPickup(this, x, y, prize?.frame ?? Frame.glowChest, prize?.tint ?? null);
       floatText(this, x, y - 28, `${getEnemy(this.level.bossId ?? '').name ?? 'Boss'} defeated!`, '#ffe066', 16, 16, 1800);
       let armed = false;

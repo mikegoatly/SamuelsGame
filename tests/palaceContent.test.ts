@@ -7,7 +7,7 @@ import { desert } from '../src/content/levels/desert';
 import { palace } from '../src/content/levels/palace';
 import { ultimate } from '../src/content/levels/ultimate';
 import { lootTables } from '../src/content/lootTables';
-import { rewardOf } from '../src/content/rewards';
+import { rewardsOf } from '../src/content/rewards';
 import { apprenticeStaff, brokenWand, goldenSword, weapons } from '../src/content/weapons';
 import { dropChance } from '../src/logic/loot';
 import { isLevelUnlocked, visibleLevels } from '../src/logic/levelRules';
@@ -26,7 +26,8 @@ describe('palace level', () => {
     expect(palace).toMatchObject({ recommendedLevel: 10, monsterLevelRange: [10, 15], bossId: 'madKing', bossLevel: 16, rewardWeaponId: 'goldenSword', unlockedBy: 'desert', mapKey: 'palace' });
     expect(getEnemy(palace.bossId!)).toBe(madKing);
     expect(madKing.boss).toBe(true);
-    expect(rewardOf(palace)).toMatchObject({ kind: 'weapon', id: 'goldenSword', headline: 'Golden Sword acquired!' });
+    expect(rewardsOf(palace)[0]).toMatchObject({ kind: 'weapon', id: 'goldenSword', headline: 'Golden Sword acquired!' });
+    expect(rewardsOf(palace)[1]).toMatchObject({ kind: 'skill', id: 'chainLightning' });
   });
 
   it('draws only from the four palace enemies and has its own music, boss track included', () => {
@@ -72,11 +73,10 @@ describe('palace loot', () => {
 });
 
 describe('weapons', () => {
-  it('the golden sword is the melee weapon, the others are ranged, and only the wand casts', () => {
+  it('the golden sword is the melee weapon and the others are ranged', () => {
     expect(goldenSword.kind).toBe('melee');
     expect(brokenWand.kind).toBe('ranged');
     expect(apprenticeStaff.kind).toBe('ranged');
-    expect(goldenSword.castsPowers).toBeFalsy();
     expect(goldenSword.melee).toMatchObject({ reach: 28 });
     expect(goldenSword.melee!.arc).toBeCloseTo((100 * Math.PI) / 180);
     expect(goldenSword.fireRateMs).toBe(350);

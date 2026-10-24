@@ -30,23 +30,3 @@ export class KeyLatch {
     this.pressed = this.held = false;
   }
 }
-
-/** Turns bursts of wheel deltas into at most one weapon switch per interval, in the net direction. */
-export class WheelThrottle {
-  private pending = 0;
-  private lastAt = -Infinity;
-
-  constructor(private readonly intervalMs: number) {}
-
-  add(delta: number): void {
-    this.pending += Math.sign(delta);
-  }
-
-  take(now: number): -1 | 0 | 1 {
-    if (this.pending === 0 || now - this.lastAt < this.intervalMs) return 0;
-    const direction = Math.sign(this.pending) as -1 | 1;
-    this.pending = 0;
-    this.lastAt = now;
-    return direction;
-  }
-}

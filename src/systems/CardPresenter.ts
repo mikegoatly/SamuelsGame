@@ -6,6 +6,8 @@ import type { SaveSystem } from './SaveSystem';
 interface CardRequest {
   id: string;
   card: CardData;
+  /** Which modal scene shows it. */
+  scene: string;
 }
 
 export interface CardHost {
@@ -20,6 +22,7 @@ const CARD_SCENE = 'ItemCard';
 export class CardPresenter {
   private readonly queue = new CardQueue<CardRequest>();
   private open = false;
+  private shown = CARD_SCENE;
 
   constructor(
     private readonly host: CardHost,
@@ -27,10 +30,10 @@ export class CardPresenter {
   ) {}
 
   /** True when the card was accepted (it will be shown); false means the caller should fall back to floating text. */
-  request(id: string, card: CardData): boolean {
+  request(id: string, card: CardData, scene: string = CARD_SCENE): boolean {
     const { settings, seen } = this.save.data;
     if (this.host.isEnding() || !shouldQueueCard(settings.itemCards, seen, this.queue.ids, id)) return false;
-    this.queue.push({ id, card });
+    this.queue.push({ id, card, scene });
     this.flush();
     return true;
   }
@@ -46,7 +49,8 @@ export class CardPresenter {
     this.save.update((save) => markSeen(save, next.id));
     scene.pause();
     scene.pause('Hud');
-    scene.launch(CARD_SCENE, next.card);
+    this.shown = next.scene;
+    scene.launch(next.scene, next.card);
   }
 
   close(): void {
@@ -54,11 +58,16 @@ export class CardPresenter {
     const next = this.nextToShow();
     if (next) {
       this.save.update((save) => markSeen(save, next.id));
-      this.host.scene.get(CARD_SCENE).scene.restart(next.card);
+      if (next.scene === this.shown) this.host.scene.get(this.shown).scene.restart(next.card);
+      else {
+        this.host.scene.stop(this.shown);
+        this.shown = next.scene;
+        this.host.scene.launch(next.scene, next.card);
+      }
       return;
     }
     this.open = false;
-    this.host.scene.stop(CARD_SCENE);
+    this.host.scene.stop(this.shown);
     this.resumeGame();
   }
 
@@ -67,7 +76,7 @@ export class CardPresenter {
     this.queue.clear();
     if (!this.open) return;
     this.open = false;
-    this.host.scene.stop(CARD_SCENE);
+    this.host.scene.stop(this.shown);
     this.resumeGame();
   }
 

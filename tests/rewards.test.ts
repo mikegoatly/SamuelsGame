@@ -1,18 +1,22 @@
 import { describe, expect, it } from 'vitest';
 import { desert } from '../src/content/levels/desert';
 import { ruins } from '../src/content/levels/ruins';
-import { rewardOf } from '../src/content/rewards';
+import { rewardsOf } from '../src/content/rewards';
 
-describe('rewardOf', () => {
-  it('describes a weapon reward as acquired', () => {
-    expect(rewardOf(ruins)).toMatchObject({ kind: 'weapon', id: 'brokenWand', headline: 'Broken Wand acquired!' });
+describe('rewardsOf', () => {
+  it('lists the weapon first, described as acquired, then the skills as learned', () => {
+    expect(rewardsOf(ruins)).toMatchObject([
+      { kind: 'weapon', id: 'brokenWand', headline: 'Broken Wand acquired!' },
+      { kind: 'skill', id: 'arcaneShield', headline: 'Arcane Shield learned!' },
+    ]);
   });
 
-  it('describes a power reward as unlocked', () => {
-    expect(rewardOf(desert)).toMatchObject({ kind: 'power', id: 'fireball', headline: 'Fireball unlocked!' });
+  it('describes a skill-only reward', () => {
+    expect(rewardsOf(desert)).toMatchObject([{ kind: 'skill', id: 'fireball', headline: 'Fireball learned!' }]);
   });
 
-  it('is undefined for levels without a reward', () => {
-    expect(rewardOf({})).toBeUndefined();
+  it('is empty for levels without a reward and skips unknown ids', () => {
+    expect(rewardsOf({})).toEqual([]);
+    expect(rewardsOf({ rewardSkillIds: ['nope'] })).toEqual([]);
   });
 });

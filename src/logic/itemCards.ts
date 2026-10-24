@@ -8,6 +8,10 @@ export interface CardData {
   frame: number;
   tint: number | null;
   lines: string[];
+  /** Texture key to show instead of a Tiny Dungeon frame (skill icons). */
+  icon?: string;
+  /** Set on the skill swap prompt: the skill waiting for a slot. */
+  skillId?: string;
 }
 
 export type CardMode = 'always' | 'first';

@@ -1,4 +1,5 @@
 import type { LootEntry, LootTable } from '../logic/loot';
+import { SCROLL_CHANCE } from '../logic/skillScroll';
 
 const common = (itemId: string, weight: number): LootEntry => ({ itemId, weight, rarity: 'common' });
 const rare = (itemId: string, weight: number): LootEntry => ({ itemId, weight, rarity: 'rare' });
@@ -63,6 +64,7 @@ export const ghostLoot: LootTable = {
 
 export const stoneGuardianLoot: LootTable = {
   id: 'stoneGuardian',
+  scrollChance: SCROLL_CHANCE.boss,
   rolls: 4,
   nothingWeight: 0,
   entries: [
@@ -112,6 +114,7 @@ export const vultureLoot: LootTable = {
 
 export const sandRatLoot: LootTable = {
   id: 'sandRat',
+  scrollChance: SCROLL_CHANCE.boss,
   rolls: 5,
   nothingWeight: 0,
   entries: [common('coinPile', 350), common('goldPile', 350), rare('healthPotionSmall', 50), rare('healthPotionLarge', 150), ...charms(34, 33, 33)],
@@ -147,6 +150,7 @@ export const assassinLoot: LootTable = {
 
 export const madKingLoot: LootTable = {
   id: 'madKing',
+  scrollChance: SCROLL_CHANCE.boss,
   rolls: 6,
   nothingWeight: 0,
   entries: [common('coinPile', 250), common('goldPile', 400), rare('healthPotionSmall', 40), rare('healthPotionLarge', 200), ...charms(37, 37, 36)],

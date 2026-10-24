@@ -42,7 +42,7 @@ export class LevelSelectScene extends MenuScene {
         playerLevel: progress.level,
         requirementName: level.unlockedBy ? getLevel(level.unlockedBy).name : undefined,
       };
-      return new LevelCard(this, x, y, cardWidth, cardHeight, level, state, () => this.scene.start('Game', { levelId: level.id }));
+      return new LevelCard(this, x, y, cardWidth, cardHeight, level, state, () => this.scene.start('Loadout', { levelId: level.id }));
     });
     const backY = Math.min(height - 24, top + (rows - 1) * (cardHeight + GAP) + cardHeight / 2 + 26);
     const back = new MenuButton(this, cx, backY, 120, 28, 'Back', () => this.goBack());

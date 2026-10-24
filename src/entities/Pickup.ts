@@ -18,7 +18,7 @@ export class Pickup extends Phaser.Physics.Arcade.Sprite {
     scene: Phaser.Scene,
     x: number,
     y: number,
-    private readonly def: ItemDef,
+    readonly def: ItemDef,
     private readonly target: Phaser.GameObjects.Components.Transform,
     private readonly onCollect: (def: ItemDef) => void,
     private readonly clock: GameClock,

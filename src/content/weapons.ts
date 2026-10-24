@@ -22,8 +22,6 @@ export interface WeaponDef {
   range: number;
   /** Projectile tint; null keeps the bolt texture's own purple. */
   tint: number | null;
-  /** Wand-type weapons can channel powers (fireball) through alt-fire. */
-  castsPowers?: boolean;
   melee?: MeleeTuning;
 }
 
@@ -49,7 +47,6 @@ export const brokenWand: WeaponDef = {
   speed: 320,
   range: 260,
   tint: null,
-  castsPowers: true,
 };
 
 /** Sweeping melee weapon: hits everything in a ~100 degree cone once per swing, hits hard, knocks back and swats bolts. */

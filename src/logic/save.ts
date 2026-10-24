@@ -3,9 +3,11 @@ import { xpToNextLevel } from './xp';
 import { noCharms, type CharmId, type Charms } from './stats';
 
 import type { CardMode } from './itemCards';
+import { emptySlots, equipInSlot, firstEmptySlot, sanitizeSlots, type Loadout } from './loadout';
 
-/** v5: `seen` item ids + `itemCards` setting. v2: added `settings`; v3: added `powers`; v4: volumes + reduceShake. Older saves load through the same tolerant parse. */
-export const SAVE_VERSION = 5;
+/** v6: `skills` + `loadout` replace `powers` and `weapons.equipped`. v5: `seen` + `itemCards`; v4: volumes + reduceShake; v2: `settings`. Older saves load through the same tolerant parse. */
+export const SAVE_VERSION = 6;
+export const MAX_SKILL_LEVEL = 5;
 export const STARTING_WEAPON = 'apprenticeStaff';
 
 export interface Settings {
@@ -21,15 +23,22 @@ export interface Settings {
 
 export const defaultSettings = (): Settings => ({ muted: false, musicVolume: 70, sfxVolume: 100, reduceShake: false, itemCards: 'first' });
 
+export interface OwnedSkill {
+  id: string;
+  level: number;
+}
+
 export interface SaveData {
   version: typeof SAVE_VERSION;
   progress: PlayerProgress;
   coins: number;
   charms: Charms;
-  weapons: { owned: string[]; equipped: string };
+  weapons: { owned: string[] };
+  skills: { owned: OwnedSkill[] };
+  /** Basic weapon and the three skill slots chosen on the loadout screen. */
+  loadout: Loadout;
   levels: { cleared: string[]; bestTimes?: Record<string, number> };
   settings: Settings;
-  powers: { unlocked: string[] };
   /** Item/event ids whose card the player has already seen. */
   seen: string[];
 }
@@ -40,10 +49,11 @@ export function defaultSave(): SaveData {
     progress: { level: 1, xp: 0 },
     coins: 0,
     charms: noCharms(),
-    weapons: { owned: [STARTING_WEAPON], equipped: STARTING_WEAPON },
+    weapons: { owned: [STARTING_WEAPON] },
+    skills: { owned: [] },
+    loadout: { weapon: STARTING_WEAPON, slots: emptySlots() },
     levels: { cleared: [] },
     settings: defaultSettings(),
-    powers: { unlocked: [] },
     seen: [],
   };
 }
@@ -59,8 +69,21 @@ const wholeNumber = (value: unknown, fallback: number, min = 0, max = Number.MAX
 const strings = (value: unknown): string[] =>
   Array.isArray(value) ? [...new Set(value.filter((v): v is string => typeof v === 'string' && v.length > 0))] : [];
 
+/** Skill ids each level hands out; lets saves from before skills existed receive the rewards of levels they already cleared. */
+export type LegacySkillRewards = Readonly<Record<string, readonly string[]>>;
+
+function parseOwnedSkills(value: unknown): OwnedSkill[] {
+  if (!Array.isArray(value)) return [];
+  const owned: OwnedSkill[] = [];
+  for (const entry of value) {
+    if (!isRecord(entry) || typeof entry.id !== 'string' || entry.id.length === 0 || owned.some((s) => s.id === entry.id)) continue;
+    owned.push({ id: entry.id, level: wholeNumber(entry.level, 1, 1, MAX_SKILL_LEVEL) });
+  }
+  return owned;
+}
+
 /** Tolerant: junk, partial or old data falls back to defaults field by field; never throws. */
-export function parseSave(json: string | null | undefined): SaveData {
+export function parseSave(json: string | null | undefined, legacyRewards: LegacySkillRewards = {}, isKnownSkill: (id: string) => boolean = () => true): SaveData {
   const save = defaultSave();
   let raw: unknown;
   try {
@@ -81,8 +104,7 @@ export function parseSave(json: string | null | undefined): SaveData {
   if (isRecord(raw.weapons)) {
     const owned = strings(raw.weapons.owned);
     if (!owned.includes(STARTING_WEAPON)) owned.unshift(STARTING_WEAPON);
-    const equipped = raw.weapons.equipped;
-    save.weapons = { owned, equipped: typeof equipped === 'string' && owned.includes(equipped) ? equipped : STARTING_WEAPON };
+    save.weapons = { owned };
   }
   if (isRecord(raw.levels)) {
     save.levels.cleared = strings(raw.levels.cleared);
@@ -104,8 +126,24 @@ export function parseSave(json: string | null | undefined): SaveData {
       itemCards: raw.settings.itemCards === 'always' ? 'always' : 'first',
     };
   }
-  if (isRecord(raw.powers)) save.powers = { unlocked: strings(raw.powers.unlocked) };
   save.seen = strings(raw.seen);
+  return parseSkills(save, raw, legacyRewards, isKnownSkill);
+}
+
+/** Reads `skills` and `loadout`; saves older than v6 convert unlocked powers and the equipped weapon, and collect the rewards of cleared levels. */
+function parseSkills(save: SaveData, raw: Record<string, unknown>, legacyRewards: LegacySkillRewards, isKnown: (id: string) => boolean): SaveData {
+  const owned = save.weapons.owned;
+  const chosenWeapon = (id: unknown): string => (typeof id === 'string' && owned.includes(id) ? id : STARTING_WEAPON);
+  if (!(typeof raw.version === 'number' && raw.version >= SAVE_VERSION)) {
+    const equipped = isRecord(raw.weapons) ? raw.weapons.equipped : undefined;
+    let next: SaveData = { ...save, loadout: { weapon: chosenWeapon(equipped), slots: emptySlots() } };
+    const powers = isRecord(raw.powers) ? strings(raw.powers.unlocked) : [];
+    for (const id of [...powers, ...save.levels.cleared.flatMap((level) => legacyRewards[level] ?? [])]) if (isKnown(id)) next = grantSkill(next, id);
+    return next;
+  }
+  save.skills = { owned: (isRecord(raw.skills) ? parseOwnedSkills(raw.skills.owned) : []).filter((skill) => isKnown(skill.id)) };
+  const loadout = isRecord(raw.loadout) ? raw.loadout : {};
+  save.loadout = { weapon: chosenWeapon(loadout.weapon), slots: sanitizeSlots(loadout.slots, save.skills.owned.map((s) => s.id)) };
   return save;
 }
 
@@ -127,21 +165,39 @@ export const addCharm = (save: SaveData, id: CharmId): SaveData => ({
 
 export function grantWeapon(save: SaveData, weaponId: string, equip = true): SaveData {
   const owned = save.weapons.owned.includes(weaponId) ? save.weapons.owned : [...save.weapons.owned, weaponId];
-  return { ...save, weapons: { owned, equipped: equip ? weaponId : save.weapons.equipped } };
+  return { ...save, weapons: { owned }, loadout: equip ? { ...save.loadout, weapon: weaponId } : save.loadout };
 }
 
 export const equipWeapon = (save: SaveData, weaponId: string): SaveData =>
-  save.weapons.owned.includes(weaponId) ? { ...save, weapons: { ...save.weapons, equipped: weaponId } } : save;
+  save.weapons.owned.includes(weaponId) ? { ...save, loadout: { ...save.loadout, weapon: weaponId } } : save;
 
-export function unlockPower(save: SaveData, powerId: string): SaveData {
-  if (save.powers.unlocked.includes(powerId)) return save;
-  return { ...save, powers: { unlocked: [...save.powers.unlocked, powerId] } };
+export const skillLevel = (save: SaveData, skillId: string): number => save.skills.owned.find((s) => s.id === skillId)?.level ?? 0;
+
+/** Owns a skill at level 1 (no-op if already owned), equipping it into the first empty slot unless `equip` is false or all slots are full. */
+export function grantSkill(save: SaveData, skillId: string, equip = true): SaveData {
+  if (skillLevel(save, skillId) > 0) return save;
+  const skills = { owned: [...save.skills.owned, { id: skillId, level: 1 }] };
+  const slot = equip ? firstEmptySlot(save.loadout.slots) : -1;
+  const slots = slot >= 0 ? equipInSlot(save.loadout.slots, slot, skillId) : save.loadout.slots;
+  return { ...save, skills, loadout: { ...save.loadout, slots } };
 }
+
+export const setLoadout = (save: SaveData, loadout: Loadout): SaveData => ({
+  ...save,
+  loadout: {
+    weapon: save.weapons.owned.includes(loadout.weapon) ? loadout.weapon : save.loadout.weapon,
+    slots: sanitizeSlots(loadout.slots, save.skills.owned.map((s) => s.id)),
+  },
+});
+
+/** Puts an owned skill in a slot (swapping if it is equipped elsewhere); unowned ids are ignored. */
+export const equipSkillInSlot = (save: SaveData, slot: number, skillId: string): SaveData =>
+  skillLevel(save, skillId) > 0 ? { ...save, loadout: { ...save.loadout, slots: equipInSlot(save.loadout.slots, slot, skillId) } } : save;
 
 export interface LevelClear {
   levelId: string;
   rewardWeaponId?: string;
-  rewardPowerId?: string;
+  rewardSkillIds?: readonly string[];
   timeMs?: number;
   runCoins?: number;
 }
@@ -149,7 +205,7 @@ export interface LevelClear {
 export function applyLevelClear(save: SaveData, clear: LevelClear): SaveData {
   let next = addCoins(save, clear.runCoins ?? 0);
   if (clear.rewardWeaponId) next = grantWeapon(next, clear.rewardWeaponId, !next.weapons.owned.includes(clear.rewardWeaponId));
-  if (clear.rewardPowerId) next = unlockPower(next, clear.rewardPowerId);
+  for (const id of clear.rewardSkillIds ?? []) next = grantSkill(next, id);
   const cleared = next.levels.cleared.includes(clear.levelId) ? next.levels.cleared : [...next.levels.cleared, clear.levelId];
   const levels: SaveData['levels'] = { ...next.levels, cleared };
   const best = next.levels.bestTimes?.[clear.levelId];

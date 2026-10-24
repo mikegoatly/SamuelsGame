@@ -17,7 +17,7 @@ Rushing ahead means under-levelled player → damage dealt reduced, damage taken
 | # | Name | Environment | Monster lvl | Reward |
 |---|------|-------------|-------------|--------|
 | 1 | Broken Wand | Ruins | 1–4 | Broken Wand (basic magic bolt) |
-| 2 | Lost Desert | Desert | 5–9 | Wand power: Fireball |
+| 2 | Lost Desert | Desert | 5–9 | Skill: Fireball |
 | 3 | Killer Palace | Palace | 10–15 | Golden Sword (melee) |
 | 4+ | (future) | … | … | … → Ultimate Boss |
 
@@ -27,7 +27,7 @@ weights, monster level range, boss id, reward id, unlock requirement (previous l
 ## 3. Player
 
 - Stats: HP, move speed, level, XP, dash (cooldown), inventory.
-- Weapons (`content/weapons.ts`, `kind: 'ranged' | 'melee'`): Apprentice Staff -> Broken Wand (+Fireball alt-fire, needs `castsPowers`) -> Golden Sword.
+- Weapons (`content/weapons.ts`, `kind: 'ranged' | 'melee'`): Apprentice Staff -> Broken Wand -> Golden Sword; the basic weapon is chosen on the loadout screen, skills work with any of them.
   Golden Sword: base 22 (2.2x a wand bolt), swing every 350ms, ~100 degree cone, reach 28px to the target's body edge, each enemy hit once per
   swing (`logic/melee.ts`, angle-wrap safe), knockback 2.4x, and it swats enemy bolts inside the cone (`systems/MeleeSystem`). DPS ~1.57x the wand but only at close range.
   Owned weapons cycle with Q / mouse wheel / gamepad Y, LB, RB / touch swap button (`logic/weaponCycle.ts`, `systems/WeaponSwitcher`); the equipped weapon is saved and shown in the HUD.
@@ -66,14 +66,14 @@ MainMenu -> LevelSelect (2x2 cards, Back) -> Game {levelId}; GameOver (Retry / L
 |---|---|---|---|
 | Move | WASD | Left virtual stick | Left stick / D-pad |
 | Aim + fire | Mouse + LMB | Right virtual stick (fires past ~50% deflection) | Right stick (auto-fires past ~50%) or RT |
-| Alt fire (Fireball) | RMB | Button | LT |
+| Skill 1 | RMB or 1 | Button 1 | LT |
+| Skill 2 | E or 2 | Button 2 | RB |
+| Skill 3 | R or 3 | Button 3 | LB |
 | Dash | Space | Button | A |
-| Swap weapon | Q / mouse wheel | Small button under Dash (once 2+ weapons) | Y / RB (next), LB (previous) |
 | Pause | Esc | Button (top right) | Start |
 
 Touch (`TouchSource`): floating twin sticks. A touch starting in the left half spawns the move stick, the right half the
-aim stick (radius ~50 game px at 640x360, scaled with screen). Dash and Alt fire buttons sit on the right edge above the
-aim zone; touches starting on them (or the fullscreen button) never spawn a stick. Controls show only after a touch and
+aim stick (radius ~50 game px at 640x360, scaled with screen). Dash and the three skill buttons fan out on the right edge (skill icon + cooldown pie); touches starting on them (or the fullscreen button) never spawn a stick. Controls show only after a touch and
 hide on mouse/keyboard/gamepad use. Layout maths is pure (`logic/virtualStick.ts`); `HudScene` renders the `TouchState`
 read from the scene registry. Scaling is `Phaser.Scale.EXPAND` from a 640x360 base (no letterbox; HUD anchors to edges
 and re-lays out on resize); portrait touch devices get a CSS "Rotate your device" overlay.
@@ -164,10 +164,9 @@ tests/                    Vitest specs for logic/
 - Bosses are data-driven: `logic/bossBrain.ts` takes a `BossBrainConfig` (`content/bosses.ts`), an attack list per phase of slam, burrow,
   burst, spit and summon. Sequenced attacks (slam, burrow) own the boss; timed ones pause while it is hidden. Sand Rat: base HP 1030 (3348 at Lv10),
   a Lv8-9 player with the broken wand needs ~94-112s at 50% uptime. Burrow every 6.2s/4.4s, spit every 2.8s/2.2s.
-- Fireball (`logic/fireball.ts`, `systems/FireballSystem.ts`): cooldown 2.5s, radius 40, damage 3x a bolt, falloff to 0.4 at the edge. Needs `castsPowers`
-  (broken wand). Status is published in the registry for the HUD bar (bottom-left) and the touch button (hidden when locked, greyed with a pie when cooling).
+- Fireball (`logic/fireball.ts`, `systems/skills/FireballCaster.ts`): level 1 cooldown 2.5s, radius 40, 30 base damage (independent of the weapon), falloff to 0.4 at the edge. See section 14.
 - Quicksand: `hazard` objects become slow zones (50% speed, `logic/hazards.ts`) drawn as dark sand pits.
-- Save v3 adds `powers.unlocked`; `LevelCompleteScene` shows a reward line ("Fireball unlocked!" / "Broken Wand acquired!") from `content/rewards.ts`.
+- Level rewards are `rewardWeaponId` plus `rewardSkillIds`; `LevelCompleteScene` lists each ("Fireball learned!" / "Broken Wand acquired!") from `content/rewards.ts`.
 
 ## 11. Level 3 flow (M6)
 
@@ -190,3 +189,13 @@ tests/                    Vitest specs for logic/
 - `logic/pathfinding.ts`: A* over the 16px tile grid (8-way, no corner cutting) where a tile is passable only if the body fits (`bodyClear` at its centre, so big bodies see inflated walls), then string-pulling smoothing with `corridorClear` (centre + both edge lines). Returns the nearest reachable point when the goal is walled off.
 - `logic/navigator.ts`: per-enemy `Navigator.aim()`: straight at the player when a body-wide corridor is clear, else follows the path, recomputed every ~0.35-0.5s; stuck detection (under 30% of the expected travel in 1s) makes it slide sideways along the obstacle for 0.7s and repath.
   `Enemy.chase` uses it for every chaser/boss/stalker (not while a boss is burrowed); window and node count are bounded, so the cost stays small.
+
+## 14. Skills and loadout (v2 phase 1)
+
+- `content/skills.ts`: `SkillDef {id, name, description, icon, color, kind, cooldownMs[5], params[5], maxLevel 5}`; stats are always read through `skillCooldown` / `skillParams(skill, level)`, so phase 2 only adds upgrade UI and economy. Owned skills carry a level (1 for now).
+- `SkillSystem` (`systems/SkillSystem.ts`): three slots from `save.loadout`, `SkillCooldowns` on the `GameClock`, casting from `Player.skillHandler` (slot, origin, aim), slot statuses published in the registry (`skillState`) for `ui/SkillBar` and `TouchControlsView`. A caster returning false (no target, blocked blink) spends no cooldown.
+- Casters (`systems/skills/`): Fireball, Frost Nova (`logic/frostNova.ts`, enemy `applySlow` honoured by chase, kite, dash and the navigator), Chain Lightning (`logic/chainLightning.ts`, cone then jumps with line of sight, zig-zag bolt), Arcane Shield (`logic/arcaneShield.ts`, `Player.damageAbsorber`, bolts inside the bubble are destroyed), Blink Strike (`logic/blinkStrike.ts`, `Player.blinkTo`, `PlayerTimers.grantInvulnerability`).
+- Input: LMB/RT/aim stick basic; RMB or 1, E or 2, R or 3 / LT, RB, LB / touch buttons for the slots; keyboard taps use `KeyLatch`, touch buttons latch taps too. Weapon cycling was removed.
+- HUD: bottom-centre skill bar with a cooldown sweep and the Input Prompts glyph (`content/inputGlyphs.ts`) of the device used last (`systems/inputDevice.ts`).
+- `LoadoutScene` (Level select -> Loadout -> Game) and `SkillSwapScene` (modal through `CardPresenter`, default focus is Keep in bag) use `MenuList`, so mouse, touch, keyboard and gamepad all work.
+- Save v6 (`skills.owned`, `loadout`), migration in `parseSave` (powers, equipped weapon, rewards of cleared levels via `LegacySkillRewards`). Scrolls: `logic/skillScroll.ts`, chance per loot table (`scrollChance`, bosses 3%, default 0.5%).

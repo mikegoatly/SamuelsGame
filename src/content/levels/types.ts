@@ -12,7 +12,7 @@ export interface LevelConfig {
   bossId?: string;
   bossLevel?: number;
   rewardWeaponId?: string;
-  rewardPowerId?: string;
+  rewardSkillIds?: readonly string[];
   unlockedBy?: string;
   /** Tilemap cache key; levels without one fall back to the generated arena room. */
   mapKey?: string;

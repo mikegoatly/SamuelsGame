@@ -17,8 +17,6 @@ export interface GameEventMap {
   'boss-hp': [hp: number, maxHp: number];
   'boss-died': [x: number, y: number];
   'pause-requested': [];
-  'weapon-cycle': [direction: 1 | -1];
-  'weapon-changed': [weaponId: string];
   'player-hurt': [];
   'player-died': [];
 }

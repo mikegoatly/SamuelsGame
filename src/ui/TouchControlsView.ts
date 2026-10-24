@@ -1,9 +1,10 @@
 import Phaser from 'phaser';
 import { ControlFrame, Tex } from '../content/assetKeys';
-import { touchMetrics, type ButtonId } from '../logic/virtualStick';
-import { FIREBALL_STATE_KEY } from '../systems/FireballSystem';
-import type { FireballStatus } from '../logic/fireball';
-import { canSwapWeapons, TOUCH_STATE_KEY, type StickView, type TouchState } from '../systems/TouchSource';
+import { getSkill } from '../content/skills';
+import { SKILL_BUTTONS, touchMetrics, type ButtonId } from '../logic/virtualStick';
+import type { SkillSlotStatus } from '../logic/skillSlots';
+import { SKILL_STATE_KEY } from '../systems/SkillSystem';
+import { TOUCH_STATE_KEY, type StickView, type TouchState } from '../systems/TouchSource';
 
 const IDLE_ALPHA = 0.4;
 const ACTIVE_ALPHA = 0.8;
@@ -18,27 +19,34 @@ export class TouchControlsView {
   private readonly sticks: Record<'move' | 'aim', StickImages>;
   private readonly buttons: Record<ButtonId, Phaser.GameObjects.Image>;
   private readonly cooldown: Phaser.GameObjects.Graphics;
+  private readonly icons: Phaser.GameObjects.Image[];
 
   constructor(private readonly scene: Phaser.Scene) {
     this.sticks = { move: this.makeStick(), aim: this.makeStick() };
-    this.buttons = { dash: this.makeImage(ControlFrame.dash), altFire: this.makeImage(ControlFrame.altFire), swap: this.makeImage(ControlFrame.swap) };
-    this.cooldown = scene.add.graphics().setDepth(101);
+    this.buttons = {
+      dash: this.makeImage(ControlFrame.dash),
+      skill1: this.makeImage(ControlFrame.skill),
+      skill2: this.makeImage(ControlFrame.skill),
+      skill3: this.makeImage(ControlFrame.skill),
+    };
+    this.icons = SKILL_BUTTONS.map(() => scene.add.image(0, 0, Tex.tiles, 0).setVisible(false).setDepth(101));
+    this.cooldown = scene.add.graphics().setDepth(102);
   }
 
   update(): void {
     const state = this.scene.registry.get(TOUCH_STATE_KEY) as TouchState | undefined;
     const visible = state?.visible ?? false;
     const { scale } = this.scene;
-    const metrics = touchMetrics(scale.width, scale.height, canSwapWeapons());
+    const metrics = touchMetrics(scale.width, scale.height);
+    const statuses = this.scene.registry.get(SKILL_STATE_KEY) as readonly SkillSlotStatus[] | undefined;
 
-    const fireball = this.scene.registry.get(FIREBALL_STATE_KEY) as FireballStatus | undefined;
     this.cooldown.clear();
     for (const zone of metrics.buttons) {
       const image = this.buttons[zone.id];
-      const hidden = (zone.id === 'altFire' && !fireball?.unlocked) ;
-      image.setVisible(visible && !hidden).setPosition(zone.x, zone.y).setDisplaySize(zone.r * 2, zone.r * 2);
+      image.setVisible(visible).setPosition(zone.x, zone.y).setDisplaySize(zone.r * 2, zone.r * 2);
       image.setAlpha(state?.buttons[zone.id] ? ACTIVE_ALPHA : IDLE_ALPHA);
-      if (zone.id === 'altFire' && visible && fireball?.unlocked) this.showFireball(image, zone, fireball);
+      const slot = SKILL_BUTTONS.indexOf(zone.id as (typeof SKILL_BUTTONS)[number]);
+      if (slot >= 0) this.showSkill(image, this.icons[slot]!, zone, visible, statuses?.[slot]);
     }
     if (state) {
       this.showStick(this.sticks.move, visible ? state.move : undefined, metrics.stickRadius);
@@ -46,19 +54,26 @@ export class TouchControlsView {
     }
   }
 
-  /** Orange tint when ready; greyed with a dark pie sweeping away as the cooldown recovers. */
-  private showFireball(image: Phaser.GameObjects.Image, zone: { x: number; y: number; r: number }, fireball: FireballStatus): void {
-    if (!fireball.available) {
-      image.setTint(0x505058).setAlpha(0.3);
+  /** Skill icon on its button; dimmed while cooling down with a dark pie sweeping away, nearly invisible for an empty slot. */
+  private showSkill(button: Phaser.GameObjects.Image, icon: Phaser.GameObjects.Image, zone: { x: number; y: number; r: number }, visible: boolean, status?: SkillSlotStatus): void {
+    const skill = status?.skillId ? getSkill(status.skillId) : undefined;
+    icon.setVisible(visible && skill !== undefined);
+    if (!skill || !status) {
+      button.setAlpha(visible ? 0.15 : 0);
       return;
     }
-    if (fireball.ready) {
-      image.setTint(0xff9030).setAlpha(Math.max(image.alpha, 0.65));
+    icon.setTexture(skill.icon).setPosition(zone.x, zone.y).setDisplaySize(zone.r * 1.5, zone.r * 1.5);
+    if (status.ready) {
+      icon.clearTint().setAlpha(0.95);
+      button.setTint(skill.color);
       return;
     }
-    image.setTint(0x808080);
-    const start = -Math.PI / 2 + fireball.fraction * Math.PI * 2;
-    this.cooldown.fillStyle(0x000000, 0.55).slice(zone.x, zone.y, zone.r, start, -Math.PI / 2 + Math.PI * 2, false).fillPath();
+    icon.setTint(0x707080).setAlpha(0.7);
+    button.setTint(0x808080);
+    if (visible) {
+      const start = -Math.PI / 2 + status.fraction * Math.PI * 2;
+      this.cooldown.fillStyle(0x000000, 0.55).slice(zone.x, zone.y, zone.r, start, -Math.PI / 2 + Math.PI * 2, false).fillPath();
+    }
   }
 
   private showStick({ base, knob }: StickImages, view: StickView | undefined, radius: number): void {

@@ -3,7 +3,6 @@ import { cloakAlpha } from '../src/logic/charge';
 import { isLevelUnlocked, visibleLevels } from '../src/logic/levelRules';
 import { applyLevelClear, equipWeapon, grantWeapon } from '../src/logic/save';
 import { pickThrone } from '../src/logic/spawnPoints';
-import { fireballStatus } from '../src/logic/fireball';
 import { aSave } from './builders';
 
 describe('cloakAlpha', () => {
@@ -38,15 +37,15 @@ describe('pickThrone', () => {
 describe('equipWeapon', () => {
   it('equips an owned weapon and ignores one that is not owned', () => {
     const owned = grantWeapon(aSave(), 'brokenWand', false);
-    expect(equipWeapon(owned, 'brokenWand').weapons.equipped).toBe('brokenWand');
+    expect(equipWeapon(owned, 'brokenWand').loadout.weapon).toBe('brokenWand');
     expect(equipWeapon(owned, 'goldenSword')).toBe(owned);
   });
 
   it('clearing the palace grants and equips the golden sword, keeping the older weapons', () => {
     const save = applyLevelClear(grantWeapon(aSave(), 'brokenWand'), { levelId: 'palace', rewardWeaponId: 'goldenSword' });
     expect(save.weapons.owned).toEqual(['apprenticeStaff', 'brokenWand', 'goldenSword']);
-    expect(save.weapons.equipped).toBe('goldenSword');
-    expect(equipWeapon(save, 'brokenWand').weapons.equipped).toBe('brokenWand');
+    expect(save.loadout.weapon).toBe('goldenSword');
+    expect(equipWeapon(save, 'brokenWand').loadout.weapon).toBe('brokenWand');
   });
 });
 
@@ -63,14 +62,6 @@ describe('level visibility', () => {
     const all = [palace, teaser];
     expect(visibleLevels(all, ['desert']).map((l) => l.id)).toEqual(['palace']);
     expect(visibleLevels(all, ['desert', 'palace']).map((l) => l.id)).toEqual(['palace', 'ultimate']);
-  });
-});
-
-describe('fireball status with a non-wand weapon', () => {
-  it('stays unlocked (so the HUD can grey it) while unavailable', () => {
-    const status = fireballStatus({ unlocked: true, castsPowers: false, now: 0, readyAt: 0 });
-    expect(status).toMatchObject({ unlocked: true, available: false, ready: false });
-    expect(fireballStatus({ unlocked: false, castsPowers: true, now: 0, readyAt: 0 }).unlocked).toBe(false);
   });
 });
 

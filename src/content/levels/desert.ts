@@ -15,7 +15,7 @@ export const desert: LevelConfig = {
   ],
   bossId: 'sandRat',
   bossLevel: 10,
-  rewardPowerId: 'fireball',
+  rewardSkillIds: ['fireball'],
   unlockedBy: 'ruins',
   mapKey: MapKey.desert,
   music: Music.desert,

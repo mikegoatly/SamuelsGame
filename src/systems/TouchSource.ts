@@ -1,11 +1,9 @@
 import Phaser from 'phaser';
-import { knownWeapons } from '../content/weapons';
-import { saveSystem } from './SaveSystem';
+import { KeyLatch } from '../logic/keyLatch';
+import { SLOT_COUNT } from '../logic/loadout';
 import { pastThreshold } from '../logic/stick';
-import { classifyTouch, readStick, touchMetrics, type ButtonId, type TouchRole } from '../logic/virtualStick';
+import { classifyTouch, readStick, SKILL_BUTTONS, touchMetrics, type ButtonId, type TouchRole } from '../logic/virtualStick';
 import type { InputSource } from './InputController';
-
-export const canSwapWeapons = (): boolean => knownWeapons(saveSystem.data.weapons.owned).length > 1;
 
 export const TOUCH_STATE_KEY = 'touchState';
 
@@ -35,17 +33,18 @@ export class TouchSource implements InputSource {
   readonly moveVector = new Phaser.Math.Vector2();
   readonly aimWorldPoint = null;
   fire = false;
-  altFire = false;
+  readonly skills: boolean[] = Array.from({ length: SLOT_COUNT }, () => false);
   dash = false;
-  weaponCycle = 0;
 
-  private pendingSwap = false;
   readonly state: TouchState = {
     visible: false,
     move: newStick(),
     aim: newStick(),
-    buttons: { dash: false, altFire: false, swap: false },
+    buttons: { dash: false, skill1: false, skill2: false, skill3: false },
   };
+
+  /** Remembers taps shorter than a frame, like the keyboard latches. */
+  private readonly latches: Record<ButtonId, KeyLatch> = { dash: new KeyLatch(), skill1: new KeyLatch(), skill2: new KeyLatch(), skill3: new KeyLatch() };
 
   private readonly lastAim = new Phaser.Math.Vector2(1, 0);
   private hasAimed = false;
@@ -63,9 +62,11 @@ export class TouchSource implements InputSource {
     input.on('pointermove', (pointer: Phaser.Input.Pointer) => {
       if (!pointer.wasTouch) this.hide();
     });
-    input.on('pointerup', (pointer: Phaser.Input.Pointer) => this.held.delete(pointer));
-    input.on('pointerupoutside', (pointer: Phaser.Input.Pointer) => this.held.delete(pointer));
+    input.on('pointerup', (pointer: Phaser.Input.Pointer) => this.release(pointer));
+    input.on('pointerupoutside', (pointer: Phaser.Input.Pointer) => this.release(pointer));
     input.keyboard?.on('keydown', () => this.hide());
+    scene.game.canvas.addEventListener('pointercancel', () => this.releaseAll());
+    window.addEventListener('blur', () => this.releaseAll());
   }
 
   get aimVector(): Phaser.Math.Vector2 | null {
@@ -75,14 +76,12 @@ export class TouchSource implements InputSource {
   update(scene: Phaser.Scene): void {
     if (this.state.visible && this.padInUse(scene)) this.hide();
     this.moveVector.reset();
-    this.fire = this.altFire = this.dash = false;
-    this.weaponCycle = this.pendingSwap ? 1 : 0;
-    this.pendingSwap = false;
+    this.fire = false;
     const { state } = this;
     state.move.active = state.aim.active = false;
-    state.buttons.dash = state.buttons.altFire = state.buttons.swap = false;
+    for (const id of Object.keys(state.buttons) as ButtonId[]) state.buttons[id] = false;
 
-    const { stickRadius } = touchMetrics(scene.scale.width, scene.scale.height, canSwapWeapons());
+    const { stickRadius } = touchMetrics(scene.scale.width, scene.scale.height);
     for (const [pointer, role] of this.held) {
       if (role === 'move') {
         const { value } = this.readInto(state.move, pointer, stickRadius);
@@ -99,8 +98,14 @@ export class TouchSource implements InputSource {
         state.buttons[role] = true;
       }
     }
-    this.altFire = state.buttons.altFire;
-    this.dash = state.buttons.dash;
+    this.dash = this.latches.dash.read();
+    SKILL_BUTTONS.forEach((id, i) => (this.skills[i] = this.latches[id].read()));
+  }
+
+  private release(pointer: Phaser.Input.Pointer): void {
+    const role = this.held.get(pointer);
+    this.held.delete(pointer);
+    if (role && role !== 'move' && role !== 'aim' && ![...this.held.values()].includes(role)) this.latches[role].up();
   }
 
   private readInto(view: StickView, pointer: Phaser.Input.Pointer, radius: number) {
@@ -114,7 +119,7 @@ export class TouchSource implements InputSource {
   private touchStart(pointer: Phaser.Input.Pointer): void {
     this.state.visible = true;
     const { scale } = this.scene;
-    const role = classifyTouch(pointer, scale.width, touchMetrics(scale.width, scale.height, canSwapWeapons()));
+    const role = classifyTouch(pointer, scale.width, touchMetrics(scale.width, scale.height));
     if (!role) return;
     if (role === 'move' || role === 'aim') {
       if ([...this.held.values()].includes(role)) return;
@@ -122,13 +127,20 @@ export class TouchSource implements InputSource {
       view.originX = pointer.x;
       view.originY = pointer.y;
     }
-    if (role === 'swap') this.pendingSwap = true;
+    if (role !== 'move' && role !== 'aim') this.latches[role].down();
     this.held.set(pointer, role);
+  }
+
+  /** Cancelled touches and lost focus release every held pointer and button. */
+  private releaseAll(): void {
+    this.held.clear();
+    Object.values(this.latches).forEach((latch) => latch.reset());
   }
 
   private hide(): void {
     this.state.visible = false;
     this.held.clear();
+    Object.values(this.latches).forEach((latch) => latch.reset());
   }
 
   private padInUse(scene: Phaser.Scene): boolean {

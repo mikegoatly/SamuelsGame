@@ -42,8 +42,7 @@ describe('classifyTouch', () => {
   const width = 640;
   const metrics = touchMetrics(width, 360);
   const dash = metrics.buttons.find((b) => b.id === 'dash')!;
-  const alt = metrics.buttons.find((b) => b.id === 'altFire')!;
-  const swap = metrics.buttons.find((b) => b.id === 'swap')!;
+  const skill = (id: string) => metrics.buttons.find((b) => b.id === id)!;
 
   it.each([
     ['left half', 50, 300, 'move'],
@@ -51,8 +50,9 @@ describe('classifyTouch', () => {
     ['right half', 400, 300, 'aim'],
     ['centre line', 320, 200, 'aim'],
     ['dash button', dash.x, dash.y, 'dash'],
-    ['alt button', alt.x, alt.y, 'altFire'],
-    ['swap button', swap.x, swap.y, 'swap'],
+    ['skill 1 button', skill('skill1').x, skill('skill1').y, 'skill1'],
+    ['skill 2 button', skill('skill2').x, skill('skill2').y, 'skill2'],
+    ['skill 3 button', skill('skill3').x, skill('skill3').y, 'skill3'],
     ['fullscreen button', metrics.fullscreen.x, metrics.fullscreen.y, null],
     ['pause button', metrics.pause.x, metrics.pause.y, null],
   ])('%s', (_name, x, y, expected) => {
@@ -65,34 +65,34 @@ describe('touchMetrics', () => {
     expect(touchMetrics(640, 360).stickRadius).toBe(50);
   });
 
+  it('has dash plus three skill buttons, in slot order', () => {
+    expect(touchMetrics(640, 360).buttons.map((b) => b.id)).toEqual(['dash', 'skill1', 'skill2', 'skill3']);
+  });
+
   it.each([
     [640, 360],
+    [740, 360],
+    [568, 320],
     [640, 480],
     [800, 360],
-  ])('keeps buttons on screen and apart at %dx%d', (w, h) => {
-    const { buttons, fullscreen } = touchMetrics(w, h);
-    const [a, b] = buttons;
+    [900, 420],
+  ])('keeps buttons on the right, on screen and apart at %dx%d', (w, h) => {
+    const { buttons, fullscreen, pause } = touchMetrics(w, h);
     for (const button of buttons) {
       expect(button.x + button.r).toBeLessThanOrEqual(w);
       expect(button.y + button.r).toBeLessThanOrEqual(h);
+      expect(button.y - button.r).toBeGreaterThanOrEqual(0);
       expect(button.x).toBeGreaterThan(w / 2);
-      expect(Math.hypot(button.x - fullscreen.x, button.y - fullscreen.y)).toBeGreaterThan(button.r + fullscreen.r);
+      for (const hud of [fullscreen, pause]) expect(Math.hypot(button.x - hud.x, button.y - hud.y)).toBeGreaterThan(button.r + hud.r);
     }
     for (const first of buttons) {
       for (const second of buttons.filter((o) => o !== first)) expect(Math.hypot(first.x - second.x, first.y - second.y)).toBeGreaterThan(first.r + second.r);
     }
-    expect(a).toBeDefined();
-    expect(b).toBeDefined();
   });
-});
 
-describe('swap button visibility', () => {
-  it('is left out of the layout and the touch classification when the player has one weapon', () => {
-    const full = touchMetrics(640, 360);
-    const lone = touchMetrics(640, 360, false);
-    const swap = full.buttons.find((b) => b.id === 'swap')!;
-    expect(lone.buttons.map((b) => b.id)).toEqual(['dash', 'altFire']);
-    expect(classifyTouch({ x: swap.x, y: swap.y }, 640, full)).toBe('swap');
-    expect(classifyTouch({ x: swap.x, y: swap.y }, 640, lone)).toBe('aim');
+  it('leaves room on the right half for the aim stick to start', () => {
+    const { buttons } = touchMetrics(740, 360);
+    const free = buttons.every((b) => b.x - b.r > 740 / 2 + 40);
+    expect(free).toBe(true);
   });
 });

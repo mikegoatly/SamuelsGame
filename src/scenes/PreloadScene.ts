@@ -1,6 +1,8 @@
 import Phaser from 'phaser';
 import { gameText } from '../ui/gameText';
-import { Frame, MUSIC_FILES, SHEET_COLS, TILE_SIZE, Tex } from '../content/assetKeys';
+import { Frame, MUSIC_FILES, SHEET_COLS, SKILL_ICON_SOURCES, TILE_SIZE, Tex } from '../content/assetKeys';
+import { PROMPT_SIZE } from '../content/inputGlyphs';
+import { skillList } from '../content/skills';
 import { SFX_DEFS, sfxKey, type SfxId } from '../content/sfxDefs';
 import { levels } from '../content/levels';
 import { toStone } from '../logic/grey';
@@ -21,6 +23,8 @@ export class PreloadScene extends Phaser.Scene {
       frameHeight: TILE_SIZE,
     });
     this.load.atlasXML(Tex.controls, 'controls/flat-dark.png', 'controls/flat-dark.xml');
+    this.load.spritesheet(Tex.prompts, 'controls/prompts.png', { frameWidth: PROMPT_SIZE, frameHeight: PROMPT_SIZE });
+    for (const [id, file] of Object.entries(SKILL_ICON_SOURCES)) this.load.image(`skill-src-${id}`, file);
     for (const [id, def] of Object.entries(SFX_DEFS)) def.files.forEach((file, i) => this.load.audio(sfxKey(id as SfxId, i), `audio/${file}`));
     this.load.image(Tex.smoke, 'fx/smoke.png');
     this.load.image(Tex.star, 'fx/star.png');
@@ -34,6 +38,7 @@ export class PreloadScene extends Phaser.Scene {
     this.makeStoneGuardianTexture();
     this.makePalaceTiles();
     this.makeVignetteTexture();
+    this.makeSkillIcons();
     this.scene.start('MainMenu');
   }
 
@@ -63,6 +68,37 @@ export class PreloadScene extends Phaser.Scene {
       canvas.context.putImageData(pixels, x, y);
     }
     canvas.refresh();
+  }
+
+  /** 32px skill icons: a dark disc with a coloured rim and the skill's particle sprite, tinted and downscaled smoothly. */
+  private makeSkillIcons(): void {
+    const size = 32;
+    for (const skill of skillList) {
+      const source = this.textures.get(`skill-src-${skill.id}`).getSourceImage() as CanvasImageSource;
+      const css = `#${skill.color.toString(16).padStart(6, '0')}`;
+      const canvas = this.textures.createCanvas(skill.icon, size, size)!;
+      const ctx = canvas.context;
+      ctx.fillStyle = 'rgba(20,18,28,0.92)';
+      ctx.beginPath();
+      ctx.arc(size / 2, size / 2, size / 2 - 1, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = css;
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      const glyph = document.createElement('canvas');
+      glyph.width = glyph.height = size;
+      const g = glyph.getContext('2d')!;
+      g.imageSmoothingQuality = 'high';
+      g.drawImage(source, 3, 3, size - 6, size - 6);
+      g.globalCompositeOperation = 'source-atop';
+      g.fillStyle = css;
+      g.globalAlpha = 0.7;
+      g.fillRect(0, 0, size, size);
+      ctx.drawImage(glyph, 0, 0);
+      ctx.globalAlpha = 0.8;
+      ctx.drawImage(source, 8, 8, size - 16, size - 16);
+      canvas.refresh();
+    }
   }
 
   /** Soft red edge glow (transparent in the middle) used for damage and low-HP feedback. */
