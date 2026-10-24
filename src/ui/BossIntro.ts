@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { FONT } from '../content/assetKeys';
+import { gameText } from './gameText';
 import { playSfx } from '../systems/sfx';
 
 const BAR_HEIGHT = 36;
@@ -20,10 +20,8 @@ export class BossIntro {
     const { width, height } = scene.scale;
     const top = scene.add.rectangle(width / 2, -BAR_HEIGHT / 2, width, BAR_HEIGHT, 0x000000).setDepth(60);
     const bottom = scene.add.rectangle(width / 2, height + BAR_HEIGHT / 2, width, BAR_HEIGHT, 0x000000).setDepth(60);
-    const banner = scene.add
-      .text(-width, height / 2, name.toUpperCase(), { fontFamily: FONT, fontSize: '44px', color: '#ffd0a0', stroke: '#3a0f0f', strokeThickness: 8 })
+    const banner = gameText(scene, -width, height / 2, name.toUpperCase(), 48, { color: '#ffd0a0', stroke: '#3a0f0f' })
       .setOrigin(0.5)
-      .setResolution(2)
       .setDepth(61)
       .setShadow(0, 0, '#ff5a3a', 14, true, true);
     this.bars = { top, bottom };

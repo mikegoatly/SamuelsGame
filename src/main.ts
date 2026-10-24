@@ -10,6 +10,7 @@ import { PauseScene } from './scenes/PauseScene';
 import { HudScene } from './scenes/HudScene';
 import { PreloadScene } from './scenes/PreloadScene';
 import { HowToPlayScene } from './scenes/HowToPlayScene';
+import { ItemCardScene } from './scenes/ItemCardScene';
 import { SettingsScene } from './scenes/SettingsScene';
 import { installDeviceTracker } from './systems/inputDevice';
 import { applySavedMute, installMuteHotkey } from './systems/audioSettings';
@@ -26,7 +27,7 @@ const game = new Phaser.Game({
   input: { gamepad: true },
   physics: { default: 'arcade', arcade: { gravity: { x: 0, y: 0 } } },
   scale: { mode: Phaser.Scale.EXPAND, autoCenter: Phaser.Scale.CENTER_BOTH },
-  scene: [BootScene, PreloadScene, MainMenuScene, HowToPlayScene, SettingsScene, LevelSelectScene, GameScene, HudScene, PauseScene, LevelCompleteScene, GameOverScene],
+  scene: [BootScene, PreloadScene, MainMenuScene, HowToPlayScene, SettingsScene, LevelSelectScene, GameScene, HudScene, PauseScene, ItemCardScene, LevelCompleteScene, GameOverScene],
 });
 
 applySavedMute(game);

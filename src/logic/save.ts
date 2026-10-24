@@ -2,8 +2,10 @@ import { MAX_LEVEL, type PlayerProgress } from './progression';
 import { xpToNextLevel } from './xp';
 import { noCharms, type CharmId, type Charms } from './stats';
 
-/** v2: added `settings`; v3: added `powers`; v4: volumes + reduceShake. Older saves load through the same tolerant parse. */
-export const SAVE_VERSION = 4;
+import type { CardMode } from './itemCards';
+
+/** v5: `seen` item ids + `itemCards` setting. v2: added `settings`; v3: added `powers`; v4: volumes + reduceShake. Older saves load through the same tolerant parse. */
+export const SAVE_VERSION = 5;
 export const STARTING_WEAPON = 'apprenticeStaff';
 
 export interface Settings {
@@ -13,9 +15,11 @@ export interface Settings {
   sfxVolume: number;
   /** Accessibility: no screen shake, softer flashes. */
   reduceShake: boolean;
+  /** When to pause for an item card on pickup. */
+  itemCards: CardMode;
 }
 
-export const defaultSettings = (): Settings => ({ muted: false, musicVolume: 70, sfxVolume: 100, reduceShake: false });
+export const defaultSettings = (): Settings => ({ muted: false, musicVolume: 70, sfxVolume: 100, reduceShake: false, itemCards: 'first' });
 
 export interface SaveData {
   version: typeof SAVE_VERSION;
@@ -26,6 +30,8 @@ export interface SaveData {
   levels: { cleared: string[]; bestTimes?: Record<string, number> };
   settings: Settings;
   powers: { unlocked: string[] };
+  /** Item/event ids whose card the player has already seen. */
+  seen: string[];
 }
 
 export function defaultSave(): SaveData {
@@ -38,6 +44,7 @@ export function defaultSave(): SaveData {
     levels: { cleared: [] },
     settings: defaultSettings(),
     powers: { unlocked: [] },
+    seen: [],
   };
 }
 
@@ -94,9 +101,11 @@ export function parseSave(json: string | null | undefined): SaveData {
       musicVolume: wholeNumber(raw.settings.musicVolume, fallback.musicVolume, 0, 100),
       sfxVolume: wholeNumber(raw.settings.sfxVolume, fallback.sfxVolume, 0, 100),
       reduceShake: raw.settings.reduceShake === true,
+      itemCards: raw.settings.itemCards === 'always' ? 'always' : 'first',
     };
   }
   if (isRecord(raw.powers)) save.powers = { unlocked: strings(raw.powers.unlocked) };
+  save.seen = strings(raw.seen);
   return save;
 }
 

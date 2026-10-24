@@ -64,7 +64,8 @@ class Feel {
     scene.time.delayedCall(freeze, () => this.thaw());
   }
 
-  private thaw(): void {
+  /** Ends any freeze frame now (used before pausing for a modal). */
+  thaw(): void {
     if (!this.frozen) return;
     this.frozen = false;
     if (this.clock) this.clock.frozen = false;

@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { ControlFrame, FONT, Frame, Tex } from '../content/assetKeys';
+import { ControlFrame, Frame, Tex } from '../content/assetKeys';
 import { items } from '../content/items';
 import { getWeapon, knownWeapons } from '../content/weapons';
 import type { Player } from '../entities/Player';
@@ -13,6 +13,7 @@ import type { LevelDirector } from '../systems/LevelDirector';
 import { MUTE_EVENT } from '../systems/audioSettings';
 import { saveSystem } from '../systems/SaveSystem';
 import { BossIntro } from '../ui/BossIntro';
+import { gameText } from '../ui/gameText';
 import { DamageVignette } from '../ui/DamageVignette';
 import { TouchControlsView } from '../ui/TouchControlsView';
 
@@ -70,16 +71,16 @@ export class HudScene extends Phaser.Scene {
     const intro = (this.intro = new BossIntro(this));
     this.bars = this.add.graphics();
     this.levelText = this.makeText(BAR_X, 4, '#ffffff', 16);
-    this.hpText = this.makeText(BAR_X + 4, 27, '#ffffff', 8);
+    this.hpText = this.makeText(BAR_X + 5, 27, '#ffffff', 16).setOrigin(0, 0.5);
     this.waveText = this.makeText(0, 4, '#d8d8e8', 16).setOrigin(1, 0);
     this.bossBar = this.add.graphics();
     this.bossName = this.makeText(0, 4, '#ffd0a0', 12).setOrigin(0.5, 0).setVisible(false);
     this.muteText = this.makeText(BAR_X, 0, '#b0b0c8', 10).setOrigin(0, 1).setText('Sound off (M)').setVisible(saveSystem.data.settings.muted);
     this.createFullscreenButton();
     this.createPauseButton(events);
-    this.add.image(BAR_X + 5, 55, Tex.tiles, Frame.coin).setTint(0xffd84a);
-    this.coinText = this.makeText(BAR_X + 16, 49, '#ffe066', 10);
-    this.charmIcons = this.add.container(BAR_X, 70);
+    this.add.image(BAR_X + 5, 58, Tex.tiles, Frame.coin).setTint(0xffd84a);
+    this.coinText = this.makeText(BAR_X + 16, 58, '#ffe066', 16).setOrigin(0, 0.5);
+    this.charmIcons = this.add.container(BAR_X, 78);
     this.showCoins(loot.totalCoins);
     this.showCharms(saveSystem.data.charms);
     this.touchView = new TouchControlsView(this);
@@ -143,13 +144,13 @@ export class HudScene extends Phaser.Scene {
   private createFireballIndicator(): void {
     this.fireIcon = this.add.image(BAR_X + 6, 0, Tex.fireball).setVisible(false);
     this.fireBar = this.add.graphics();
-    this.fireText = this.makeText(BAR_X + 16, 0, '#ffb060', 8).setOrigin(0, 0.5).setText('Fireball').setVisible(false);
+    this.fireText = this.makeText(BAR_X + 16, 0, '#ffb060', 16).setOrigin(0, 0.5).setText('Fireball').setVisible(false);
   }
 
   /** Bottom-left slot showing the equipped weapon; Q / wheel / Y / swap button cycle it. */
   private createWeaponIndicator(weaponId: string): void {
     this.weaponIcon = this.add.image(BAR_X + 8, 0, Tex.tiles, Frame.wand).setScale(1.5);
-    this.weaponText = this.makeText(BAR_X + 22, 0, '#e8e8f8', 8).setOrigin(0, 0.5);
+    this.weaponText = this.makeText(BAR_X + 22, 0, '#e8e8f8', 16).setOrigin(0, 0.5);
     this.showWeapon(weaponId);
   }
 
@@ -171,7 +172,7 @@ export class HudScene extends Phaser.Scene {
     this.fireIcon.setVisible(status.unlocked).setPosition(BAR_X + 6, y).setAlpha(status.available ? (status.ready ? 1 : 0.5) : 0.25);
     this.fireText
       .setVisible(status.unlocked)
-      .setPosition(BAR_X + 16, y - 7)
+      .setPosition(BAR_X + 16, y - 8)
       .setText(status.available ? 'Fireball' : 'Fireball (wand)')
       .setColor(status.available ? (status.ready ? '#ffb060' : '#9a9ab8') : '#6a6a80');
     this.fireBar.clear();
@@ -246,9 +247,9 @@ export class HudScene extends Phaser.Scene {
       if (charms[id] <= 0) continue;
       const item = items[CHARM_ITEMS[id]]!;
       const icon = this.add.image(x + 5, 0, Tex.tiles, item.frame).setTint(item.tint ?? 0xffffff);
-      const count = this.makeText(x + 13, -5, '#ffffff', 8).setText(`x${charms[id]}`);
+      const count = this.makeText(x + 13, 0, '#ffffff', 16).setOrigin(0, 0.5).setText(`x${charms[id]}`);
       this.charmIcons.add([icon, count]);
-      x += 34;
+      x += 40;
     }
   }
 
@@ -261,8 +262,8 @@ export class HudScene extends Phaser.Scene {
   private drawBars(): void {
     this.hpText.setText(`${this.hp.value}/${this.hp.max}`);
     this.bars.clear();
-    this.drawBar(24, this.hp.value / this.hp.max, 0xd94c4c, 12);
-    this.drawBar(40, this.xpRatio, 0x7a5cff, 5);
+    this.drawBar(19, this.hp.value / this.hp.max, 0xd94c4c, 16);
+    this.drawBar(39, this.xpRatio, 0x7a5cff, 5);
   }
 
   private drawBar(y: number, ratio: number, color: number, height: number): void {
@@ -272,12 +273,6 @@ export class HudScene extends Phaser.Scene {
   }
 
   private makeText(x: number, y: number, color: string, size: number): Phaser.GameObjects.Text {
-    return this.add.text(x, y, '', {
-      fontFamily: FONT,
-      fontSize: `${size}px`,
-      color,
-      stroke: '#14121c',
-      strokeThickness: 3,
-    });
+    return gameText(this, x, y, '', size, { color });
   }
 }

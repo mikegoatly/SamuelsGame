@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { charmCard } from '../content/cards';
 import { items, RARITY_COLOR, type ItemDef } from '../content/items';
 import { lootTables } from '../content/lootTables';
 import { Pickup } from '../entities/Pickup';
@@ -6,6 +7,7 @@ import type { Player } from '../entities/Player';
 import { rollDrops } from '../logic/loot';
 import { resolvePotion } from '../logic/pickups';
 import { addCharm } from '../logic/save';
+import type { CardPresenter } from './CardPresenter';
 import type { GameClock } from './GameClock';
 import type { GameEvents } from './GameEvents';
 import { floatText } from './floatText';
@@ -27,6 +29,7 @@ export class LootSystem {
     private readonly run: RunState,
     private readonly save: SaveSystem,
     private readonly clock: GameClock,
+    private readonly cards: Pick<CardPresenter, 'request'>,
     private readonly rng: () => number = Math.random,
   ) {
     this.group = scene.physics.add.group({ allowGravity: false });
@@ -52,7 +55,7 @@ export class LootSystem {
 
   private apply(def: ItemDef): void {
     const { player } = this;
-    const at = (text: string, color: string): void => floatText(this.scene, player.x, player.y - 14, text, color, 10, 16, 800);
+    const at = (text: string, color: string): void => floatText(this.scene, player.x, player.y - 14, text, color, 16, 20, 1500);
     const color = RARITY_COLOR[def.rarity];
     if (def.kind === 'coin') {
       this.addCoins(def.value);
@@ -71,9 +74,14 @@ export class LootSystem {
     } else {
       this.save.update((save) => addCharm(save, def.charm));
       this.events.emit('charms-changed', this.save.data.charms);
-      at(`${def.name}!`, color);
       playSfx(this.scene, 'charm');
+      if (this.offerCard(def)) return;
+      at(`${def.name}!`, color);
     }
+  }
+
+  private offerCard(def: Extract<ItemDef, { kind: 'charm' }>): boolean {
+    return this.cards.request(def.id, charmCard(def, this.save.data.charms[def.charm]));
   }
 
   private addCoins(amount: number): void {

@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
-import { FONT, Frame, MUSIC_FILES, SHEET_COLS, TILE_SIZE, Tex } from '../content/assetKeys';
+import { gameText } from '../ui/gameText';
+import { Frame, MUSIC_FILES, SHEET_COLS, TILE_SIZE, Tex } from '../content/assetKeys';
 import { SFX_DEFS, sfxKey, type SfxId } from '../content/sfxDefs';
 import { levels } from '../content/levels';
 import { toStone } from '../logic/grey';
@@ -82,7 +83,7 @@ export class PreloadScene extends Phaser.Scene {
     const cx = this.scale.width / 2;
     const cy = this.scale.height / 2;
     const barWidth = 240;
-    this.add.text(cx, cy - 24, 'Loading...', { fontFamily: FONT, fontSize: '24px' }).setOrigin(0.5);
+    gameText(this, cx, cy - 24, 'Loading...', 32).setOrigin(0.5);
     this.add.rectangle(cx, cy, barWidth + 4, 16, 0x444444).setStrokeStyle(2, 0xffffff);
     const fill = this.add.rectangle(cx - barWidth / 2, cy, 0, 10, 0xb48cff).setOrigin(0, 0.5);
     this.load.on('progress', (value: number) => {

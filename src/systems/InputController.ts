@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { InputSwallow } from '../logic/inputSwallow';
 import { GamepadSource } from './GamepadSource';
 import { KeyboardMouseSource } from './KeyboardMouseSource';
 import { TouchSource } from './TouchSource';
@@ -29,9 +30,15 @@ export class InputController {
   weaponCycle = 0;
 
   private readonly sources: InputSource[];
+  private readonly swallow = new InputSwallow();
 
   constructor(scene: Phaser.Scene, sources?: InputSource[]) {
     this.sources = sources ?? [new KeyboardMouseSource(scene), new GamepadSource(), new TouchSource(scene)];
+  }
+
+  /** Drops fire, dash and swap input until released, e.g. after a click or key dismissed a modal. */
+  swallowUntilReleased(): void {
+    this.swallow.arm();
   }
 
   rumble(durationMs: number, weak: number, strong: number): void {
@@ -51,6 +58,10 @@ export class InputController {
       this.dash ||= source.dash;
       if (this.weaponCycle === 0) this.weaponCycle = source.weaponCycle;
       this.mergeAim(source, origin);
+    }
+    if (this.swallow.suppress(this.fire || this.altFire || this.dash || this.weaponCycle !== 0)) {
+      this.fire = this.altFire = this.dash = false;
+      this.weaponCycle = 0;
     }
     if (this.moveVector.lengthSq() > 1) this.moveVector.normalize();
   }

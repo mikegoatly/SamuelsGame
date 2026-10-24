@@ -1,5 +1,5 @@
 import { CONTROLS_HELP, DEVICE_ORDER, GOAL_LINES } from '../content/controlsHelp';
-import { FONT } from '../content/assetKeys';
+import { gameText } from '../ui/gameText';
 import { lastInputDevice } from '../systems/inputDevice';
 import { MenuButton } from '../ui/MenuButton';
 import { MenuList } from '../ui/MenuList';
@@ -19,10 +19,7 @@ export class HowToPlayScene extends MenuScene {
     menuText(this, cx, 26, 'How to play', 26, '#b48cff');
     const wrap = Math.min(width - 40, 560);
     GOAL_LINES.forEach((line, i) => {
-      this.add
-        .text(cx, 56 + i * 15, line, { fontFamily: FONT, fontSize: '12px', color: '#d8d8e8', wordWrap: { width: wrap }, align: 'center' })
-        .setOrigin(0.5, 0)
-        .setResolution(2);
+      gameText(this, cx, 52 + i * 20, line, 16, { color: '#d8d8e8' }).setWordWrapWidth(wrap).setAlign('center').setOrigin(0.5, 0);
     });
 
     const active = lastInputDevice();

@@ -1,3 +1,4 @@
+import type { CardMode } from '../logic/itemCards';
 import { changeSettings, MUTE_EVENT, toggleMute } from '../systems/audioSettings';
 import { saveSystem } from '../systems/SaveSystem';
 import { MenuButton } from '../ui/MenuButton';
@@ -45,8 +46,13 @@ export class SettingsScene extends MenuScene {
       changeSettings(this.game, { reduceShake });
       shake.setLabel(shakeLabel(reduceShake));
     });
-    const back = new MenuButton(this, cx, Math.min(height - 28, rowY(4) + 16), 140, 30, 'Back', () => this.goBack());
-    this.menu = new MenuList(this, [music, effects, sound, shake, back], { onBack: () => this.goBack() });
+    const cards = new MenuButton(this, cx, rowY(4), ROW_WIDTH, ROW_HEIGHT, cardsLabel(settings.itemCards), () => {
+      const itemCards = saveSystem.data.settings.itemCards === 'always' ? 'first' : 'always';
+      changeSettings(this.game, { itemCards });
+      cards.setLabel(cardsLabel(itemCards));
+    });
+    const back = new MenuButton(this, cx, Math.min(height - 28, rowY(5) + 16), 140, 30, 'Back', () => this.goBack());
+    this.menu = new MenuList(this, [music, effects, sound, shake, cards, back], { onBack: () => this.goBack() });
   }
 
   private goBack(): void {
@@ -55,4 +61,5 @@ export class SettingsScene extends MenuScene {
 }
 
 const soundLabel = (muted: boolean): string => `Sound: ${muted ? 'Off' : 'On'}  (M)`;
+const cardsLabel = (mode: CardMode): string => `Show item cards: ${mode === 'always' ? 'Always' : 'First time only'}`;
 const shakeLabel = (reduced: boolean): string => `Reduce shake / flashes: ${reduced ? 'On' : 'Off'}`;

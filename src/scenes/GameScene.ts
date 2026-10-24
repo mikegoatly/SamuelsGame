@@ -10,6 +10,8 @@ import { EnemyProjectiles, type EnemyProjectile } from '../entities/EnemyProject
 import type { Enemy } from '../entities/Enemy';
 import { Player } from '../entities/Player';
 import { createProjectilePool, Projectile } from '../entities/Projectile';
+import { levelUpCard } from '../content/cards';
+import { CardPresenter } from '../systems/CardPresenter';
 import { RewardPickup } from '../entities/RewardPickup';
 import { damageToEnemy } from '../logic/combat';
 import { rectCenter } from '../logic/geometry';
@@ -45,6 +47,7 @@ const REWARD_ARM_MS = 1200;
 
 export class GameScene extends Phaser.Scene {
   private ending = false;
+  private cards!: CardPresenter;
   private level!: LevelConfig;
   private progression!: ProgressionSystem;
   private run: RunState = { coins: 0 };
@@ -73,11 +76,13 @@ export class GameScene extends Phaser.Scene {
     const projectiles = createProjectilePool(this);
     const shots = new EnemyProjectiles(this);
     const weapon = getWeapon(save.weapons.equipped);
+    const controls = new InputController(this);
+    this.cards = new CardPresenter({ scene: this.scene, isEnding: () => this.ending, onClosed: () => controls.swallowUntilReleased() }, saveSystem);
     const player = new Player(
       this,
       playerStart.x,
       playerStart.y,
-      new InputController(this),
+      controls,
       projectiles,
       progression,
       events,
@@ -90,7 +95,7 @@ export class GameScene extends Phaser.Scene {
     const isSolid = (x: number, y: number): boolean => [walls, ...map.solid].some((layer) => layer.getTileAtWorldXY(x, y) !== null);
     const factory = new EnemyFactory(this, enemies, { target: player, events, shots, clock: this.clock, isBlocked: isSolid });
     const director = this.createDirector(map, player, factory, events);
-    const loot = new LootSystem(this, player, events, this.run, saveSystem, this.clock);
+    const loot = new LootSystem(this, player, events, this.run, saveSystem, this.clock, this.cards);
     const fireball = new FireballSystem({
       scene: this,
       player,
@@ -125,9 +130,10 @@ export class GameScene extends Phaser.Scene {
       this.kills++;
       progression.awardKill(level);
     });
-    events.on('level-up', () => {
+    events.on('level-up', (level) => {
       this.celebrateLevelUp(player);
       this.persistProgress();
+      this.offerLevelUpCard(level);
     });
     events.on('player-died', () => this.endRun(director));
     events.on('pause-requested', () => this.pauseGame());
@@ -159,6 +165,15 @@ export class GameScene extends Phaser.Scene {
     this.scene.stop('Pause');
     this.scene.resume();
     this.scene.resume('Hud');
+    this.cards.flush();
+  }
+
+  closeCard(): void {
+    this.cards.close();
+  }
+
+  private offerLevelUpCard(level: number): void {
+    this.cards.request(`levelUp${level}`, levelUpCard(level));
   }
 
   quitToLevelSelect(): void {
@@ -171,6 +186,7 @@ export class GameScene extends Phaser.Scene {
   completeLevel(): void {
     if (this.ending) return;
     this.ending = true;
+    this.cards.cancel();
     feel.lock();
     this.physics.pause();
     const timeMs = Math.round(this.clock.now - this.startedAt);
@@ -255,7 +271,7 @@ export class GameScene extends Phaser.Scene {
       const { x, y } = rectCenter(arena.rect);
       const prize = rewardOf(this.level);
       const reward = new RewardPickup(this, x, y, prize?.frame ?? Frame.glowChest, prize?.tint ?? null);
-      floatText(this, x, y - 28, `${getEnemy(this.level.bossId ?? '').name ?? 'Boss'} defeated!`, '#ffe066', 12, 16, 1800);
+      floatText(this, x, y - 28, `${getEnemy(this.level.bossId ?? '').name ?? 'Boss'} defeated!`, '#ffe066', 16, 16, 1800);
       let armed = false;
       this.time.delayedCall(REWARD_ARM_MS, () => (armed = true));
       this.physics.add.overlap(player, reward, () => {
@@ -288,13 +304,14 @@ export class GameScene extends Phaser.Scene {
   }
 
   private celebrateLevelUp(player: Player): void {
-    floatText(this, player.x, player.y - 16, 'LEVEL UP!', '#7dffb0', 14, 24, 1100);
+    floatText(this, player.x, player.y - 16, 'LEVEL UP!', '#7dffb0', 16, 24, 1500);
     playSfx(this, 'levelUp');
   }
 
   private endRun(director: LevelDirector): void {
     if (this.ending) return;
     this.ending = true;
+    this.cards.cancel();
     feel.lock();
     director.stop();
     const lostCoins = this.run.coins;

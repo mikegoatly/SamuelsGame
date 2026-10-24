@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
-import { FONT, Frame, Music, Tex } from '../content/assetKeys';
+import { gameText } from '../ui/gameText';
+import { Frame, Music, Tex } from '../content/assetKeys';
 import { GAME_TITLE } from '../content/config';
 import { musicOf } from '../systems/MusicPlayer';
 import { saveSystem } from '../systems/SaveSystem';
@@ -65,10 +66,8 @@ export class MainMenuScene extends MenuScene {
   }
 
   private drawTitle(x: number, y: number): void {
-    const title = this.add
-      .text(x, y, GAME_TITLE, { fontFamily: FONT, fontSize: '52px', color: TITLE_COLOR, stroke: '#2a1a5a', strokeThickness: 8 })
+    const title = gameText(this, x, y, GAME_TITLE, 48, { color: TITLE_COLOR, stroke: '#2a1a5a' })
       .setOrigin(0.5)
-      .setResolution(2)
       .setShadow(0, 0, '#b48cff', 18, true, true);
     this.tweens.add({ targets: title, y: y + 5, duration: 2200, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
     this.tweens.add({ targets: title, scale: 1.03, duration: 3100, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });

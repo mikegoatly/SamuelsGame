@@ -106,7 +106,7 @@ export class RoomFlowSystem implements LevelDirector {
     this.current = undefined;
     this.o.doors.open(room.order);
     this.o.events.emit('room-cleared', room.order, this.totalRooms);
-    floatText(this.o.scene, this.o.player.x, this.o.player.y - 20, 'Room cleared!', '#7dffb0', 12, 20, 1200);
+    floatText(this.o.scene, this.o.player.x, this.o.player.y - 20, 'Room cleared!', '#7dffb0', 16, 20, 1500);
     playSfx(this.o.scene, 'doorOpen');
   }
 

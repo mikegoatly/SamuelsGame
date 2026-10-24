@@ -37,20 +37,21 @@ describe('volume settings in the save', () => {
     expect(d.sfxVolume).toBe(100);
     expect(d.reduceShake).toBe(false);
     const changed = withSettings(defaultSave(), { musicVolume: 30, sfxVolume: 0, reduceShake: true });
-    expect(parseSave(serialize(changed)).settings).toEqual({ muted: false, musicVolume: 30, sfxVolume: 0, reduceShake: true });
+    expect(parseSave(serialize(changed)).settings).toEqual({ muted: false, musicVolume: 30, sfxVolume: 0, reduceShake: true, itemCards: 'first' });
     expect(parseSave(JSON.stringify({ settings: { musicVolume: 900, sfxVolume: 'loud', reduceShake: 'yes' } })).settings).toEqual({
       muted: false,
       musicVolume: 100,
       sfxVolume: 100,
       reduceShake: false,
+      itemCards: 'first',
     });
   });
 
   it('migrates a v3 save that only had muted', () => {
     const migrated = parseSave(JSON.stringify({ version: 3, coins: 5, settings: { muted: true } }));
-    expect(SAVE_VERSION).toBe(4);
-    expect(migrated.version).toBe(4);
+    expect(SAVE_VERSION).toBe(5);
+    expect(migrated.version).toBe(5);
     expect(migrated.coins).toBe(5);
-    expect(migrated.settings).toEqual({ muted: true, musicVolume: 70, sfxVolume: 100, reduceShake: false });
+    expect(migrated.settings).toEqual({ muted: true, musicVolume: 70, sfxVolume: 100, reduceShake: false, itemCards: 'first' });
   });
 });

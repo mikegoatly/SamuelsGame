@@ -139,8 +139,8 @@ describe('save repair and migration', () => {
   it('migrates a version 1 save to the current version keeping its data', () => {
     const v1 = { version: 1, progress: { level: 3, xp: 10 }, coins: 7, levels: { cleared: ['ruins'] } };
     const migrated = parseSave(JSON.stringify(v1));
-    expect(SAVE_VERSION).toBe(4);
-    expect(migrated.version).toBe(4);
+    expect(SAVE_VERSION).toBe(5);
+    expect(migrated.version).toBe(5);
     expect(migrated.coins).toBe(7);
     expect(migrated.levels.cleared).toEqual(['ruins']);
     expect(migrated.settings).toEqual(defaultSave().settings);
