@@ -1,13 +1,13 @@
 import Phaser from 'phaser';
 import { Tex } from '../content/assetKeys';
-import { steerToward } from '../logic/angle';
 import type { Point } from '../logic/geometry';
+import { homingStep } from '../logic/homing';
 
 export interface ShotStyle {
   tint?: number;
   scale?: number;
   /** Steers toward `target` for `ms` at `turnRate` radians per second. */
-  homing?: { turnRate: number; ms: number; target: Point };
+  homing?: { turnRate: number; ms: number; target: Point & { dead?: boolean } };
 }
 
 export class EnemyProjectile extends Phaser.Physics.Arcade.Sprite {
@@ -45,10 +45,9 @@ export class EnemyProjectile extends Phaser.Physics.Arcade.Sprite {
   private steer(delta: number): void {
     const { homing } = this;
     if (!homing || !this.active) return;
-    this.age += delta;
-    if (this.age > homing.ms) return;
     const body = this.body as Phaser.Physics.Arcade.Body;
-    const heading = steerToward(Math.atan2(body.velocity.y, body.velocity.x), Math.atan2(homing.target.y - this.y, homing.target.x - this.x), (homing.turnRate * delta) / 1000);
+    const heading = homingStep(Math.atan2(body.velocity.y, body.velocity.x), this, homing.target.dead ? null : homing.target, homing, delta, this.age);
+    this.age += delta;
     this.setVelocity(Math.cos(heading) * this.speed, Math.sin(heading) * this.speed);
   }
 

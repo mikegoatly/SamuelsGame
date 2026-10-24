@@ -110,8 +110,8 @@ export const vultureLoot: LootTable = {
   entries: [common('coin', 400), common('coinPile', 200), rare('healthPotionSmall', 150), ...charms(10, 10, 10)],
 };
 
-export const sandWyrmLoot: LootTable = {
-  id: 'sandWyrm',
+export const sandRatLoot: LootTable = {
+  id: 'sandRat',
   rolls: 5,
   nothingWeight: 0,
   entries: [common('coinPile', 350), common('goldPile', 350), rare('healthPotionSmall', 50), rare('healthPotionLarge', 150), ...charms(34, 33, 33)],
@@ -153,5 +153,5 @@ export const madKingLoot: LootTable = {
 };
 
 export const lootTables: Record<string, LootTable> = Object.fromEntries(
-  [slimeLoot, batLoot, cyclopsLoot, ghostLoot, stoneGuardianLoot, scorpionLoot, banditLoot, mummyLoot, vultureLoot, sandWyrmLoot, palaceGuardLoot, royalArcherLoot, darkMageLoot, assassinLoot, madKingLoot].map((table) => [table.id, table]),
+  [slimeLoot, batLoot, cyclopsLoot, ghostLoot, stoneGuardianLoot, scorpionLoot, banditLoot, mummyLoot, vultureLoot, sandRatLoot, palaceGuardLoot, royalArcherLoot, darkMageLoot, assassinLoot, madKingLoot].map((table) => [table.id, table]),
 );

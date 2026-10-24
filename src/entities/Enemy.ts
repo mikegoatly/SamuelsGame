@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
-import { FONT, Frame, Tex } from '../content/assetKeys';
+import { gameText } from '../ui/gameText';
+import { Frame, TILE_SIZE, Tex } from '../content/assetKeys';
 import { deathTint } from '../content/deathTints';
 import type { EnemyDef } from '../content/enemies';
 import { damageToPlayer, enemyMaxHp } from '../logic/combat';
@@ -9,6 +10,7 @@ import { newBlinkState, pickBlinkPoint, stepBlink, type BlinkState } from '../lo
 import { chargeLaneLength, cloakAlpha, newChargeState, stepCharge, type ChargeState, type ChargeTuning } from '../logic/charge';
 import { rangedStance, spreadDirections } from '../logic/enemyAi';
 import { lineClear } from '../logic/lineOfSight';
+import { Navigator, PathBudget } from '../logic/navigator';
 import { isFrontal, shieldedDamage } from '../logic/shield';
 import { deathBurst } from '../systems/fx';
 import { feel } from '../systems/feel';
@@ -35,6 +37,7 @@ const ORB_SCALE = 1.35;
 const ORB_TINT = 0xc070ff;
 const ORB_RANGE = 320;
 const BODY_RADIUS = 7;
+const pathBudget = new PathBudget();
 
 export interface EnemyContext {
   target: Player;
@@ -57,6 +60,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
   protected readonly shots: EnemyProjectiles;
   protected readonly clock: GameClock;
   protected readonly isBlocked: (x: number, y: number) => boolean;
+  private readonly navigator?: Navigator;
   private readonly label: Phaser.GameObjects.Text;
   private readonly baseTint: number | null;
   private readonly wobblePhase = Math.random() * Math.PI * 2;
@@ -88,6 +92,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     this.shots = context.shots;
     this.clock = context.clock;
     this.isBlocked = context.isBlocked ?? (() => false);
+    if (context.isBlocked) this.navigator = new Navigator(context.isBlocked, TILE_SIZE, Math.random, pathBudget);
     scene.add.existing(this);
     scene.physics.add.existing(this);
     this.level = level;
@@ -102,11 +107,9 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
 
     if (def.shield) this.shieldImage = scene.add.image(x, y, Tex.tiles, Frame.shield).setDepth(6).setTint(SHIELD_TINT).setScale(0.9);
 
-    this.label = scene.add
-      .text(x, y, `Lv${level}`, { fontFamily: FONT, fontSize: '8px', color: '#d8d8e8', stroke: '#14121c', strokeThickness: 2 })
+    this.label = gameText(scene, x, y, `Lv${level}`, 8, { color: '#d8d8e8', world: true })
       .setOrigin(0.5)
       .setDepth(6)
-      .setResolution(2)
       .setAlpha(0.8);
   }
 
@@ -161,7 +164,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     const dealt = shield ? shieldedDamage(amount, blocked, shield.reduction) : amount;
     this.hp -= dealt;
     this.revealedUntil = this.clock.now + HIT_REVEAL_MS;
-    floatText(this.scene, this.x, this.y - this.displayHeight / 2, String(dealt), blocked ? '#9ab4ff' : '#ffe066');
+    floatText(this.scene, this.x, this.y - this.displayHeight / 2, String(dealt), blocked ? '#9ab4ff' : '#ffe066', 8, 14, 700);
     if (blocked) this.flashShield();
     playSfx(this.scene, 'enemyHit');
     if (this.def.boss) feel.hitStop(30);
@@ -248,8 +251,11 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     this.lane = undefined;
   }
 
-  protected chase(time: number, speed = this.def.speed): void {
-    this.desired.set(this.target.x - this.x, this.target.y - this.y);
+  /** Walks toward the player, round walls and pillars when a straight line would snag (skipped by `usePath = false`). */
+  protected chase(time: number, speed = this.def.speed, usePath = true): void {
+    const walks = usePath && this.def.behaviour !== 'erratic';
+    const goal = this.navigator && walks ? this.navigator.aim(time, this, this.target, this.bodyRadius(), speed) : this.target;
+    this.desired.set(goal.x - this.x, goal.y - this.y);
     if (this.desired.lengthSq() < 1) return;
     this.desired.normalize();
     if (this.def.behaviour === 'erratic') {
@@ -257,6 +263,11 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     }
     this.setVelocity(this.desired.x * speed, this.desired.y * speed);
     this.setFlipX(this.desired.x < 0);
+  }
+
+  private bodyRadius(): number {
+    const body = this.body as Phaser.Physics.Arcade.Body;
+    return Math.max(body.halfWidth, body.halfHeight);
   }
 
   /** Keeps a firing distance from the player and shoots slow bolts on a timer. */
@@ -270,6 +281,15 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     const strafe = stance === 'hold' ? Math.sin(time / 650 + this.wobblePhase) * 0.5 : 0;
     const ux = dx / distance;
     const uy = dy / distance;
+    if (stance === 'approach' && this.navigator && !lineClear(this, this.target, this.isBlocked)) {
+      const goal = this.navigator.aim(time, this, this.target, this.bodyRadius(), this.def.speed);
+      const gx = goal.x - this.x;
+      const gy = goal.y - this.y;
+      const length = Math.hypot(gx, gy) || 1;
+      this.setVelocity((gx / length) * this.def.speed, (gy / length) * this.def.speed);
+      this.setFlipX(dx < 0);
+      return;
+    }
     this.setVelocity((ux * radial - uy * strafe) * this.def.speed, (uy * radial + ux * strafe) * this.def.speed);
     this.setFlipX(dx < 0);
     if (this.armed && time >= this.nextShotAt && distance <= SHOOT_DISTANCE) {

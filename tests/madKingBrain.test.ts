@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { madKingBrain, sandWyrmBrain, stoneGuardianBrain } from '../src/content/bosses';
+import { madKingBrain, sandRatBrain, stoneGuardianBrain } from '../src/content/bosses';
 import { newBossState, phaseAttack, stepBoss, summonCount, type BossAction, type BossBrainConfig, type BossState } from '../src/logic/bossBrain';
 
 type Logged = { at: number; action: BossAction };
@@ -22,8 +22,12 @@ describe('mad king brain', () => {
   const cfg = madKingBrain;
 
   it('lunges: telegraphs a line, dashes after the windup and recovers after the dash', () => {
-    const lunge = phaseAttack(cfg, 1, 'lunge')!;
-    const { log, state } = run(cfg, fresh(cfg), 0, lunge.firstMs + lunge.telegraphMs + lunge.dashMs + 100, 1);
+    const single: BossBrainConfig = {
+      phaseTwoAt: 0.5,
+      phases: { 1: { speedMultiplier: 1, attacks: [{ kind: 'lunge', firstMs: 4000, cooldownMs: 5000, telegraphMs: 700, dashMs: 400, dashSpeed: 340, width: 18 }] }, 2: { speedMultiplier: 1, attacks: [] } },
+    };
+    const lunge = phaseAttack(single, 1, 'lunge')!;
+    const { log, state } = run(single, fresh(single), 0, lunge.firstMs + lunge.telegraphMs + lunge.dashMs + 100, 1);
     const line = only(log, 'telegraphLine')[0]!;
     const dash = only(log, 'lunge')[0]!;
     const end = only(log, 'lungeEnd')[0]!;
@@ -36,12 +40,51 @@ describe('mad king brain', () => {
     expect(state.due.lunge).toBe(end.at + lunge.cooldownMs);
   });
 
-  it('phase 1 has no teleport or spiral; phase 2 adds both and lunges faster', () => {
+  it('lunge combos: chained lunges re-aim with a shorter warning and only the last one starts the cooldown', () => {
+    const lunge = phaseAttack(cfg, 1, 'lunge')!;
+    expect(lunge.lunges).toBeGreaterThanOrEqual(2);
+    expect(lunge.lunges).toBeLessThanOrEqual(3);
+    const chainMs = lunge.chainTelegraphMs!;
+    expect(chainMs).toBeGreaterThanOrEqual(450);
+    expect(chainMs).toBeLessThan(lunge.telegraphMs);
+    const total = lunge.telegraphMs + lunge.dashMs + (lunge.lunges! - 1) * (chainMs + lunge.dashMs);
+    const { log, state } = run(cfg, fresh(cfg), 0, lunge.firstMs + total + 50, 1);
+    const lines = only(log, 'telegraphLine').filter((l) => l.at >= lunge.firstMs);
+    const dashes = only(log, 'lunge');
+    expect(lines).toHaveLength(lunge.lunges!);
+    expect(dashes).toHaveLength(lunge.lunges!);
+    expect(dashes[1]!.at - lines[1]!.at).toBe(chainMs);
+    expect(lines[1]!.at).toBe(only(log, 'lungeEnd')[0]!.at);
+    expect(state.mode).toBe('chase');
+    expect(state.due.lunge).toBe(only(log, 'lungeEnd')[lunge.lunges! - 1]!.at + lunge.cooldownMs);
+  });
+
+  it('phase 1 is a bullet hell: dense rings, double spirals, and combos; no teleport or seekers yet', () => {
+    expect(phaseAttack(cfg, 1, 'burst')!.count).toBeGreaterThanOrEqual(16);
+    expect(phaseAttack(cfg, 1, 'burst')!.everyMs).toBeLessThanOrEqual(4000);
+    expect(phaseAttack(cfg, 1, 'spiral')!.arms).toBe(2);
     expect(phaseAttack(cfg, 1, 'teleport')).toBeUndefined();
-    expect(phaseAttack(cfg, 1, 'spiral')).toBeUndefined();
+    expect(phaseAttack(cfg, 1, 'seek')).toBeUndefined();
+  });
+
+  it('phase 2 swaps to seeking bullets with fewer straight ones, and keeps teleport and lunges', () => {
+    const straightPerSecond = (phase: 1 | 2): number =>
+      cfg.phases[phase].attacks.reduce((sum, a) => sum + (a.kind === 'burst' || a.kind === 'spiral' ? (a.count * (a.kind === 'spiral' ? (a.arms ?? 1) : 1) * 1000) / a.everyMs : 0), 0);
+    const seek = phaseAttack(cfg, 2, 'seek')!;
+    expect(seek.count).toBeGreaterThanOrEqual(5);
+    expect(seek.turnRate).toBeGreaterThan(0.8);
+    expect(seek.turnRate).toBeLessThan(2);
+    expect(straightPerSecond(2)).toBeLessThan(straightPerSecond(1));
     expect(phaseAttack(cfg, 2, 'teleport')).toBeDefined();
-    expect(phaseAttack(cfg, 2, 'spiral')).toBeDefined();
     expect(phaseAttack(cfg, 2, 'lunge')!.cooldownMs).toBeLessThan(phaseAttack(cfg, 1, 'lunge')!.cooldownMs);
+  });
+
+  it('seek volleys fire on their cadence once phase 2 starts', () => {
+    const seek = phaseAttack(cfg, 2, 'seek')!;
+    const { log } = run(cfg, fresh(cfg), 0, 30000, 0.3);
+    const volleys = only(log, 'seek');
+    expect(volleys.length).toBeGreaterThanOrEqual(4);
+    expect(volleys[0]!.action).toMatchObject({ count: seek.count, turnRate: seek.turnRate, ms: seek.lifeMs });
   });
 
   it('summons palace guards in both phases', () => {
@@ -57,10 +100,10 @@ describe('mad king brain', () => {
     const appear = only(log, 'appear')[0]!;
     expect(warn.at - vanish.at).toBe(teleport.vanishMs);
     expect(appear.at - warn.at).toBe(teleport.telegraphMs);
-    for (const type of ['spiral', 'burst', 'summon']) {
+    for (const type of ['seek', 'burst', 'summon']) {
       expect(only(log, type).filter((l) => l.at > vanish.at && l.at < appear.at), type).toEqual([]);
     }
-    expect(only(log, 'spiral').length).toBeGreaterThanOrEqual(2);
+    expect(only(log, 'seek').length).toBeGreaterThanOrEqual(2);
   });
 
   it('is untargetable only while vanished', () => {
@@ -74,7 +117,7 @@ describe('mad king brain', () => {
     const phase2 = run(cfg, fresh(cfg), 0, 100, 0.3).state;
     const { log } = run(cfg, phase2, 150, 20000, 0.3);
     const appear = only(log, 'appear')[0]!;
-    const after = log.filter((l) => l.at >= appear.at && l.at <= appear.at + 50 && ['spiral', 'burst', 'summon', 'lunge'].includes(l.action.type));
+    const after = log.filter((l) => l.at >= appear.at && l.at <= appear.at + 50 && ['seek', 'burst', 'summon', 'lunge'].includes(l.action.type));
     expect(after.length).toBeLessThanOrEqual(1);
   });
 });
@@ -129,7 +172,7 @@ describe('hidden time pushes every other timer back', () => {
     expect(after.state.due.lunge!).toBeGreaterThanOrEqual(dueBefore + hiddenFor - 50);
   });
 
-  it('sand wyrm style: a slam due while burrowed is pushed back by the hidden time (slam included)', () => {
+  it('sand rat style: a slam due while burrowed is pushed back by the hidden time (slam included)', () => {
     const cfg: BossBrainConfig = {
       phaseTwoAt: 0.5,
       phases: {
@@ -148,7 +191,7 @@ describe('hidden time pushes every other timer back', () => {
     const after = run(cfg, hidden, 250, 1200, 1);
     expect(after.state.mode).toBe('chase');
     expect(after.state.due.slam!).toBeGreaterThanOrEqual(5000 + (only(after.log, 'emerge')[0]!.at - 100) - 50);
-    for (const kind of [sandWyrmBrain, stoneGuardianBrain]) expect(kind.phases[1].attacks.length).toBeGreaterThan(0);
+    for (const kind of [sandRatBrain, stoneGuardianBrain]) expect(kind.phases[1].attacks.length).toBeGreaterThan(0);
   });
 });
 
@@ -161,13 +204,13 @@ describe('minion caps', () => {
   });
 
   it('every boss summon is capped in its config', () => {
-    for (const brain of [stoneGuardianBrain, sandWyrmBrain, madKingBrain]) {
+    for (const brain of [stoneGuardianBrain, sandRatBrain, madKingBrain]) {
       for (const phase of [1, 2] as const) {
         for (const attack of brain.phases[phase].attacks) if (attack.kind === 'summon') expect(attack.maxAlive, attack.minion).toBeGreaterThan(0);
       }
     }
     expect(phaseAttack(madKingBrain, 2, 'summon')!.maxAlive).toBe(3);
     expect(phaseAttack(stoneGuardianBrain, 2, 'summon')!.maxAlive).toBe(4);
-    expect(phaseAttack(sandWyrmBrain, 2, 'summon')!.maxAlive).toBe(4);
+    expect(phaseAttack(sandRatBrain, 2, 'summon')!.maxAlive).toBe(4);
   });
 });

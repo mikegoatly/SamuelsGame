@@ -3,7 +3,7 @@ import type { BlinkTuning } from '../logic/blink';
 import type { ChargeTuning } from '../logic/charge';
 import type { Shield } from '../logic/shield';
 import { Frame, Tex } from './assetKeys';
-import { madKingBrain, sandWyrmBrain, stoneGuardianBrain } from './bosses';
+import { madKingBrain, sandRatBrain, stoneGuardianBrain } from './bosses';
 
 export interface EnemyDef {
   id: string;
@@ -60,7 +60,7 @@ export const stoneGuardian: EnemyDef = {
   id: 'stoneGuardian',
   name: 'Stone Guardian',
   frame: Frame.cyclops,
-  baseHp: 380,
+  baseHp: 455,
   baseDamage: 14,
   speed: 34,
   behaviour: 'boss',
@@ -123,19 +123,19 @@ export const vulture: EnemyDef = {
   lootTableId: 'vulture',
   tint: 0xd0a070,
 };
-export const sandWyrm: EnemyDef = {
-  id: 'sandWyrm',
-  name: 'Sand Wyrm',
+export const sandRat: EnemyDef = {
+  id: 'sandRat',
+  name: 'Sand Rat',
   frame: Frame.serpent,
-  baseHp: 860,
+  baseHp: 1030,
   baseDamage: 14,
   speed: 30,
   behaviour: 'boss',
-  lootTableId: 'sandWyrm',
+  lootTableId: 'sandRat',
   tint: 0xf0c060,
   scale: 3,
   boss: true,
-  brain: sandWyrmBrain,
+  brain: sandRatBrain,
   slamDamage: 20,
   boltDamage: 8,
   boltSpeed: 95,
@@ -200,7 +200,7 @@ export const madKing: EnemyDef = {
   id: 'madKing',
   name: 'Mad King',
   frame: Frame.horned,
-  baseHp: 1190,
+  baseHp: 1800,
   baseDamage: 18,
   speed: 40,
   behaviour: 'boss',
@@ -214,6 +214,6 @@ export const madKing: EnemyDef = {
   boltSpeed: 85,
 };
 
-export const enemies: EnemyDef[] = [slime, bat, cyclops, spider, ghost, stoneGuardian, scorpion, bandit, mummy, vulture, sandWyrm, palaceGuard, royalArcher, darkMage, assassin, madKing];
+export const enemies: EnemyDef[] = [slime, bat, cyclops, spider, ghost, stoneGuardian, scorpion, bandit, mummy, vulture, sandRat, palaceGuard, royalArcher, darkMage, assassin, madKing];
 
 export const getEnemy = (id: string): EnemyDef => enemies.find((e) => e.id === id) ?? slime;

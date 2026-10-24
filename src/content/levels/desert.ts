@@ -13,7 +13,7 @@ export const desert: LevelConfig = {
     { enemyId: 'vulture', weight: 3 },
     { enemyId: 'mummy', weight: 2 },
   ],
-  bossId: 'sandWyrm',
+  bossId: 'sandRat',
   bossLevel: 10,
   rewardPowerId: 'fireball',
   unlockedBy: 'ruins',

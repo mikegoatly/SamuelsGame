@@ -10,7 +10,7 @@ export const DEATH_TINTS: Record<string, number> = {
   bandit: 0xd05050,
   mummy: 0xd8c898,
   vulture: 0xb08060,
-  sandWyrm: 0xd8b070,
+  sandRat: 0xd8b070,
   palaceGuard: 0x9ab4ff,
   royalArcher: 0xe0c060,
   darkMage: 0xc070ff,

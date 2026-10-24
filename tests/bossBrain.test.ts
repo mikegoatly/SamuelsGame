@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { sandWyrmBrain, stoneGuardianBrain } from '../src/content/bosses';
+import { sandRatBrain, stoneGuardianBrain } from '../src/content/bosses';
 import { bossPhase, newBossState, phaseAttack, stepBoss, type BossAction, type BossBrainConfig, type BossState } from '../src/logic/bossBrain';
 import { bossHp } from './builders';
 
@@ -91,7 +91,7 @@ describe('stone guardian brain', () => {
 
 describe('hidden time', () => {
   it('pushes timed attacks back by the time spent hidden, so nothing fires in a burst on emerging', () => {
-    const cfg = sandWyrmBrain;
+    const cfg = sandRatBrain;
     const burrow = phaseAttack(cfg, 1, 'burrow')!;
     const dive = run(cfg, fresh(cfg), 0, burrow.firstMs, 1).state;
     const remaining = dive.due.spit! - burrow.firstMs;
@@ -104,8 +104,8 @@ describe('hidden time', () => {
   });
 });
 
-describe('sand wyrm brain', () => {
-  const cfg = sandWyrmBrain;
+describe('sand rat brain', () => {
+  const cfg = sandRatBrain;
   const burrow = (phase: 1 | 2) => phaseAttack(cfg, phase, 'burrow')!;
 
   it('burrows, travels hidden, telegraphs the emergence then emerges', () => {

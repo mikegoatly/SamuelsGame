@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { bandit, getEnemy, madKing, mummy, palaceGuard, sandWyrm, stoneGuardian, type EnemyDef } from '../src/content/enemies';
+import { bandit, getEnemy, madKing, mummy, palaceGuard, sandRat, stoneGuardian, type EnemyDef } from '../src/content/enemies';
 import { desert } from '../src/content/levels/desert';
 import { palace } from '../src/content/levels/palace';
 import { ruins } from '../src/content/levels/ruins';
+import { madKingBrain } from '../src/content/bosses';
+import { standingSurvivalSeconds } from './bossSim';
 import { apprenticeStaff, brokenWand, goldenSword } from '../src/content/weapons';
 import { FIREBALL, fireballDamage } from '../src/logic/fireball';
 import { damageToEnemy, damageToPlayer, enemyMaxHp, playerMaxHp } from '../src/logic/combat';
@@ -18,36 +20,36 @@ describe('stone guardian balance', () => {
   it('is a level 5 boss with a big but beatable health pool', () => {
     expect(level).toBe(5);
     expect(hp).toBeGreaterThanOrEqual(600);
-    expect(hp).toBeLessThanOrEqual(900);
+    expect(hp).toBeLessThanOrEqual(1000);
   });
 
-  it('takes a level 4 player with the staff 60-90s at ~50% uptime', () => {
-    expect(secondsToKill(4, 0.5)).toBeGreaterThanOrEqual(60);
-    expect(secondsToKill(4, 0.5)).toBeLessThanOrEqual(90);
+  it('takes a level 4 player with the staff 75-110s at ~50% uptime', () => {
+    expect(secondsToKill(4, 0.5)).toBeGreaterThanOrEqual(75);
+    expect(secondsToKill(4, 0.5)).toBeLessThanOrEqual(110);
   });
 });
 
-describe('sand wyrm balance', () => {
+describe('sand rat balance', () => {
   const level = desert.bossLevel!;
-  const hp = enemyMaxHp(sandWyrm.baseHp, level);
+  const hp = enemyMaxHp(sandRat.baseHp, level);
   const secondsToKill = (playerLevel: number, accuracy: number): number =>
     hp / (damageToEnemy(brokenWand.baseDamage, playerLevel, level) * (1000 / brokenWand.fireRateMs) * accuracy);
 
   it('is a level 10 boss', () => {
     expect(level).toBe(10);
-    expect(hp).toBeGreaterThanOrEqual(2400);
-    expect(hp).toBeLessThanOrEqual(3200);
+    expect(hp).toBeGreaterThanOrEqual(3000);
+    expect(hp).toBeLessThanOrEqual(3800);
   });
 
-  it('takes a level 8-9 player with the broken wand 75-100s at ~50% uptime', () => {
+  it('takes a level 8-9 player with the broken wand 90-125s at ~50% uptime', () => {
     for (const playerLevel of [8, 9]) {
-      expect(secondsToKill(playerLevel, 0.5), `level ${playerLevel}`).toBeGreaterThanOrEqual(75);
-      expect(secondsToKill(playerLevel, 0.5), `level ${playerLevel}`).toBeLessThanOrEqual(100);
+      expect(secondsToKill(playerLevel, 0.5), `level ${playerLevel}`).toBeGreaterThanOrEqual(90);
+      expect(secondsToKill(playerLevel, 0.5), `level ${playerLevel}`).toBeLessThanOrEqual(125);
     }
   });
 
   it('its volley bolts take at least 6 hits to kill an on-level player', () => {
-    const boltHit = damageToPlayer(sandWyrm.boltDamage!, level, 9);
+    const boltHit = damageToPlayer(sandRat.boltDamage!, level, 9);
     expect(playerMaxHp(9) / boltHit).toBeGreaterThanOrEqual(6);
   });
 });
@@ -153,16 +155,29 @@ describe('mad king balance', () => {
     expect(level).toBe(16);
   });
 
-  it('takes a level 14-15 player with the broken wand and fireballs 90-110s at ~50% uptime', () => {
+  it('takes a level 14-15 player with the broken wand and fireballs 2-3 minutes at ~50% uptime', () => {
     for (const playerLevel of [14, 15]) {
-      expect(secondsToKill(playerLevel, 0.5), `level ${playerLevel}`).toBeGreaterThanOrEqual(90);
-      expect(secondsToKill(playerLevel, 0.5), `level ${playerLevel}`).toBeLessThanOrEqual(110);
+      expect(secondsToKill(playerLevel, 0.5), `level ${playerLevel}`).toBeGreaterThanOrEqual(120);
+      expect(secondsToKill(playerLevel, 0.5), `level ${playerLevel}`).toBeLessThanOrEqual(180);
     }
   });
 
   it('its blade ring bolts take at least 6 hits to kill an on-level player and a lunge at least 4', () => {
     expect(playerMaxHp(15) / damageToPlayer(madKing.boltDamage!, level, 15)).toBeGreaterThanOrEqual(6);
     expect(playerMaxHp(15) / damageToPlayer(madKing.slamDamage!, level, 15)).toBeGreaterThanOrEqual(4);
+  });
+
+  describe('a player who never dodges', () => {
+    const damage = { boltDamage: madKing.boltDamage!, slamDamage: madKing.slamDamage!, level };
+
+    it('dies fast in phase 2 (under 30s) and phase 1 (under 45s), i-frames included', () => {
+      expect(standingSurvivalSeconds(madKingBrain, damage, 15, 0.3)).toBeLessThan(30);
+      expect(standingSurvivalSeconds(madKingBrain, damage, 15, 1)).toBeLessThan(45);
+    });
+
+    it('phase 2 is not gentler than phase 1', () => {
+      expect(standingSurvivalSeconds(madKingBrain, damage, 15, 0.3)).toBeLessThanOrEqual(standingSurvivalSeconds(madKingBrain, damage, 15, 1));
+    });
   });
 });
 

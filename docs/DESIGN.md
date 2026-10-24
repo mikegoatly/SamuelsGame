@@ -147,23 +147,23 @@ tests/                    Vitest specs for logic/
   room close (shake + sfx) -> waves spawn in the room from the level pool at the room's level range (`roomWaves`) -> doors open
   when all dead; cleared rooms never retrigger. After all 5 rooms, entering the arena locks its doors and spawns the boss.
 - Enemy bolts: pooled `EnemyProjectile`, damage via `damageToPlayer`, die on walls/doors. Ghost: kites at 85-115px, shoots every ~1.8s (speed 70).
-- Stone Guardian (`entities/Boss.ts`, brain in `logic/bossBrain.ts`): Lv5, base HP 380 (760 effective), scale 2.5, no knockback.
-  Phase 1: chase, slam (0.8s red telegraph, r=60, every 3.5s), 8-bolt burst every 4s. Phase 2 (<=50%): x1.5 speed, slam every 2.4s,
-  12-bolt burst every 3.5s, 2 bats every 8s. A Lv4 player with the staff needs ~70s at 50% uptime. Drops 4 loot rolls plus the reward;
+- Stone Guardian (`entities/Boss.ts`, brain in `logic/bossBrain.ts`): Lv5, base HP 455 (910 effective), scale 2.5, no knockback.
+  Phase 1: chase, slam (0.8s red telegraph, r=60, every 3s), 8-bolt burst every 3.4s. Phase 2 (<=50%): x1.5 speed, slam every 2s,
+  12-bolt burst every 3s, 2 bats every 8s. A Lv4 player with the staff needs ~85-100s at 50% uptime. Drops 4 loot rolls plus the reward;
   +100 XP bonus.
 - Reward pickup -> `completeLevel()` (banks coins, grants+equips Broken Wand, marks cleared) -> `LevelCompleteScene` -> level select.
 - Music: ruins loop (vol 0.4) crossfades to boss track when the arena locks; stops on leave. M toggles mute (saved in `settings.muted`).
 
 ## 10. Level 2 flow (M5)
 
-- Desert uses the same RoomFlow as the ruins: 6 rooms, monster levels 5 to 9 (1/2/2/2/3/3 waves), then the Sand Wyrm. Music `desert.mp3`
+- Desert uses the same RoomFlow as the ruins: 6 rooms, monster levels 5 to 9 (1/2/2/2/3/3 waves), then the Sand Rat. Music `desert.mp3`
   (Arpeggio), boss reuses `boss.mp3`; `LevelConfig.music` / `bossMusic` drive `MusicPlayer`, `PreloadScene` loads whatever the levels declare.
 - Enemies (`content/enemies.ts`): scorpion (behaviour `charger`, `logic/charge.ts`: windup 0.6s with red lane, dash, recover), bandit (`ranged`
   with `spread` 3 bolts / 0.5 rad), mummy (80 base HP, speed 24), vulture (tinted erratic bat). Loot tables pay more coins (piles, 10-coin gold piles) and
   >=15% potions.
 - Bosses are data-driven: `logic/bossBrain.ts` takes a `BossBrainConfig` (`content/bosses.ts`), an attack list per phase of slam, burrow,
-  burst, spit and summon. Sequenced attacks (slam, burrow) own the boss; timed ones pause while it is hidden. Sand Wyrm: base HP 860 (2795 at Lv10),
-  a Lv8-9 player with the broken wand needs ~78-93s at 50% uptime.
+  burst, spit and summon. Sequenced attacks (slam, burrow) own the boss; timed ones pause while it is hidden. Sand Rat: base HP 1030 (3348 at Lv10),
+  a Lv8-9 player with the broken wand needs ~94-112s at 50% uptime. Burrow every 6.2s/4.4s, spit every 2.8s/2.2s.
 - Fireball (`logic/fireball.ts`, `systems/FireballSystem.ts`): cooldown 2.5s, radius 40, damage 3x a bolt, falloff to 0.4 at the edge. Needs `castsPowers`
   (broken wand). Status is published in the registry for the HUD bar (bottom-left) and the touch button (hidden when locked, greyed with a pie when cooling).
 - Quicksand: `hazard` objects become slow zones (50% speed, `logic/hazards.ts`) drawn as dark sand pits.
@@ -179,7 +179,14 @@ tests/                    Vitest specs for logic/
 - Enemies: palaceGuard (shield: frontal hits take 55% less, shield turns at 1.3 rad/s so flanking works; `logic/shield.ts`), royalArcher (`leadAim` predictive shots),
   darkMage (`logic/blink.ts`: blinks 85px when the player is within 62px, then fires a slow homing orb; `logic/angle.ts steerToward`), assassin (charger, alpha 0.14 while stalking via `cloakAlpha`, revealed on windup/hit).
   Palace loot pays 3.5-4 coins/kill, 11-17% large potions, 6-10% charms.
-- Mad King (Lv16, base HP 1190 = 5652, scale 3): phase 1 lunge (0.7s red lane, 400ms dash, `lunge` attack), 12-bolt spinning ring, 2 guards every 24s; phase 2 (<=50%, x1.25 speed) adds teleport between three thrones
-  (vanish 0.8s, warning ring at the destination, shockwave on arrival; destinations clamped to the arena and unblocked) and 24-bolt double spirals (`spiralVolley`). The brain keeps the running sequence in `BossState.current`,
-  so a phase change mid-lunge/hide always finishes it; hidden time pushes every other timer back. A Lv14-15 player with wand + fireballs needs ~90-108s at 50% uptime.
+- Mad King (Lv16, base HP 1800 = 8550, scale 3): phase 1 (x1.1 speed) 3-lunge combos (0.65s red lane, then 0.5s re-aimed follow-ups, 400ms dashes), 16-bolt ring every 3.6s, double counter-rotating 14-bolt spirals, 2 guards every 24s;
+  phase 2 (<=50%, x1.3 speed) swaps spirals for a 6-orb seeking ring every 2.8s (`seek` attack: `logic/homing.ts`, 1.3 rad/s for 3.2s at 0.8x bolt speed, so they can be outrun; walls and sword swings destroy them), 2-lunge combos, a 12-bolt ring and teleport between three thrones
+  (vanish 0.8s, warning ring at the destination, shockwave on arrival; destinations clamped to the arena and unblocked). The brain keeps the running sequence in `BossState.current`,
+  so a phase change mid-lunge/hide always finishes it; hidden time pushes every other timer back. A Lv14-15 player with wand + fireballs needs ~137-164s at 50% uptime. A player who never moves dies in ~13s (phase 1) / ~9s (phase 2) with i-frames respected (`tests/bossSim.ts`).
 - Clearing it grants and equips the Golden Sword ("Golden Sword acquired!"). `ultimate` (comingSoon, no map) shows as a locked "??? / The Ultimate Boss awaits / Coming soon" card once the palace is cleared (`visibleLevels`); a level 4 is a new config + theme + preset.
+
+## 12. Chase navigation
+
+- `logic/pathfinding.ts`: A* over the 16px tile grid (8-way, no corner cutting) where a tile is passable only if the body fits (`bodyClear` at its centre, so big bodies see inflated walls), then string-pulling smoothing with `corridorClear` (centre + both edge lines). Returns the nearest reachable point when the goal is walled off.
+- `logic/navigator.ts`: per-enemy `Navigator.aim()`: straight at the player when a body-wide corridor is clear, else follows the path, recomputed every ~0.35-0.5s; stuck detection (under 30% of the expected travel in 1s) makes it slide sideways along the obstacle for 0.7s and repath.
+  `Enemy.chase` uses it for every chaser/boss/stalker (not while a boss is burrowed); window and node count are bounded, so the cost stays small.

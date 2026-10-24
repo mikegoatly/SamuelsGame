@@ -5,7 +5,7 @@ export const Tex = {
   puff: 'puff',
   enemyBolt: 'enemy-bolt',
   stoneGuardian: 'stone-guardian',
-  sandWyrm: 'sand-wyrm',
+  sandRat: 'sand-rat',
   fireball: 'fireball',
   explosion: 'explosion',
   quicksand: 'quicksand',

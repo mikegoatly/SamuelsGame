@@ -3,14 +3,29 @@ import type { Point } from './geometry';
 const SAMPLE_STEP = 2;
 
 /** True when no sampled point strictly between `from` and `to` is blocked (endpoints are ignored). */
-export function lineClear(from: Point, to: Point, blocked: (x: number, y: number) => boolean): boolean {
+export function lineClear(from: Point, to: Point, blocked: (x: number, y: number) => boolean, step = SAMPLE_STEP): boolean {
   const length = Math.hypot(to.x - from.x, to.y - from.y);
-  const samples = Math.ceil(length / SAMPLE_STEP);
+  const samples = Math.ceil(length / step);
   for (let i = 1; i < samples; i++) {
     const t = i / samples;
     if (blocked(from.x + (to.x - from.x) * t, from.y + (to.y - from.y) * t)) return false;
   }
   return true;
+}
+
+const CORRIDOR_STEP = 4;
+
+/** True when a body of `radius` can travel `from` to `to`: the centre line and both edge lines are clear. */
+export function corridorClear(from: Point, to: Point, radius: number, blocked: (x: number, y: number) => boolean): boolean {
+  if (!lineClear(from, to, blocked, CORRIDOR_STEP)) return false;
+  if (radius <= 0) return true;
+  const length = Math.hypot(to.x - from.x, to.y - from.y) || 1;
+  const ox = (-(to.y - from.y) / length) * radius;
+  const oy = ((to.x - from.x) / length) * radius;
+  return (
+    lineClear({ x: from.x + ox, y: from.y + oy }, { x: to.x + ox, y: to.y + oy }, blocked, CORRIDOR_STEP) &&
+    lineClear({ x: from.x - ox, y: from.y - oy }, { x: to.x - ox, y: to.y - oy }, blocked, CORRIDOR_STEP)
+  );
 }
 
 const BODY_SAMPLES = 8;

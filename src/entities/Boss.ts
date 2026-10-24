@@ -11,6 +11,8 @@ import { Enemy, type EnemyContext } from './Enemy';
 import type { Player } from './Player';
 
 const BOLT_RANGE = 340;
+const SEEK_RANGE = 420;
+const SEEK_TINT = 0xc070ff;
 const BURROW_SPEED_MULTIPLIER = 4;
 const DUST = 0xd8b070;
 const MAGIC = 0xd8a0ff;
@@ -87,7 +89,8 @@ export class Boss extends Enemy {
       return;
     }
     const speed = this.def.speed * this.config.phases[bossPhase(this.config, this.hp / this.maxHp)].speedMultiplier;
-    this.chase(time, mode === 'burrowed' ? speed * BURROW_SPEED_MULTIPLIER : speed);
+    const burrowed = mode === 'burrowed';
+    this.chase(time, burrowed ? speed * BURROW_SPEED_MULTIPLIER : speed, !burrowed);
   }
 
   protected override die(): void {
@@ -115,7 +118,8 @@ export class Boss extends Enemy {
     else if (action.type === 'lungeEnd') this.endLunge();
     else if (action.type === 'vanish') this.vanishAway();
     else if (action.type === 'appear') this.appear();
-    else if (action.type === 'spiral') this.spiral(action.count, action.turns);
+    else if (action.type === 'spiral') this.spiral(action.count, action.turns, action.arms);
+    else if (action.type === 'seek') this.seek(action.count, action.turnRate, action.ms, action.speedFactor);
     else this.enrage();
   }
 
@@ -190,13 +194,30 @@ export class Boss extends Enemy {
     this.puff();
   }
 
-  private spiral(count: number, turns: number): void {
+  /** Each extra arm spins the other way, so two arms cross each other. */
+  private spiral(count: number, turns: number, arms: number): void {
     this.burstSpin += 0.5;
     const damage = this.boltDamage();
-    for (const bolt of spiralVolley(count, turns, this.burstSpin, this.def.boltSpeed ?? 90)) {
-      this.shots.fire(this.x, this.y, bolt.x, bolt.y, bolt.speed, damage, BOLT_RANGE);
+    for (let arm = 0; arm < arms; arm++) {
+      const sign = arm % 2 === 0 ? 1 : -1;
+      for (const bolt of spiralVolley(count, turns * sign, this.burstSpin + (arm * Math.PI) / arms, this.def.boltSpeed ?? 90)) {
+        this.shots.fire(this.x, this.y, bolt.x, bolt.y, bolt.speed, damage, BOLT_RANGE);
+      }
     }
     playSfx(this.scene, 'enemyShot', { rate: 0.7, volume: 1.6 });
+  }
+
+  /** A ring of slow purple orbs that curve toward the player for a few seconds, then fly straight; walls and the sword stop them. */
+  private seek(count: number, turnRate: number, ms: number, speedFactor: number): void {
+    this.burstSpin += 0.4;
+    const damage = this.boltDamage();
+    const speed = (this.def.boltSpeed ?? 90) * speedFactor;
+    const style = { tint: SEEK_TINT, scale: 1.35, homing: { turnRate, ms, target: this.target } };
+    for (let i = 0; i < count; i++) {
+      const angle = this.burstSpin + (i * Math.PI * 2) / count;
+      this.shots.fire(this.x, this.y, Math.cos(angle), Math.sin(angle), speed, damage, SEEK_RANGE, style);
+    }
+    playSfx(this.scene, 'enemyShot', { rate: 0.55, volume: 1.6 });
   }
 
   private strikeArea(emerging: boolean): void {
