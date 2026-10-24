@@ -8,7 +8,8 @@
     "build": "tsc --noEmit && vite build",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
-    "copy-assets": "tsx tools/copy-assets.ts"
+    "copy-assets": "tsx tools/copy-assets.ts",
+    "gen-maps": "tsx tools/generate-ruins.ts"
   },
   "dependencies": {
     "phaser": "^3.90.0"

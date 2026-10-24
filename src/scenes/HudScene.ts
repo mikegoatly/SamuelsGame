@@ -7,7 +7,8 @@ import type { CharmId, Charms } from '../logic/stats';
 import type { GameEvents } from '../systems/GameEvents';
 import type { LootSystem } from '../systems/LootSystem';
 import type { ProgressionSystem } from '../systems/ProgressionSystem';
-import type { SpawnSystem } from '../systems/SpawnSystem';
+import type { LevelDirector } from '../systems/LevelDirector';
+import { MUTE_EVENT } from '../systems/audioSettings';
 import { saveSystem } from '../systems/SaveSystem';
 import { TouchControlsView } from '../ui/TouchControlsView';
 
@@ -15,8 +16,9 @@ export interface HudData {
   events: GameEvents;
   progression: ProgressionSystem;
   player: Player;
-  spawner: SpawnSystem;
+  director: LevelDirector;
   loot: LootSystem;
+  roomTotal?: number;
 }
 
 const BAR_X = 10;
@@ -31,6 +33,10 @@ export class HudScene extends Phaser.Scene {
   private hpText!: Phaser.GameObjects.Text;
   private levelText!: Phaser.GameObjects.Text;
   private waveText!: Phaser.GameObjects.Text;
+  private muteText!: Phaser.GameObjects.Text;
+  private bossBar!: Phaser.GameObjects.Graphics;
+  private bossName!: Phaser.GameObjects.Text;
+  private boss: { hp: number; max: number } | null = null;
   private hp = { value: 1, max: 1 };
   private fullscreenButton!: Phaser.GameObjects.Image;
   private pauseButton!: Phaser.GameObjects.Container;
@@ -44,11 +50,14 @@ export class HudScene extends Phaser.Scene {
   }
 
   create(data: HudData): void {
-    const { events, progression, player, spawner, loot } = data;
+    const { events, progression, player, director, loot, roomTotal } = data;
     this.bars = this.add.graphics();
     this.levelText = this.makeText(BAR_X, 4, '#ffffff', 16);
     this.hpText = this.makeText(BAR_X + 4, 27, '#ffffff', 8);
     this.waveText = this.makeText(0, 4, '#d8d8e8', 16).setOrigin(1, 0);
+    this.bossBar = this.add.graphics();
+    this.bossName = this.makeText(0, 4, '#ffd0a0', 12).setOrigin(0.5, 0).setVisible(false);
+    this.muteText = this.makeText(BAR_X, 0, '#b0b0c8', 10).setOrigin(0, 1).setText('Sound off (M)').setVisible(saveSystem.data.settings.muted);
     this.createFullscreenButton();
     this.createPauseButton(events);
     this.add.image(BAR_X + 5, 55, Tex.tiles, Frame.coin).setTint(0xffd84a);
@@ -58,10 +67,15 @@ export class HudScene extends Phaser.Scene {
     this.showCharms(saveSystem.data.charms);
     this.touchView = new TouchControlsView(this);
     this.layout();
+    const onMute = (muted: boolean): void => void this.muteText.setVisible(muted);
     this.scale.on('resize', this.layout, this);
-    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.scale.off('resize', this.layout, this));
+    this.game.events.on(MUTE_EVENT, onMute);
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      this.scale.off('resize', this.layout, this);
+      this.game.events.off(MUTE_EVENT, onMute);
+    });
 
-    this.waveText.setText(`Wave ${spawner.wave}`);
+    this.waveText.setText(roomTotal ? `Room 1/${roomTotal}` : `Wave ${director.progressLabel().replace('wave ', '')}`);
     this.hp = { value: player.hp, max: player.maxHp };
     this.showProgress(progression.progress, progression.xpForNextLevel);
 
@@ -73,6 +87,18 @@ export class HudScene extends Phaser.Scene {
     events.on('coins-changed', (total) => this.showCoins(total));
     events.on('charms-changed', (charms) => this.showCharms(charms));
     events.on('wave-started', (wave) => this.waveText.setText(`Wave ${wave}`));
+    events.on('room-started', (order, total) => this.waveText.setText(`Room ${order}/${total}`));
+    events.on('boss-started', () => this.waveText.setText('Boss'));
+    events.on('boss-spawned', (name, hp, max) => this.showBoss(name, hp, max));
+    events.on('boss-hp', (hp, max) => {
+      this.boss = { hp, max };
+      this.drawBossBar();
+    });
+    events.on('boss-died', () => {
+      this.boss = null;
+      this.bossName.setVisible(false);
+      this.drawBossBar();
+    });
   }
 
   update(): void {
@@ -84,6 +110,27 @@ export class HudScene extends Phaser.Scene {
     this.fullscreenButton.setPosition(this.scale.width - FULLSCREEN_MARGIN - half, FULLSCREEN_MARGIN + half);
     this.waveText.setX(this.fullscreenButton.x - half - 6);
     this.pauseButton.setPosition(this.fullscreenButton.x, PAUSE_Y);
+    this.muteText.setY(this.scale.height - 6);
+    this.drawBossBar();
+  }
+
+  private showBoss(name: string, hp: number, max: number): void {
+    this.boss = { hp, max };
+    this.bossName.setText(name).setVisible(true);
+    this.drawBossBar();
+  }
+
+  private drawBossBar(): void {
+    this.bossBar.clear();
+    if (!this.boss) return;
+    const width = Math.min(260, this.scale.width * 0.42);
+    const x = this.scale.width / 2 - width / 2;
+    const y = 22;
+    this.bossName.setPosition(this.scale.width / 2, 4);
+    this.bossBar.fillStyle(0x14121c, 0.9).fillRect(x - 2, y - 2, width + 4, 12 + 4);
+    this.bossBar.fillStyle(0x5a2a2a, 1).fillRect(x, y, width, 12);
+    this.bossBar.fillStyle(0xe0503c, 1).fillRect(x, y, Math.round(width * Phaser.Math.Clamp(this.boss.hp / this.boss.max, 0, 1)), 12);
+    this.bossBar.fillStyle(0xffffff, 0.25).fillRect(x + width / 2 - 1, y, 2, 12);
   }
 
   private createFullscreenButton(): void {

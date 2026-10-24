@@ -1,27 +1,39 @@
 import Phaser from 'phaser';
-import { Sfx } from '../content/assetKeys';
+import { Frame, Sfx } from '../content/assetKeys';
 import { CAMERA_ZOOM } from '../content/config';
+import { GOD_DAMAGE_MULTIPLIER, GOD_MODE } from '../debug';
 import { getLevel, type LevelConfig } from '../content/levels';
 import { getWeapon } from '../content/weapons';
-import { Enemy } from '../entities/Enemy';
+import { EnemyProjectiles, type EnemyProjectile } from '../entities/EnemyProjectile';
+import type { Enemy } from '../entities/Enemy';
 import { Player } from '../entities/Player';
 import { createProjectilePool, Projectile } from '../entities/Projectile';
+import { RewardPickup } from '../entities/RewardPickup';
 import { damageToEnemy } from '../logic/combat';
+import { rectCenter } from '../logic/geometry';
 import { addCoins, applyLevelClear, withProgress } from '../logic/save';
+import { GameClock } from '../systems/GameClock';
+import { EnemyFactory } from '../systems/EnemyFactory';
 import { GameEvents } from '../systems/GameEvents';
 import { floatText } from '../systems/floatText';
 import { InputController } from '../systems/InputController';
+import type { LevelDirector } from '../systems/LevelDirector';
 import { LootSystem, type RunState } from '../systems/LootSystem';
+import { MusicPlayer } from '../systems/MusicPlayer';
 import { ProgressionSystem } from '../systems/ProgressionSystem';
+import { RoomFlowSystem } from '../systems/RoomFlowSystem';
 import { saveSystem } from '../systems/SaveSystem';
 import { SpawnSystem } from '../systems/SpawnSystem';
-import { buildLevelMap } from './RoomBuilder';
+import { buildLevelMap, type LevelMap } from './RoomBuilder';
 
 export interface GameSceneData {
   levelId: string;
 }
 
 const BUTTON_START = 9;
+const REWARD_FADE_MS = 600;
+const BOSS_XP_BONUS = 100;
+const REWARD_ARM_MS = 1200;
 
 export class GameScene extends Phaser.Scene {
   private ending = false;
@@ -29,6 +41,9 @@ export class GameScene extends Phaser.Scene {
   private progression!: ProgressionSystem;
   private run: RunState = { coins: 0 };
   private startedAt = 0;
+  private kills = 0;
+  private clock!: GameClock;
+  private enemies!: Phaser.Physics.Arcade.Group;
 
   constructor() {
     super('Game');
@@ -36,14 +51,18 @@ export class GameScene extends Phaser.Scene {
 
   create(data: Partial<GameSceneData>): void {
     this.ending = false;
+    this.kills = 0;
     this.level = getLevel(data.levelId ?? 'arena');
     this.run = { coins: 0 };
-    this.startedAt = this.time.now;
+    this.clock = new GameClock(this);
+    this.startedAt = 0;
     const save = saveSystem.data;
     const events = new GameEvents();
     const progression = (this.progression = new ProgressionSystem(events, save.progress));
-    const { walls, playerStart } = buildLevelMap(this, this.level);
+    const map = buildLevelMap(this, this.level);
+    const { walls, playerStart } = map;
     const projectiles = createProjectilePool(this);
+    const shots = new EnemyProjectiles(this);
     const weapon = getWeapon(save.weapons.equipped);
     const player = new Player(
       this,
@@ -56,35 +75,44 @@ export class GameScene extends Phaser.Scene {
       weapon,
       () => saveSystem.data.charms,
     );
-    const enemies = this.physics.add.group({ allowGravity: false });
-    const spawner = new SpawnSystem(this, player, enemies, events, this.level);
+    const enemies = (this.enemies = this.physics.add.group({ allowGravity: false }));
+    const factory = new EnemyFactory(this, enemies, { target: player, events, shots, clock: this.clock });
+    const director = this.createDirector(map, player, factory, events);
     const loot = new LootSystem(this, player, events, this.run, saveSystem);
 
-    this.physics.add.collider(player, walls);
-    this.physics.add.collider(enemies, walls);
-    this.physics.add.collider(enemies, enemies);
-    this.physics.add.collider(player, enemies, (_, enemy) => (enemy as Enemy).tryContact(player));
-    this.physics.add.collider(projectiles, walls, (bolt) => (bolt as Projectile).kill());
+    this.addColliders(map, player, enemies, projectiles, shots);
     this.physics.add.overlap(projectiles, enemies, (boltObj, enemyObj) => {
       const bolt = boltObj as Projectile;
       const enemy = enemyObj as Enemy;
       if (!bolt.active || !enemy.alive) return;
-      const damage = damageToEnemy(bolt.weapon.baseDamage, progression.level, enemy.level, player.stats.damageMultiplier);
+      const multiplier = GOD_MODE ? GOD_DAMAGE_MULTIPLIER : 1;
+      const damage = damageToEnemy(bolt.weapon.baseDamage, progression.level, enemy.level, player.stats.damageMultiplier) * multiplier;
       enemy.takeHit(damage, bolt.body!.velocity.x, bolt.body!.velocity.y);
       bolt.kill();
     });
+    this.physics.add.overlap(player, shots.group, (_, boltObj) => {
+      const bolt = boltObj as EnemyProjectile;
+      if (!bolt.active) return;
+      player.takeDamage(bolt.damage, bolt.x, bolt.y);
+      bolt.kill();
+    });
 
-    events.on('enemy-died', (level) => progression.awardKill(level));
+    events.on('enemy-died', (level) => {
+      this.kills++;
+      progression.awardKill(level);
+    });
     events.on('level-up', () => {
       this.celebrateLevelUp(player);
       this.persistProgress();
     });
-    events.on('player-died', () => this.endRun(spawner));
+    events.on('player-died', () => this.endRun(director));
     events.on('pause-requested', () => this.pauseGame());
     this.input.keyboard?.on('keydown-ESC', () => this.pauseGame());
     this.input.gamepad?.on('down', (_pad: Phaser.Input.Gamepad.Gamepad, button: Phaser.Input.Gamepad.Button) => {
       if (button.index === BUTTON_START) this.pauseGame();
     });
+    const music = this.startMusic(events);
+    this.setUpReward(map, player, events);
 
     this.physics.world.setBounds(0, 0, walls.width, walls.height);
     const camera = this.cameras.main;
@@ -93,12 +121,14 @@ export class GameScene extends Phaser.Scene {
     camera.startFollow(player, true, 0.15, 0.15);
     camera.fadeIn(250);
 
-    this.scene.launch('Hud', { events, progression, player, spawner, loot });
+    this.scene.launch('Hud', { events, progression, player, director, loot, roomTotal: map.world?.rooms.length });
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      director.stop();
+      music?.stop();
       events.clear();
       this.scene.stop('Hud');
     });
-    spawner.start();
+    director.start();
   }
 
   resumeGame(): void {
@@ -113,18 +143,101 @@ export class GameScene extends Phaser.Scene {
     this.scene.start('LevelSelect');
   }
 
-  /** Called by the level flow (M4b) when the boss/exit is done: banks coins, grants the reward, records the clear. */
+  /** Banks coins, grants the reward weapon, records the clear and shows the results screen. */
   completeLevel(): void {
+    if (this.ending) return;
+    this.ending = true;
+    this.physics.pause();
+    const timeMs = Math.round(this.clock.now - this.startedAt);
+    const coins = this.run.coins;
     saveSystem.update((save) =>
       applyLevelClear(withProgress(save, this.progression.progress), {
         levelId: this.level.id,
         rewardWeaponId: this.level.rewardWeaponId,
-        runCoins: this.run.coins,
-        timeMs: this.time.now - this.startedAt,
+        runCoins: coins,
+        timeMs,
       }),
     );
     this.run.coins = 0;
-    this.scene.start('LevelSelect');
+    const camera = this.cameras.main;
+    camera.fadeOut(REWARD_FADE_MS, 20, 18, 28);
+    camera.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () =>
+      this.scene.start('LevelComplete', {
+        title: `${this.level.name} recovered!`,
+        timeMs,
+        kills: this.kills,
+        coins,
+        xp: this.progression.gainedXp,
+        level: this.progression.level,
+      }),
+    );
+  }
+
+  private createDirector(map: LevelMap, player: Player, factory: EnemyFactory, events: GameEvents): LevelDirector {
+    const { world, doors, walls } = map;
+    if (!world || !doors) return new SpawnSystem(this, player, factory, events, this.level);
+    return new RoomFlowSystem({
+      scene: this,
+      player,
+      factory,
+      events,
+      level: this.level,
+      world,
+      doors,
+      isBlocked: (x, y) => walls.getTileAtWorldXY(x, y) !== null,
+    });
+  }
+
+  private addColliders(
+    map: LevelMap,
+    player: Player,
+    enemies: Phaser.Physics.Arcade.Group,
+    projectiles: Phaser.Physics.Arcade.Group,
+    shots: EnemyProjectiles,
+  ): void {
+    for (const layer of [map.walls, ...map.solid]) {
+      this.physics.add.collider(player, layer);
+      this.physics.add.collider(enemies, layer);
+      this.physics.add.collider(projectiles, layer, (bolt) => (bolt as Projectile).kill());
+      this.physics.add.collider(shots.group, layer, (bolt) => (bolt as EnemyProjectile).kill());
+    }
+    this.physics.add.collider(enemies, enemies);
+    this.physics.add.collider(player, enemies, (_, enemy) => (enemy as Enemy).tryContact(player));
+  }
+
+  private startMusic(events: GameEvents): MusicPlayer | undefined {
+    if (!this.level.music) return undefined;
+    const music = new MusicPlayer(this);
+    music.play(this.level.music);
+    const bossMusic = this.level.bossMusic;
+    if (bossMusic) events.on('boss-started', () => music.crossfadeTo(bossMusic));
+    return music;
+  }
+
+  /** The boss drops the level reward at the arena centre; picking it up completes the level. */
+  private setUpReward(map: LevelMap, player: Player, events: GameEvents): void {
+    const arena = map.world?.bossArena;
+    if (!arena) return;
+    events.on('boss-died', () => {
+      if (this.ending) return;
+      this.dismissMinions();
+      this.progression.gain(BOSS_XP_BONUS);
+      const { x, y } = rectCenter(arena.rect);
+      const reward = new RewardPickup(this, x, y, this.level.rewardWeaponId ? getWeapon(this.level.rewardWeaponId).frame : Frame.glowChest, null);
+      floatText(this, x, y - 28, 'Guardian defeated!', '#ffe066', 12, 16, 1800);
+      let armed = false;
+      this.time.delayedCall(REWARD_ARM_MS, () => (armed = true));
+      this.physics.add.overlap(player, reward, () => {
+        if (!armed || !reward.active || this.ending) return;
+        reward.destroy();
+        this.sound.play(Sfx.shoot, { volume: 0.5, rate: 2.2 });
+        this.completeLevel();
+      });
+    });
+  }
+
+  private dismissMinions(): void {
+    for (const enemy of this.enemies.getChildren() as Enemy[]) if (!enemy.def.boss) enemy.dismiss();
   }
 
   private pauseGame(): void {
@@ -149,10 +262,10 @@ export class GameScene extends Phaser.Scene {
     this.sound.play(Sfx.hit, { volume: 0.4, rate: 1.5, delay: 0.1 });
   }
 
-  private endRun(spawner: SpawnSystem): void {
+  private endRun(director: LevelDirector): void {
     if (this.ending) return;
     this.ending = true;
-    spawner.stop();
+    director.stop();
     const lostCoins = this.run.coins;
     this.run.coins = 0;
     this.persistProgress();
@@ -163,7 +276,7 @@ export class GameScene extends Phaser.Scene {
       this.scene.start('GameOver', {
         levelId: this.level.id,
         level: this.progression.level,
-        wave: spawner.wave,
+        progress: director.progressLabel(),
         lostCoins,
       }),
     );

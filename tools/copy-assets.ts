@@ -19,6 +19,12 @@ const files: Array<[string, string]> = [
   ['Audio/Impact Sounds/License.txt', 'audio/License.txt'],
 ];
 
+const musicDir = process.env.MUSIC_DIR ?? 'C:/Users/mikeg/OneDrive/Royalty Free Background Music Pack';
+const music: Array<[string, string]> = [
+  ['Complicated Melody.mp3', 'music/ruins.mp3'],
+  ['Fight.mp3', 'music/boss.mp3'],
+];
+
 if (!existsSync(kenneyDir)) {
   console.error(`Kenney directory not found: ${kenneyDir}\nSet KENNEY_DIR to override.`);
   process.exit(1);
@@ -29,5 +35,18 @@ for (const [src, dest] of files) {
   const to = join(outDir, ...dest.split('/'));
   mkdirSync(dirname(to), { recursive: true });
   copyFileSync(from, to);
+  console.log(`copied ${dest}`);
+}
+
+if (!existsSync(musicDir)) {
+  console.error(`Music directory not found: ${musicDir}
+Set MUSIC_DIR to override.`);
+  process.exit(1);
+}
+
+for (const [src, dest] of music) {
+  const to = join(outDir, ...dest.split('/'));
+  mkdirSync(dirname(to), { recursive: true });
+  copyFileSync(join(musicDir, src), to);
   console.log(`copied ${dest}`);
 }

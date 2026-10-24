@@ -47,6 +47,35 @@ export const cyclopsLoot: LootTable = {
   ],
 };
 
+export const ghostLoot: LootTable = {
+  id: 'ghost',
+  rolls: 1,
+  nothingWeight: 250,
+  entries: [
+    common('coin', 560),
+    common('coinPile', 60),
+    rare('healthPotionSmall', 110),
+    epic('charmOfPower', 7),
+    epic('charmOfSwiftness', 7),
+    epic('charmOfVitality', 6),
+  ],
+};
+
+export const stoneGuardianLoot: LootTable = {
+  id: 'stoneGuardian',
+  rolls: 4,
+  nothingWeight: 0,
+  entries: [
+    common('coin', 100),
+    common('coinPile', 600),
+    rare('healthPotionSmall', 100),
+    rare('healthPotionLarge', 100),
+    epic('charmOfPower', 34),
+    epic('charmOfSwiftness', 33),
+    epic('charmOfVitality', 33),
+  ],
+};
+
 export const lootTables: Record<string, LootTable> = Object.fromEntries(
-  [slimeLoot, batLoot, cyclopsLoot].map((table) => [table.id, table]),
+  [slimeLoot, batLoot, cyclopsLoot, ghostLoot, stoneGuardianLoot].map((table) => [table.id, table]),
 );

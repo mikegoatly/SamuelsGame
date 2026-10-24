@@ -1,7 +1,9 @@
 import { MAX_LEVEL, type PlayerProgress } from './progression';
+import { xpToNextLevel } from './xp';
 import { noCharms, type CharmId, type Charms } from './stats';
 
-export const SAVE_VERSION = 1;
+/** v2: added `settings`; v1 saves load through the same tolerant parse. */
+export const SAVE_VERSION = 2;
 export const STARTING_WEAPON = 'apprenticeStaff';
 
 export interface SaveData {
@@ -11,6 +13,7 @@ export interface SaveData {
   charms: Charms;
   weapons: { owned: string[]; equipped: string };
   levels: { cleared: string[]; bestTimes?: Record<string, number> };
+  settings: { muted: boolean };
 }
 
 export function defaultSave(): SaveData {
@@ -21,6 +24,7 @@ export function defaultSave(): SaveData {
     charms: noCharms(),
     weapons: { owned: [STARTING_WEAPON], equipped: STARTING_WEAPON },
     levels: { cleared: [] },
+    settings: { muted: false },
   };
 }
 
@@ -48,7 +52,7 @@ export function parseSave(json: string | null | undefined): SaveData {
 
   if (isRecord(raw.progress)) {
     const level = wholeNumber(raw.progress.level, 1, 1, MAX_LEVEL);
-    save.progress = { level, xp: level >= MAX_LEVEL ? 0 : wholeNumber(raw.progress.xp, 0) };
+    save.progress = { level, xp: level >= MAX_LEVEL ? 0 : Math.min(wholeNumber(raw.progress.xp, 0), xpToNextLevel(level) - 1) };
   }
   save.coins = wholeNumber(raw.coins, 0);
   if (isRecord(raw.charms)) {
@@ -70,8 +74,11 @@ export function parseSave(json: string | null | undefined): SaveData {
       save.levels.bestTimes = times;
     }
   }
+  if (isRecord(raw.settings)) save.settings = { muted: raw.settings.muted === true };
   return save;
 }
+
+export const withMuted = (save: SaveData, muted: boolean): SaveData => ({ ...save, settings: { ...save.settings, muted } });
 
 export const withProgress = (save: SaveData, progress: PlayerProgress): SaveData => ({ ...save, progress });
 
@@ -99,7 +106,7 @@ export interface LevelClear {
 
 export function applyLevelClear(save: SaveData, clear: LevelClear): SaveData {
   let next = addCoins(save, clear.runCoins ?? 0);
-  if (clear.rewardWeaponId) next = grantWeapon(next, clear.rewardWeaponId);
+  if (clear.rewardWeaponId) next = grantWeapon(next, clear.rewardWeaponId, !next.weapons.owned.includes(clear.rewardWeaponId));
   const cleared = next.levels.cleared.includes(clear.levelId) ? next.levels.cleared : [...next.levels.cleared, clear.levelId];
   const levels: SaveData['levels'] = { ...next.levels, cleared };
   const best = next.levels.bestTimes?.[clear.levelId];

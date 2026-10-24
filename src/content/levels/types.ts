@@ -10,10 +10,12 @@ export interface LevelConfig {
   monsterLevelRange: LevelRange;
   enemyPool: { enemyId: string; weight: number }[];
   bossId?: string;
+  bossLevel?: number;
   rewardWeaponId?: string;
   rewardPowerId?: string;
   unlockedBy?: string;
   /** Tilemap cache key; levels without one fall back to the generated arena room. */
   mapKey?: string;
   music?: string;
+  bossMusic?: string;
 }

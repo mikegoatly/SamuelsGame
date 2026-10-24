@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { Frame, Sfx, Tex } from '../content/assetKeys';
+import { GOD_MODE } from '../debug';
 import type { WeaponDef } from '../content/weapons';
 import { computePlayerStats, type Charms, type PlayerStats } from '../logic/stats';
 import type { GameEvents } from '../systems/GameEvents';
@@ -64,7 +65,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   }
 
   takeDamage(amount: number, fromX: number, fromY: number): boolean {
-    if (this.dead || this.invulnerable) return false;
+    if (this.dead || this.invulnerable || GOD_MODE) return false;
     this.hp = Math.max(0, this.hp - amount);
     this.invulnerableUntil = this.scene.time.now + Player.IFRAMES_MS;
     this.scene.sound.play(Sfx.hit, { volume: 0.5, rate: 0.7 });

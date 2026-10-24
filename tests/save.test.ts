@@ -7,9 +7,12 @@ import {
   defaultSave,
   grantWeapon,
   parseSave,
+  withMuted,
   serialize,
+  SAVE_VERSION,
   STARTING_WEAPON,
 } from '../src/logic/save';
+import { xpToNextLevel } from '../src/logic/xp';
 import { SAVE_KEY, SaveSystem } from '../src/systems/SaveSystem';
 import { aSave, fakeStorage } from './builders';
 
@@ -92,6 +95,11 @@ describe('save transforms', () => {
     expect(slower.levels).toEqual({ cleared: ['ruins'], bestTimes: { ruins: 90_000 } });
     expect(applyLevelClear(first, { levelId: 'ruins', timeMs: 60_000 }).levels.bestTimes).toEqual({ ruins: 60_000 });
   });
+
+  it('applyLevelClear only equips a reward weapon that is newly owned', () => {
+    const owned = aSave({ weapons: { owned: [STARTING_WEAPON, 'brokenWand', 'goldenSword'], equipped: 'goldenSword' } });
+    expect(applyLevelClear(owned, { levelId: 'ruins', rewardWeaponId: 'brokenWand' }).weapons.equipped).toBe('goldenSword');
+  });
 });
 
 describe('SaveSystem', () => {
@@ -118,5 +126,31 @@ describe('SaveSystem', () => {
     const system = new SaveSystem(() => storage);
     system.reset();
     expect(storage.items.has(SAVE_KEY)).toBe(false);
+  });
+});
+
+describe('save repair and migration', () => {
+  it('caps xp below the next level threshold', () => {
+    const save = parseSave(JSON.stringify({ progress: { level: 2, xp: 99999 } }));
+    expect(save.progress).toEqual({ level: 2, xp: xpToNextLevel(2) - 1 });
+  });
+
+  it('migrates a version 1 save to version 2 keeping its data', () => {
+    const v1 = { version: 1, progress: { level: 3, xp: 10 }, coins: 7, levels: { cleared: ['ruins'] } };
+    const migrated = parseSave(JSON.stringify(v1));
+    expect(SAVE_VERSION).toBe(2);
+    expect(migrated.version).toBe(2);
+    expect(migrated.coins).toBe(7);
+    expect(migrated.levels.cleared).toEqual(['ruins']);
+    expect(migrated.settings).toEqual({ muted: false });
+  });
+});
+
+describe('settings', () => {
+  it('defaults to sound on, round-trips muted and repairs junk', () => {
+    expect(defaultSave().settings.muted).toBe(false);
+    expect(parseSave(serialize(withMuted(defaultSave(), true))).settings.muted).toBe(true);
+    expect(parseSave(JSON.stringify({ settings: { muted: 'yes' } })).settings.muted).toBe(false);
+    expect(parseSave(JSON.stringify({ settings: 5 })).settings).toEqual({ muted: false });
   });
 });

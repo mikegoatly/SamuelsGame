@@ -3,11 +3,22 @@ export const Tex = {
   controls: 'controls',
   bolt: 'bolt',
   puff: 'puff',
+  enemyBolt: 'enemy-bolt',
+  stoneGuardian: 'stone-guardian',
 } as const;
 
 export const Sfx = {
   shoot: 'sfx-shoot',
   hit: 'sfx-hit',
+} as const;
+
+export const Music = {
+  ruins: 'music-ruins',
+  boss: 'music-boss',
+} as const;
+
+export const MapKey = {
+  ruins: 'ruins',
 } as const;
 
 export const FONT = 'KenneyPixel';
@@ -21,6 +32,12 @@ export const Frame = {
   floorRubble: 12,
   floorPebbles: 24,
   wall: 40,
+  wallWindow: 28,
+  wallAlt: [57, 58, 59],
+  pillar: 59,
+  doorClosed: 46,
+  chest: 89,
+  glowChest: 92,
   hero: 84,
   wand: 129,
   staff: 125,

@@ -14,6 +14,8 @@ export class KeyboardMouseSource implements InputSource {
   private readonly keys: Keys;
   private readonly mouseAim = new Phaser.Math.Vector2();
   private mouseMoved = false;
+  private wasDown = false;
+  private pressStartedOnUi = false;
   private lastX = 0;
   private lastY = 0;
 
@@ -49,7 +51,16 @@ export class KeyboardMouseSource implements InputSource {
     this.lastY = pointer.y;
     pointer.updateWorldPoint(scene.cameras.main);
     this.mouseAim.set(pointer.worldX, pointer.worldY);
-    this.fire = pointer.leftButtonDown();
+    const down = pointer.leftButtonDown();
+    if (down && !this.wasDown) this.pressStartedOnUi = this.isOverHud(scene, pointer);
+    this.wasDown = down;
+    this.fire = down && !this.pressStartedOnUi;
     this.altFire = pointer.rightButtonDown();
+  }
+
+  /** True when the pointer is over an interactive HUD object (pause/fullscreen buttons), so the click is not a shot. */
+  private isOverHud(scene: Phaser.Scene, pointer: Phaser.Input.Pointer): boolean {
+    const hud = scene.scene.get('Hud');
+    return (hud?.input?.hitTestPointer(pointer).length ?? 0) > 0;
   }
 }

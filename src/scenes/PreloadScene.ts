@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
-import { FONT, Sfx, TILE_SIZE, Tex } from '../content/assetKeys';
+import { FONT, Frame, MapKey, Music, SHEET_COLS, Sfx, TILE_SIZE, Tex } from '../content/assetKeys';
+import { toStone } from '../logic/grey';
 
 export class PreloadScene extends Phaser.Scene {
   constructor() {
@@ -16,10 +17,27 @@ export class PreloadScene extends Phaser.Scene {
     this.load.atlasXML(Tex.controls, 'controls/flat-dark.png', 'controls/flat-dark.xml');
     this.load.audio(Sfx.shoot, 'audio/shoot.ogg');
     this.load.audio(Sfx.hit, 'audio/hit.ogg');
+    this.load.audio(Music.ruins, 'music/ruins.mp3');
+    this.load.audio(Music.boss, 'music/boss.mp3');
+    this.load.tilemapTiledJSON(MapKey.ruins, 'maps/ruins.tmj');
   }
 
   create(): void {
+    this.makeStoneGuardianTexture();
     this.scene.start('MainMenu');
+  }
+
+  /** Desaturated copy of the cyclops frame so the boss reads as stone rather than brown. */
+  private makeStoneGuardianTexture(): void {
+    const canvas = this.textures.createCanvas(Tex.stoneGuardian, TILE_SIZE, TILE_SIZE)!;
+    const source = this.textures.get(Tex.tiles).getSourceImage() as CanvasImageSource;
+    const sx = (Frame.cyclops % SHEET_COLS) * TILE_SIZE;
+    const sy = Math.floor(Frame.cyclops / SHEET_COLS) * TILE_SIZE;
+    canvas.context.drawImage(source, sx, sy, TILE_SIZE, TILE_SIZE, 0, 0, TILE_SIZE, TILE_SIZE);
+    const pixels = canvas.context.getImageData(0, 0, TILE_SIZE, TILE_SIZE);
+    toStone(pixels.data);
+    canvas.context.putImageData(pixels, 0, 0);
+    canvas.refresh();
   }
 
   private drawLoadingBar(): void {

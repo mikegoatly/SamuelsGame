@@ -29,6 +29,10 @@ export class MenuButton implements MenuItem {
     this.label.setColor(focused ? '#ffffff' : '#c8c8e0');
   }
 
+  setLabel(text: string): void {
+    this.label.setText(text);
+  }
+
   activate(): void {
     this.onActivate();
   }

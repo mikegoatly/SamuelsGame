@@ -2,6 +2,7 @@ import { expect } from 'vitest';
 import type { LootTable } from '../src/logic/loot';
 import type { PlayerProgress } from '../src/logic/progression';
 import { defaultSave, type SaveData } from '../src/logic/save';
+import type { RoomSpec } from '../src/logic/tiledObjects';
 
 export function expectClose(actual: number, expected: number): void {
   expect(actual).toBeCloseTo(expected, 6);
@@ -56,4 +57,31 @@ export function fakeStorage(initial: Record<string, string> = {}, failing = fals
     setItem: (key: string, value: string) => (failing ? fail() : void items.set(key, value)),
     removeItem: (key: string) => (failing ? fail() : void items.delete(key)),
   };
+}
+
+export type TiledProps = Record<string, string | number | boolean>;
+
+export function aTiledObject(type: string, x: number, y: number, props: TiledProps = {}, size?: { w: number; h: number }) {
+  return {
+    type,
+    x,
+    y,
+    ...(size ? { width: size.w, height: size.h } : { point: true }),
+    properties: Object.entries(props).map(([name, value]) => ({ name, value })),
+  };
+}
+
+export function aTiledMap(...objects: ReturnType<typeof aTiledObject>[]) {
+  return { layers: [{ name: 'ground', type: 'tilelayer' }, { name: 'objects', type: 'objectgroup', objects }] };
+}
+
+export const aRoomObject = (order: number, x = 0, y = 0, props: TiledProps = {}) =>
+  aTiledObject('room', x, y, { order, encounter: `r${order}`, waves: 2, minLevel: 1, maxLevel: 2, ...props }, { w: 160, h: 112 });
+
+export function bossHp(ratio: number): { hp: number; max: number } {
+  return { hp: ratio * 1000, max: 1000 };
+}
+
+export function aRoom(order: number, x: number, y: number, overrides: Partial<RoomSpec> = {}): RoomSpec {
+  return { order, encounter: `r${order}`, waves: 2, minLevel: 1, maxLevel: 2, rect: { x, y, w: 160, h: 112 }, ...overrides };
 }

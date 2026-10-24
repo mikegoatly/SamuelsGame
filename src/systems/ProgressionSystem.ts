@@ -4,6 +4,7 @@ import type { GameEvents } from './GameEvents';
 
 export class ProgressionSystem {
   private current: PlayerProgress;
+  private gained = 0;
 
   constructor(
     private readonly events: GameEvents,
@@ -14,6 +15,11 @@ export class ProgressionSystem {
 
   get progress(): PlayerProgress {
     return this.current;
+  }
+
+  /** Total XP earned since this system was created (one run). */
+  get gainedXp(): number {
+    return this.gained;
   }
 
   get level(): number {
@@ -29,6 +35,7 @@ export class ProgressionSystem {
   }
 
   gain(amount: number): void {
+    this.gained += Math.max(0, amount);
     const { progress, levelsGained } = addXp(this.current, amount);
     this.current = progress;
     this.events.emit('xp-changed', progress);

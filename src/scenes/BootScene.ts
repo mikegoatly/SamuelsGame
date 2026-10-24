@@ -8,6 +8,7 @@ export class BootScene extends Phaser.Scene {
 
   create(): void {
     this.generateBoltTexture();
+    this.generateEnemyBoltTexture();
     this.generatePuffTexture();
     this.game.canvas.addEventListener('contextmenu', (e) => e.preventDefault());
     document.fonts
@@ -21,6 +22,14 @@ export class BootScene extends Phaser.Scene {
     g.fillStyle(0xb48cff, 0.5).fillCircle(5, 5, 5);
     g.fillStyle(0xffffff, 1).fillCircle(5, 5, 3);
     g.generateTexture(Tex.bolt, 10, 10);
+    g.destroy();
+  }
+
+  private generateEnemyBoltTexture(): void {
+    const g = this.add.graphics();
+    g.fillStyle(0xff4a2a, 0.55).fillCircle(5, 5, 5);
+    g.fillStyle(0xffe0a0, 1).fillCircle(5, 5, 3);
+    g.generateTexture(Tex.enemyBolt, 10, 10);
     g.destroy();
   }
 

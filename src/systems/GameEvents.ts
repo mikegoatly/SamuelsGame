@@ -10,6 +10,12 @@ export interface GameEventMap {
   'enemy-died': [level: number, x: number, y: number, lootTableId: string];
   'coins-changed': [total: number];
   'charms-changed': [charms: Charms];
+  'room-started': [order: number, total: number];
+  'room-cleared': [order: number, total: number];
+  'boss-started': [];
+  'boss-spawned': [name: string, hp: number, maxHp: number];
+  'boss-hp': [hp: number, maxHp: number];
+  'boss-died': [x: number, y: number];
   'pause-requested': [];
   'player-died': [];
 }
