@@ -4,6 +4,7 @@ import { items } from '../content/items';
 import type { Player } from '../entities/Player';
 import type { PlayerProgress } from '../logic/progression';
 import type { CharmId, Charms } from '../logic/stats';
+import type { FireballSystem } from '../systems/FireballSystem';
 import type { GameEvents } from '../systems/GameEvents';
 import type { LootSystem } from '../systems/LootSystem';
 import type { ProgressionSystem } from '../systems/ProgressionSystem';
@@ -18,6 +19,7 @@ export interface HudData {
   player: Player;
   director: LevelDirector;
   loot: LootSystem;
+  fireball: FireballSystem;
   roomTotal?: number;
 }
 
@@ -43,6 +45,10 @@ export class HudScene extends Phaser.Scene {
   private coinText!: Phaser.GameObjects.Text;
   private charmIcons!: Phaser.GameObjects.Container;
   private touchView!: TouchControlsView;
+  private fireball!: FireballSystem;
+  private fireIcon!: Phaser.GameObjects.Image;
+  private fireBar!: Phaser.GameObjects.Graphics;
+  private fireText!: Phaser.GameObjects.Text;
   private xpRatio = 0;
 
   constructor() {
@@ -50,7 +56,8 @@ export class HudScene extends Phaser.Scene {
   }
 
   create(data: HudData): void {
-    const { events, progression, player, director, loot, roomTotal } = data;
+    const { events, progression, player, director, loot, fireball, roomTotal } = data;
+    this.fireball = fireball;
     this.bars = this.add.graphics();
     this.levelText = this.makeText(BAR_X, 4, '#ffffff', 16);
     this.hpText = this.makeText(BAR_X + 4, 27, '#ffffff', 8);
@@ -66,6 +73,7 @@ export class HudScene extends Phaser.Scene {
     this.showCoins(loot.totalCoins);
     this.showCharms(saveSystem.data.charms);
     this.touchView = new TouchControlsView(this);
+    this.createFireballIndicator();
     this.layout();
     const onMute = (muted: boolean): void => void this.muteText.setVisible(muted);
     this.scale.on('resize', this.layout, this);
@@ -103,6 +111,25 @@ export class HudScene extends Phaser.Scene {
 
   update(): void {
     this.touchView.update();
+    this.drawFireball();
+  }
+
+  private createFireballIndicator(): void {
+    this.fireIcon = this.add.image(BAR_X + 6, 0, Tex.fireball).setVisible(false);
+    this.fireBar = this.add.graphics();
+    this.fireText = this.makeText(BAR_X + 16, 0, '#ffb060', 8).setOrigin(0, 0.5).setText('Fireball').setVisible(false);
+  }
+
+  /** Bottom-left cooldown bar, shown once the power is unlocked and a wand-type weapon is equipped. */
+  private drawFireball(): void {
+    const status = this.fireball.current;
+    const y = this.scale.height - 30;
+    this.fireIcon.setVisible(status.available).setPosition(BAR_X + 6, y).setAlpha(status.ready ? 1 : 0.5);
+    this.fireText.setVisible(status.available).setPosition(BAR_X + 16, y - 7).setColor(status.ready ? '#ffb060' : '#9a9ab8');
+    this.fireBar.clear();
+    if (!status.available) return;
+    this.fireBar.fillStyle(0x14121c, 0.85).fillRect(BAR_X + 15, y - 1, 52, 6);
+    this.fireBar.fillStyle(status.ready ? 0xff9030 : 0x8a5a30, 1).fillRect(BAR_X + 16, y, Math.round(50 * status.fraction), 4);
   }
 
   private layout(): void {

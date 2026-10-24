@@ -2,6 +2,8 @@ import Phaser from 'phaser';
 import { Frame, Sfx, Tex } from '../content/assetKeys';
 import { GOD_MODE } from '../debug';
 import type { WeaponDef } from '../content/weapons';
+import { speedFactorAt } from '../logic/hazards';
+import type { Rect } from '../logic/geometry';
 import { computePlayerStats, type Charms, type PlayerStats } from '../logic/stats';
 import type { GameEvents } from '../systems/GameEvents';
 import type { InputController } from '../systems/InputController';
@@ -19,6 +21,10 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   maxHp: number;
   stats: PlayerStats;
   dead = false;
+  /** Quicksand patches (world px) that slow movement. */
+  slowZones: Rect[] = [];
+  /** Called when alt-fire is held; the power system decides whether anything happens. */
+  altFireHandler?: (x: number, y: number, direction: Phaser.Math.Vector2) => void;
 
   private readonly wand: Phaser.GameObjects.Image;
   private readonly aimDirection = new Phaser.Math.Vector2(1, 0);
@@ -88,10 +94,12 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
 
     this.handleDash(time);
     if (!this.isDashing && time >= this.knockbackUntil) {
-      this.setVelocity(this.controls.moveVector.x * this.stats.moveSpeed, this.controls.moveVector.y * this.stats.moveSpeed);
+      const speed = this.stats.moveSpeed * speedFactorAt(this, this.slowZones);
+      this.setVelocity(this.controls.moveVector.x * speed, this.controls.moveVector.y * speed);
     }
 
     this.handleFire(time);
+    if (this.controls.altFire) this.altFireHandler?.(this.x, this.y - 2, this.aimDirection);
     this.updateVisuals(time);
   }
 

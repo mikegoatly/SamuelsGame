@@ -38,6 +38,17 @@ describe('parseLevelObjects', () => {
     expect(parsed.exit).toBeNull();
   });
 
+  it('reads hazard rects and ignores hazards of unknown kinds', () => {
+    const parsed = parseLevelObjects(
+      aTiledMap(
+        aTiledObject('playerStart', 0, 0),
+        aTiledObject('hazard', 32, 48, { kind: 'quicksand' }, { w: 48, h: 32 }),
+        aTiledObject('hazard', 0, 0, { kind: 'lava' }, { w: 16, h: 16 }),
+      ),
+    );
+    expect(parsed.hazards).toEqual([{ kind: 'quicksand', rect: { x: 32, y: 48, w: 48, h: 32 } }]);
+  });
+
   it('throws a clear error without a player start', () => {
     expect(() => parseLevelObjects(aTiledMap())).toThrow(/playerStart/);
   });

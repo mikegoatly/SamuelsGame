@@ -3,6 +3,8 @@ import { Frame, Sfx } from '../content/assetKeys';
 import { CAMERA_ZOOM } from '../content/config';
 import { GOD_DAMAGE_MULTIPLIER, GOD_MODE } from '../debug';
 import { getLevel, type LevelConfig } from '../content/levels';
+import { getEnemy } from '../content/enemies';
+import { rewardOf } from '../content/rewards';
 import { getWeapon } from '../content/weapons';
 import { EnemyProjectiles, type EnemyProjectile } from '../entities/EnemyProjectile';
 import type { Enemy } from '../entities/Enemy';
@@ -14,6 +16,7 @@ import { rectCenter } from '../logic/geometry';
 import { addCoins, applyLevelClear, withProgress } from '../logic/save';
 import { GameClock } from '../systems/GameClock';
 import { EnemyFactory } from '../systems/EnemyFactory';
+import { FireballSystem } from '../systems/FireballSystem';
 import { GameEvents } from '../systems/GameEvents';
 import { floatText } from '../systems/floatText';
 import { InputController } from '../systems/InputController';
@@ -75,16 +78,26 @@ export class GameScene extends Phaser.Scene {
       weapon,
       () => saveSystem.data.charms,
     );
+    player.slowZones = map.slowZones;
     const enemies = (this.enemies = this.physics.add.group({ allowGravity: false }));
-    const factory = new EnemyFactory(this, enemies, { target: player, events, shots, clock: this.clock });
+    const isSolid = (x: number, y: number): boolean => [walls, ...map.solid].some((layer) => layer.getTileAtWorldXY(x, y) !== null);
+    const factory = new EnemyFactory(this, enemies, { target: player, events, shots, clock: this.clock, isBlocked: isSolid });
     const director = this.createDirector(map, player, factory, events);
     const loot = new LootSystem(this, player, events, this.run, saveSystem);
+    const fireball = new FireballSystem({
+      scene: this,
+      player,
+      enemies,
+      clock: this.clock,
+      unlocked: () => saveSystem.data.powers.unlocked.includes('fireball'),
+      isSolid,
+    });
 
     this.addColliders(map, player, enemies, projectiles, shots);
     this.physics.add.overlap(projectiles, enemies, (boltObj, enemyObj) => {
       const bolt = boltObj as Projectile;
       const enemy = enemyObj as Enemy;
-      if (!bolt.active || !enemy.alive) return;
+      if (!bolt.active || !enemy.alive || !enemy.targetable) return;
       const multiplier = GOD_MODE ? GOD_DAMAGE_MULTIPLIER : 1;
       const damage = damageToEnemy(bolt.weapon.baseDamage, progression.level, enemy.level, player.stats.damageMultiplier) * multiplier;
       enemy.takeHit(damage, bolt.body!.velocity.x, bolt.body!.velocity.y);
@@ -121,7 +134,7 @@ export class GameScene extends Phaser.Scene {
     camera.startFollow(player, true, 0.15, 0.15);
     camera.fadeIn(250);
 
-    this.scene.launch('Hud', { events, progression, player, director, loot, roomTotal: map.world?.rooms.length });
+    this.scene.launch('Hud', { events, progression, player, director, loot, fireball, roomTotal: map.world?.rooms.length });
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       director.stop();
       music?.stop();
@@ -154,6 +167,7 @@ export class GameScene extends Phaser.Scene {
       applyLevelClear(withProgress(save, this.progression.progress), {
         levelId: this.level.id,
         rewardWeaponId: this.level.rewardWeaponId,
+        rewardPowerId: this.level.rewardPowerId,
         runCoins: coins,
         timeMs,
       }),
@@ -169,6 +183,7 @@ export class GameScene extends Phaser.Scene {
         coins,
         xp: this.progression.gainedXp,
         level: this.progression.level,
+        reward: rewardOf(this.level),
       }),
     );
   }
@@ -223,8 +238,9 @@ export class GameScene extends Phaser.Scene {
       this.dismissMinions();
       this.progression.gain(BOSS_XP_BONUS);
       const { x, y } = rectCenter(arena.rect);
-      const reward = new RewardPickup(this, x, y, this.level.rewardWeaponId ? getWeapon(this.level.rewardWeaponId).frame : Frame.glowChest, null);
-      floatText(this, x, y - 28, 'Guardian defeated!', '#ffe066', 12, 16, 1800);
+      const prize = rewardOf(this.level);
+      const reward = new RewardPickup(this, x, y, prize?.frame ?? Frame.glowChest, prize?.tint ?? null);
+      floatText(this, x, y - 28, `${getEnemy(this.level.bossId ?? '').name ?? 'Boss'} defeated!`, '#ffe066', 12, 16, 1800);
       let armed = false;
       this.time.delayedCall(REWARD_ARM_MS, () => (armed = true));
       this.physics.add.overlap(player, reward, () => {

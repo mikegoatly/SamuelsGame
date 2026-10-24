@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
-import { FONT, Frame, MapKey, Music, SHEET_COLS, Sfx, TILE_SIZE, Tex } from '../content/assetKeys';
+import { FONT, Frame, MUSIC_FILES, SHEET_COLS, Sfx, TILE_SIZE, Tex } from '../content/assetKeys';
+import { levels } from '../content/levels';
 import { toStone } from '../logic/grey';
 
 export class PreloadScene extends Phaser.Scene {
@@ -17,9 +18,10 @@ export class PreloadScene extends Phaser.Scene {
     this.load.atlasXML(Tex.controls, 'controls/flat-dark.png', 'controls/flat-dark.xml');
     this.load.audio(Sfx.shoot, 'audio/shoot.ogg');
     this.load.audio(Sfx.hit, 'audio/hit.ogg');
-    this.load.audio(Music.ruins, 'music/ruins.mp3');
-    this.load.audio(Music.boss, 'music/boss.mp3');
-    this.load.tilemapTiledJSON(MapKey.ruins, 'maps/ruins.tmj');
+    this.load.audio(Sfx.explosion, 'audio/explosion.ogg');
+    this.load.atlasXML(Tex.explosion, 'fx/explosion.png', 'fx/explosion.xml');
+    for (const [key, file] of Object.entries(MUSIC_FILES)) this.load.audio(key, file);
+    for (const level of levels) if (level.mapKey) this.load.tilemapTiledJSON(level.mapKey, `maps/${level.mapKey}.tmj`);
   }
 
   create(): void {

@@ -27,3 +27,17 @@ describe('roomWaves', () => {
     }
   });
 });
+
+describe('roomWaves counting', () => {
+  it('gives every wave at least one enemy, within the room level range, and one wave per configured wave', () => {
+    for (const waves of [1, 2, 3]) {
+      const room = aRoom(1, 0, 0, { waves, minLevel: 5, maxLevel: 9 });
+      const result = roomWaves(room);
+      expect(result).toHaveLength(waves);
+      for (const levels of result) {
+        expect(levels.length).toBeGreaterThan(0);
+        for (const level of levels) expect(level >= 5 && level <= 9).toBe(true);
+      }
+    }
+  });
+});

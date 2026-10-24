@@ -1,9 +1,9 @@
-import { Frame, SHEET_COLS, TILE_SIZE } from '../src/content/assetKeys';
-import { floorMask, generateLayout, type DungeonLayout, type LayoutRoom } from '../src/logic/dungeonLayout';
+import { SHEET_COLS, TILE_SIZE } from '../src/content/assetKeys';
+import { floorMask, generateLayout, placeHazards, type DungeonLayout, type LayoutRoom } from '../src/logic/dungeonLayout';
 import type { Rect } from '../src/logic/geometry';
 import { mulberry32, randInt } from '../src/logic/rng';
+import type { MapTheme } from './mapThemes';
 
-export const RUINS_SEED = 20240611;
 const WALL_RING = 2;
 const SHEET_ROWS = 11;
 
@@ -27,15 +27,6 @@ interface TiledObject {
   properties?: Prop[];
 }
 
-/** Monster levels climb 1 -> 4 across the five combat rooms. */
-const ENCOUNTERS = [
-  { waves: 1, minLevel: 1, maxLevel: 1 },
-  { waves: 2, minLevel: 1, maxLevel: 2 },
-  { waves: 2, minLevel: 2, maxLevel: 3 },
-  { waves: 2, minLevel: 3, maxLevel: 4 },
-  { waves: 3, minLevel: 4, maxLevel: 4 },
-];
-
 const gid = (frame: number): number => frame + 1;
 const grid = (layout: DungeonLayout): number[][] => Array.from({ length: layout.rows }, () => new Array<number>(layout.cols).fill(0));
 const px = (tiles: number): number => tiles * TILE_SIZE;
@@ -47,7 +38,7 @@ function nearWall(floor: boolean[][], x: number, y: number, ring: number): boole
   return false;
 }
 
-function paintGround(layout: DungeonLayout, floor: boolean[][], rng: () => number): number[][] {
+function paintGround(layout: DungeonLayout, floor: boolean[][], rng: () => number, theme: MapTheme): number[][] {
   const ground = grid(layout);
   const pillarAt = new Set(layout.pillars.map((p) => `${p.x},${p.y}`));
   const nearPillar = (x: number, y: number): boolean => [-1, 0, 1].some((dy) => [-1, 0, 1].some((dx) => pillarAt.has(`${x + dx},${y + dy}`)));
@@ -55,23 +46,36 @@ function paintGround(layout: DungeonLayout, floor: boolean[][], rng: () => numbe
     row.forEach((isFloor, x) => {
       if (!isFloor) return;
       const roll = rng() + (nearPillar(x, y) ? -0.25 : 0);
-      ground[y]![x] = gid(roll < 0.05 ? Frame.floorRubble : roll < 0.1 ? Frame.floorPebbles : Frame.floor);
+      ground[y]![x] = gid(floorFrame(theme.floor, roll));
     }),
   );
   return ground;
 }
 
-function paintWalls(layout: DungeonLayout, floor: boolean[][], rng: () => number): number[][] {
+function floorFrame({ base, variants }: MapTheme['floor'], roll: number): number {
+  let threshold = 0;
+  for (const variant of variants) {
+    threshold += variant.chance;
+    if (roll < threshold) return variant.frame;
+  }
+  return base;
+}
+
+/** Position-hashed pick so cover variety costs no randomness (keeps single-tile themes byte-stable). */
+const coverFrame = (cover: readonly number[], x: number, y: number): number => cover[Math.abs((x * 73856093) ^ (y * 19349663)) % cover.length]!;
+
+function paintWalls(layout: DungeonLayout, floor: boolean[][], rng: () => number, theme: MapTheme): number[][] {
+  const { wall } = theme;
   const walls = grid(layout);
   floor.forEach((row, y) =>
     row.forEach((isFloor, x) => {
       if (isFloor || !nearWall(floor, x, y, WALL_RING)) return;
       const edge = nearWall(floor, x, y, 1);
-      const alt = Frame.wallAlt[randInt(rng, 0, Frame.wallAlt.length - 1)]!;
-      walls[y]![x] = gid(edge ? (rng() < 0.1 ? Frame.wallWindow : Frame.wall) : rng() < 0.6 ? alt : Frame.wall);
+      const alt = wall.alt[randInt(rng, 0, wall.alt.length - 1)]!;
+      walls[y]![x] = gid(edge ? (rng() < wall.accentChance ? wall.accent : wall.base) : rng() < wall.altChance ? alt : wall.base);
     }),
   );
-  for (const p of layout.pillars) walls[p.y]![p.x] = gid(Frame.pillar);
+  for (const p of layout.pillars) walls[p.y]![p.x] = gid(coverFrame(theme.cover, p.x, p.y));
   return walls;
 }
 
@@ -79,7 +83,7 @@ const rectPx = (r: Rect): Pick<TiledObject, 'x' | 'y' | 'width' | 'height'> => (
 const ints = (props: Record<string, number | string>): Prop[] =>
   Object.entries(props).map(([name, value]) => ({ name, type: typeof value === 'number' ? 'int' : 'string', value }));
 
-function buildObjects(layout: DungeonLayout): TiledObject[] {
+function buildObjects(layout: DungeonLayout, hazards: Rect[], theme: MapTheme): TiledObject[] {
   let nextId = 1;
   const make = (name: string, type: string, area: Pick<TiledObject, 'x' | 'y' | 'width' | 'height'>, props: Record<string, number | string> = {}, point = false): TiledObject => ({
     id: nextId++,
@@ -101,8 +105,9 @@ function buildObjects(layout: DungeonLayout): TiledObject[] {
   const combat = layout.rooms.filter((room) => room.kind === 'combat');
   return [
     make('playerStart', 'playerStart', at(start), {}, true),
-    ...combat.map((room, i) => make(`room${room.index}`, 'room', rectPx(room.rect), { order: room.index, encounter: `ruins-room-${room.index}`, ...ENCOUNTERS[i]! })),
+    ...combat.map((room, i) => make(`room${room.index}`, 'room', rectPx(room.rect), { order: room.index, encounter: `${theme.id}-room-${room.index}`, ...theme.encounters[i]! })),
     ...layout.doors.filter((d) => d.room > 0).map((d, i) => make(`door${i + 1}`, 'door', rectPx(d.rect), { room: d.room })),
+    ...hazards.map((r, i) => make(`quicksand${i + 1}`, 'hazard', rectPx(r), { kind: 'quicksand' })),
     make('bossArena', 'bossArena', rectPx(boss.rect), { order: boss.index }),
     make('exit', 'exit', { x: px(boss.rect.x + 2), y: px(boss.cy) + TILE_SIZE / 2, width: 0, height: 0 }, {}, true),
   ];
@@ -112,11 +117,14 @@ function tileLayer(id: number, name: string, layout: DungeonLayout, data: number
   return { id, name, type: 'tilelayer', x: 0, y: 0, width: layout.cols, height: layout.rows, opacity: 1, visible: true, data: data.flat() };
 }
 
-export function buildRuinsTmj(seed = RUINS_SEED) {
-  const rng = mulberry32(seed);
-  const layout = generateLayout(rng);
+export function buildTmj(theme: MapTheme) {
+  const rng = mulberry32(theme.seed);
+  const layout = generateLayout(rng, theme.preset);
   const floor = floorMask(layout);
-  const objects = buildObjects(layout);
+  const ground = paintGround(layout, floor, rng, theme);
+  const walls = paintWalls(layout, floor, rng, theme);
+  const hazards = placeHazards(layout, rng, theme.quicksandPerRoom);
+  const objects = buildObjects(layout, hazards, theme);
   return {
     compressionlevel: -1,
     type: 'map',
@@ -147,8 +155,8 @@ export function buildRuinsTmj(seed = RUINS_SEED) {
       },
     ],
     layers: [
-      tileLayer(1, 'ground', layout, paintGround(layout, floor, rng)),
-      tileLayer(2, 'walls', layout, paintWalls(layout, floor, rng)),
+      tileLayer(1, 'ground', layout, ground),
+      tileLayer(2, 'walls', layout, walls),
       { id: 3, name: 'objects', type: 'objectgroup', draworder: 'topdown', opacity: 1, visible: true, x: 0, y: 0, objects },
     ],
   };

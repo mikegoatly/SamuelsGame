@@ -1,10 +1,9 @@
 import { rectCenter, type Rect } from './geometry';
+import { RUINS_PRESET, type CellPlan, type LayoutPreset, type Range } from './layoutPresets';
 import { randInt } from './rng';
 
 export const CELL_W = 26;
 export const CELL_H = 22;
-export const GRID_COLS = 4;
-export const GRID_ROWS = 2;
 export const CORRIDOR_W = 3;
 const MARGIN = 3;
 
@@ -45,28 +44,6 @@ export interface DungeonLayout {
   doors: LayoutDoor[];
   pillars: Pillar[];
 }
-
-type Range = [min: number, max: number];
-
-interface CellPlan {
-  kind: RoomKind;
-  col: number;
-  row: number;
-  span: number;
-  w: Range;
-  h: Range;
-}
-
-/** Serpentine through a 4x2 grid: start -> r1..r3 along the top, r4, r5 back along the bottom, boss spans the last two cells. */
-const PLAN: CellPlan[] = [
-  { kind: 'start', col: 0, row: 0, span: 1, w: [8, 10], h: [7, 9] },
-  { kind: 'combat', col: 1, row: 0, span: 1, w: [12, 16], h: [9, 12] },
-  { kind: 'combat', col: 2, row: 0, span: 1, w: [13, 18], h: [10, 13] },
-  { kind: 'combat', col: 3, row: 0, span: 1, w: [14, 19], h: [10, 14] },
-  { kind: 'combat', col: 3, row: 1, span: 1, w: [15, 20], h: [11, 15] },
-  { kind: 'combat', col: 2, row: 1, span: 1, w: [16, 20], h: [12, 16] },
-  { kind: 'boss', col: 0, row: 1, span: 2, w: [38, 44], h: [14, 16] },
-];
 
 /** Picks a [start, size] span inside a cell that always covers the centre 3-tile block. */
 function placeAxis(rng: () => number, origin: number, extent: number, centre: number, size: Range): [number, number] {
@@ -110,11 +87,11 @@ const insideInset = (rect: Rect, x: number, y: number, inset: number): boolean =
 
 const SHAPES: [number, number][][] = [[[0, 0]], [[0, 0], [1, 0]], [[0, 0], [0, 1]]];
 
-function combatPillars(rng: () => number, room: LayoutRoom): Pillar[] {
+function combatPillars(rng: () => number, room: LayoutRoom, cover: LayoutPreset['cover']): Pillar[] {
   const { rect } = room;
   if (rect.w < 12 || rect.h < 9) return [];
   const tiles: Pillar[] = [];
-  const target = 2 + Math.floor((rect.w * rect.h) / 90);
+  const target = cover.base + Math.floor((rect.w * rect.h) / cover.divisor);
   for (let attempt = 0; attempt < 60 && tiles.length < target * 1.5; attempt++) {
     const x = randInt(rng, rect.x + 2, rect.x + rect.w - 3);
     const y = randInt(rng, rect.y + 2, rect.y + rect.h - 3);
@@ -142,13 +119,13 @@ function bossPillars(room: LayoutRoom): Pillar[] {
   return tiles;
 }
 
-export function generateLayout(rng: () => number): DungeonLayout {
-  const rooms = PLAN.map((plan, index) => placeRoom(rng, plan, index));
+export function generateLayout(rng: () => number, preset: LayoutPreset = RUINS_PRESET): DungeonLayout {
+  const rooms = preset.plan.map((plan, index) => placeRoom(rng, plan, index));
   const links = rooms.slice(1).map((room, i) => connect(rooms[i]!, room));
-  const pillars = rooms.flatMap((room) => (room.kind === 'combat' ? combatPillars(rng, room) : room.kind === 'boss' ? bossPillars(room) : []));
+  const pillars = rooms.flatMap((room) => (room.kind === 'combat' ? combatPillars(rng, room, preset.cover) : room.kind === 'boss' ? bossPillars(room) : []));
   return {
-    cols: GRID_COLS * CELL_W,
-    rows: GRID_ROWS * CELL_H,
+    cols: preset.gridCols * CELL_W,
+    rows: preset.gridRows * CELL_H,
     rooms,
     corridors: links.map((l) => l.corridor),
     doors: links.flatMap((l) => l.doors),
@@ -183,4 +160,37 @@ export function reachableRooms(layout: DungeonLayout, withPillars = false): Set<
     queue.push([x + 1, y], [x - 1, y], [x, y + 1], [x, y - 1]);
   }
   return new Set(layout.rooms.filter((r) => seen.has(`${r.cx},${r.cy}`)).map((r) => r.index));
+}
+
+const PATCH_ATTEMPTS = 150;
+
+/** Quicksand patches (tile rects) in combat rooms: off the corridor strips and cover, in from the walls, never touching. */
+export function placeHazards(layout: DungeonLayout, rng: () => number, perRoom: number): Rect[] {
+  if (perRoom <= 0) return [];
+  const solid = new Set(layout.pillars.map((p) => `${p.x},${p.y}`));
+  const patches: Rect[] = [];
+  for (const room of layout.rooms.filter((r) => r.kind === 'combat')) {
+    for (let n = 0; n < perRoom; n++) {
+      for (let attempt = 0; attempt < PATCH_ATTEMPTS; attempt++) {
+        const w = randInt(rng, 3, 4);
+        const h = randInt(rng, 2, 3);
+        const patch = { x: randInt(rng, room.rect.x + 2, room.rect.x + room.rect.w - 2 - w), y: randInt(rng, room.rect.y + 2, room.rect.y + room.rect.h - 2 - h), w, h };
+        if (patchFits(room, patch, solid, patches)) {
+          patches.push(patch);
+          break;
+        }
+      }
+    }
+  }
+  return patches;
+}
+
+function patchFits(room: LayoutRoom, patch: Rect, solid: Set<string>, others: Rect[]): boolean {
+  for (let y = patch.y - 1; y <= patch.y + patch.h; y++) {
+    for (let x = patch.x - 1; x <= patch.x + patch.w; x++) if (solid.has(`${x},${y}`)) return false;
+  }
+  for (let y = patch.y; y < patch.y + patch.h; y++) {
+    for (let x = patch.x; x < patch.x + patch.w; x++) if (Math.abs(x - room.cx) <= 1 || Math.abs(y - room.cy) <= 1) return false;
+  }
+  return !others.some((o) => o.x < patch.x + patch.w + 1 && patch.x < o.x + o.w + 1 && o.y < patch.y + patch.h + 1 && patch.y < o.y + o.h + 1);
 }

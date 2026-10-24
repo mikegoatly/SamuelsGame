@@ -3,12 +3,13 @@ import { getEnemy, type EnemyDef } from '../content/enemies';
 import { Boss } from '../entities/Boss';
 import { Enemy, type EnemyContext } from '../entities/Enemy';
 import { insetRect, rectContains, type Rect } from '../logic/geometry';
-import { pickRectSpawn } from '../logic/spawnPoints';
+import { pickEmergePoint, pickRectSpawn } from '../logic/spawnPoints';
 
 const FADE_IN_MS = 300;
 const BOSS_FADE_IN_MS = 700;
 const MINION_RADIUS = 36;
 const MINION_INSET = 24;
+const EMERGE_OFFSET = 18;
 
 export interface BossArea {
   rect: Rect;
@@ -33,6 +34,7 @@ export class EnemyFactory {
         const at = this.minionSpot(area, sx, sy);
         this.spawn(getEnemy(id), lvl, at.x, at.y);
       },
+      emergeSpot: (x: number, y: number) => pickEmergePoint(area.rect, { x, y }, EMERGE_OFFSET, Math.random, area.isBlocked, MINION_INSET),
     };
     return this.fadeIn(new Boss(this.scene, x, y, def, level, this.context, hooks), BOSS_FADE_IN_MS);
   }

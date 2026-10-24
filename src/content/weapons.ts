@@ -10,6 +10,8 @@ export interface WeaponDef {
   range: number;
   /** Projectile tint; null keeps the bolt texture's own purple. */
   tint: number | null;
+  /** Wand-type weapons can channel powers (fireball) through alt-fire. */
+  castsPowers?: boolean;
 }
 
 export const apprenticeStaff: WeaponDef = {
@@ -32,6 +34,7 @@ export const brokenWand: WeaponDef = {
   speed: 320,
   range: 260,
   tint: null,
+  castsPowers: true,
 };
 
 /** Placeholder until the melee weapon lands; fires like the wand. */

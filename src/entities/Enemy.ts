@@ -2,7 +2,9 @@ import Phaser from 'phaser';
 import { FONT, Sfx, Tex } from '../content/assetKeys';
 import type { EnemyDef } from '../content/enemies';
 import { damageToPlayer, enemyMaxHp } from '../logic/combat';
-import { rangedStance } from '../logic/enemyAi';
+import { chargeLaneLength, newChargeState, stepCharge, type ChargeState, type ChargeTuning } from '../logic/charge';
+import { rangedStance, spreadDirections } from '../logic/enemyAi';
+import { lineClear } from '../logic/lineOfSight';
 import type { GameClock } from '../systems/GameClock';
 import type { GameEvents } from '../systems/GameEvents';
 import { floatText } from '../systems/floatText';
@@ -17,12 +19,16 @@ const KITE_NEAR = 85;
 const KITE_FAR = 115;
 const SHOT_RANGE = 260;
 const SHOOT_DISTANCE = 220;
+const DEFAULT_CHARGE: ChargeTuning = { triggerRange: 110, windupMs: 600, dashMs: 380, recoverMs: 800, dashSpeed: 280 };
+const WINDUP_TINT = 0xff5a3a;
 
 export interface EnemyContext {
   target: Player;
   events: GameEvents;
   shots: EnemyProjectiles;
   clock: GameClock;
+  /** Wall/door test in world px; lets enemies respect line of sight. */
+  isBlocked?: (x: number, y: number) => boolean;
 }
 
 export class Enemy extends Phaser.Physics.Arcade.Sprite {
@@ -36,6 +42,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
   protected readonly events: GameEvents;
   protected readonly shots: EnemyProjectiles;
   protected readonly clock: GameClock;
+  protected readonly isBlocked: (x: number, y: number) => boolean;
   private readonly label: Phaser.GameObjects.Text;
   private readonly baseTint: number | null;
   private readonly wobblePhase = Math.random() * Math.PI * 2;
@@ -43,6 +50,9 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
   private knockbackUntil = 0;
   private nextContactAt = 0;
   private nextShotAt: number;
+  private charge: ChargeState = newChargeState();
+  private chargeDirection = new Phaser.Math.Vector2(1, 0);
+  private lane?: Phaser.GameObjects.Rectangle;
 
   constructor(
     scene: Phaser.Scene,
@@ -57,6 +67,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     this.events = context.events;
     this.shots = context.shots;
     this.clock = context.clock;
+    this.isBlocked = context.isBlocked ?? (() => false);
     scene.add.existing(this);
     scene.physics.add.existing(this);
     this.level = level;
@@ -75,6 +86,11 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
       .setDepth(6)
       .setResolution(2)
       .setAlpha(0.8);
+  }
+
+  /** False while the enemy cannot be hurt (e.g. a boss under the sand); bolts pass through. */
+  get targetable(): boolean {
+    return this.alive;
   }
 
   override preUpdate(time: number, delta: number): void {
@@ -101,6 +117,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
       this.die();
       return;
     }
+    this.cancelDash();
     if (!this.def.boss) {
       const knock = new Phaser.Math.Vector2(directionX, directionY).normalize().scale(KNOCKBACK_SPEED);
       this.setVelocity(knock.x, knock.y);
@@ -112,7 +129,64 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
 
   protected act(time: number): void {
     if (this.def.behaviour === 'ranged') this.kite(time);
+    else if (this.def.behaviour === 'charger') this.chargeAt(time);
     else this.chase(time);
+  }
+
+  /** Hides or shows the sprite and its level label (used by bosses burrowing). */
+  protected conceal(hidden: boolean): void {
+    this.setAlpha(hidden ? 0 : 1);
+    this.label.setVisible(!hidden);
+    (this.body as Phaser.Physics.Arcade.Body).checkCollision.none = hidden;
+  }
+
+  /** Stalks the player, freezes with a red lane marking the dash, then dashes in a straight line. */
+  private chargeAt(time: number): void {
+    const tuning = this.def.charge ?? DEFAULT_CHARGE;
+    const distance = Phaser.Math.Distance.Between(this.x, this.y, this.target.x, this.target.y);
+    const sees = this.armed && lineClear(this, this.target, this.isBlocked);
+    const step = stepCharge(this.charge, time, sees ? distance : Infinity, tuning);
+    this.charge = step.state;
+    if (step.event === 'windup') this.beginWindup(tuning);
+    else if (step.event === 'dash') this.beginDash(tuning);
+    else if (step.event === 'recover') this.setVelocity(0, 0);
+    const { phase } = this.charge;
+    if (phase === 'windup') this.placeLane(tuning);
+    if (phase === 'stalk') this.chase(time);
+    else if (phase !== 'dash') this.setVelocity(0, 0);
+  }
+
+  private beginWindup(tuning: ChargeTuning): void {
+    this.chargeDirection.set(this.target.x - this.x, this.target.y - this.y).normalize();
+    this.setVelocity(0, 0);
+    this.setFlipX(this.chargeDirection.x < 0);
+    this.lane = this.scene.add.rectangle(0, 0, chargeLaneLength(tuning), 10, 0xff2a2a, 0.25).setRotation(this.chargeDirection.angle()).setDepth(3);
+    this.placeLane(tuning);
+    this.setTint(WINDUP_TINT);
+    this.scene.sound.play(Sfx.shoot, { volume: 0.2, rate: 0.5 });
+  }
+
+  /** Keeps the warning lane glued to the scorpion, so a knock during the windup cannot leave it pointing from the old spot. */
+  private placeLane(tuning: ChargeTuning): void {
+    const half = chargeLaneLength(tuning) / 2;
+    this.lane?.setPosition(this.x + this.chargeDirection.x * half, this.y + this.chargeDirection.y * half);
+  }
+
+  /** A hit mid-dash ends it: the knockback must not be overridden by (or fight with) the dash velocity. */
+  private cancelDash(): void {
+    if (this.charge.phase !== 'dash') return;
+    this.charge = { phase: 'recover', until: this.clock.now + (this.def.charge ?? DEFAULT_CHARGE).recoverMs };
+  }
+
+  private beginDash(tuning: ChargeTuning): void {
+    this.clearLane();
+    this.applyBaseTint();
+    this.setVelocity(this.chargeDirection.x * tuning.dashSpeed, this.chargeDirection.y * tuning.dashSpeed);
+  }
+
+  private clearLane(): void {
+    this.lane?.destroy();
+    this.lane = undefined;
   }
 
   protected chase(time: number, speed = this.def.speed): void {
@@ -141,7 +215,9 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     this.setFlipX(dx < 0);
     if (this.armed && time >= this.nextShotAt && distance <= SHOOT_DISTANCE) {
       this.nextShotAt = time + (this.def.fireEveryMs ?? 1800);
-      this.shots.fire(this.x, this.y, ux, uy, this.def.shotSpeed ?? 70, damageToPlayer(this.def.baseDamage, this.level, this.target.level), SHOT_RANGE);
+      const damage = damageToPlayer(this.def.baseDamage, this.level, this.target.level);
+      const { count, arc } = this.def.spread ?? { count: 1, arc: 0 };
+      for (const d of spreadDirections(ux, uy, count, arc)) this.shots.fire(this.x, this.y, d.x, d.y, this.def.shotSpeed ?? 70, damage, SHOT_RANGE);
       this.scene.sound.play(Sfx.shoot, { volume: 0.15, rate: 0.6 });
     }
   }
@@ -157,6 +233,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
   protected die(): void {
     this.alive = false;
     this.disableBody();
+    this.clearLane();
     this.label.destroy();
     this.events.emit('enemy-died', this.level, this.x, this.y, this.def.lootTableId);
     this.puff();
@@ -183,11 +260,13 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
   }
 
   private applyBaseTint(): void {
-    if (this.baseTint === null) this.clearTint();
+    if (this.charge.phase === 'windup') this.setTint(WINDUP_TINT);
+    else if (this.baseTint === null) this.clearTint();
     else this.setTint(this.baseTint);
   }
 
   override destroy(fromScene?: boolean): void {
+    this.clearLane();
     this.label.destroy();
     super.destroy(fromScene);
   }

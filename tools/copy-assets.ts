@@ -17,11 +17,16 @@ const files: Array<[string, string]> = [
   ['Audio/Sci-Fi Sounds/Audio/laserSmall_000.ogg', 'audio/shoot.ogg'],
   ['Audio/Impact Sounds/Audio/impactPunch_medium_000.ogg', 'audio/hit.ogg'],
   ['Audio/Impact Sounds/License.txt', 'audio/License.txt'],
+  ['Audio/Sci-Fi Sounds/Audio/explosionCrunch_000.ogg', 'audio/explosion.ogg'],
+  ['2D assets/Explosion Pack/Spritesheets/spritesheet_pixelExplosion.png', 'fx/explosion.png'],
+  ['2D assets/Explosion Pack/Spritesheets/spritesheet_pixelExplosion.xml', 'fx/explosion.xml'],
+  ['2D assets/Explosion Pack/License.txt', 'fx/License.txt'],
 ];
 
 const musicDir = process.env.MUSIC_DIR ?? 'C:/Users/mikeg/OneDrive/Royalty Free Background Music Pack';
 const music: Array<[string, string]> = [
   ['Complicated Melody.mp3', 'music/ruins.mp3'],
+  ['Arpeggio.mp3', 'music/desert.mp3'],
   ['Fight.mp3', 'music/boss.mp3'],
 ];
 

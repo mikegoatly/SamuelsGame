@@ -7,6 +7,7 @@ import {
   defaultSave,
   grantWeapon,
   parseSave,
+  unlockPower,
   withMuted,
   serialize,
   SAVE_VERSION,
@@ -135,11 +136,11 @@ describe('save repair and migration', () => {
     expect(save.progress).toEqual({ level: 2, xp: xpToNextLevel(2) - 1 });
   });
 
-  it('migrates a version 1 save to version 2 keeping its data', () => {
+  it('migrates a version 1 save to the current version keeping its data', () => {
     const v1 = { version: 1, progress: { level: 3, xp: 10 }, coins: 7, levels: { cleared: ['ruins'] } };
     const migrated = parseSave(JSON.stringify(v1));
-    expect(SAVE_VERSION).toBe(2);
-    expect(migrated.version).toBe(2);
+    expect(SAVE_VERSION).toBe(3);
+    expect(migrated.version).toBe(3);
     expect(migrated.coins).toBe(7);
     expect(migrated.levels.cleared).toEqual(['ruins']);
     expect(migrated.settings).toEqual({ muted: false });
@@ -152,5 +153,26 @@ describe('settings', () => {
     expect(parseSave(serialize(withMuted(defaultSave(), true))).settings.muted).toBe(true);
     expect(parseSave(JSON.stringify({ settings: { muted: 'yes' } })).settings.muted).toBe(false);
     expect(parseSave(JSON.stringify({ settings: 5 })).settings).toEqual({ muted: false });
+  });
+});
+
+describe('powers', () => {
+  it('start locked, unlock idempotently and round-trip', () => {
+    expect(defaultSave().powers.unlocked).toEqual([]);
+    const once = unlockPower(defaultSave(), 'fireball');
+    expect(unlockPower(once, 'fireball').powers.unlocked).toEqual(['fireball']);
+    expect(parseSave(serialize(once)).powers.unlocked).toEqual(['fireball']);
+  });
+
+  it('repairs junk and migrates saves that predate powers', () => {
+    expect(parseSave(JSON.stringify({ powers: 7 })).powers.unlocked).toEqual([]);
+    expect(parseSave(JSON.stringify({ powers: { unlocked: ['fireball', 3, 'fireball'] } })).powers.unlocked).toEqual(['fireball']);
+    expect(parseSave(JSON.stringify({ version: 2, coins: 4 })).powers.unlocked).toEqual([]);
+  });
+
+  it('a level clear grants its reward power', () => {
+    const next = applyLevelClear(defaultSave(), { levelId: 'desert', rewardPowerId: 'fireball' });
+    expect(next.powers.unlocked).toContain('fireball');
+    expect(next.levels.cleared).toContain('desert');
   });
 });

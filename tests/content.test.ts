@@ -6,6 +6,10 @@ import { lootTables } from '../src/content/lootTables';
 import { weapons } from '../src/content/weapons';
 import { dropChance } from '../src/logic/loot';
 import { STARTING_WEAPON } from '../src/logic/save';
+import { desert } from '../src/content/levels/desert';
+import { ruins } from '../src/content/levels/ruins';
+import { powers } from '../src/content/powers';
+import { isUnderLevelled } from '../src/logic/levelRules';
 
 describe('content integrity', () => {
   it('loot entries reference real items and every table sums to 1000', () => {
@@ -45,5 +49,59 @@ describe('content integrity', () => {
     expect(dropChance(lootTables.bat!, 'healthPotionSmall')).toBeCloseTo(0.1);
     expect(charmChance('bat')).toBeCloseTo(0.02);
     expect(charmChance('cyclops')).toBeGreaterThan(charmChance('bat'));
+  });
+
+  it('levels reference real powers and boss definitions; only the wand casts powers', () => {
+    for (const level of levels) {
+      if (level.rewardPowerId) expect(powers[level.rewardPowerId]).toBeDefined();
+      if (level.bossId) expect(getEnemy(level.bossId).boss).toBe(true);
+    }
+    expect(weapons.brokenWand!.castsPowers).toBe(true);
+    expect(weapons.apprenticeStaff!.castsPowers).toBeFalsy();
+  });
+});
+
+describe('desert content', () => {
+  const expectedCoins = (table: string) => {
+    const t = lootTables[table]!;
+    const value = (id: string) => {
+      const item = items[id]!;
+      return item.kind === 'coin' ? item.value : 0;
+    };
+    return t.entries.reduce((sum, e) => sum + (e.weight / 1000) * value(e.itemId), 0) * t.rolls;
+  };
+
+  it('is the level 5 to 9 desert that rewards the fireball and unlocks after the ruins', () => {
+    expect(desert).toMatchObject({ recommendedLevel: 5, monsterLevelRange: [5, 9], rewardPowerId: 'fireball', unlockedBy: 'ruins', bossLevel: 10 });
+    expect(desert.mapKey).toBe('desert');
+    expect(desert.music).toBeDefined();
+    expect(desert.bossMusic).toBe(ruins.bossMusic);
+  });
+
+  it('draws from the four desert enemies', () => {
+    expect(desert.enemyPool.map((e) => e.enemyId).sort()).toEqual(['bandit', 'mummy', 'scorpion', 'vulture']);
+  });
+
+  it('warns players below level 4 and nobody at level 4 or above', () => {
+    expect(isUnderLevelled(3, desert.recommendedLevel)).toBe(true);
+    expect(isUnderLevelled(4, desert.recommendedLevel)).toBe(false);
+    expect(isUnderLevelled(5, desert.recommendedLevel)).toBe(false);
+  });
+
+  it('pays more coins and potions per kill than the ruins equivalents', () => {
+    for (const id of ['scorpion', 'bandit', 'vulture']) expect(expectedCoins(id)).toBeGreaterThan(expectedCoins('bat'));
+    expect(expectedCoins('mummy')).toBeGreaterThan(expectedCoins('cyclops'));
+    for (const id of ['scorpion', 'bandit', 'mummy', 'vulture']) {
+      const potions = dropChance(lootTables[id]!, 'healthPotionSmall') + dropChance(lootTables[id]!, 'healthPotionLarge');
+      expect(potions, id).toBeGreaterThanOrEqual(0.14);
+    }
+  });
+
+  it('the new enemies use the intended behaviours', () => {
+    expect(getEnemy('scorpion').behaviour).toBe('charger');
+    expect(getEnemy('bandit')).toMatchObject({ behaviour: 'ranged', spread: { count: 3 } });
+    expect(getEnemy('mummy').baseHp).toBeGreaterThan(getEnemy('cyclops').baseHp);
+    expect(getEnemy('mummy').speed).toBeLessThanOrEqual(getEnemy('cyclops').speed);
+    expect(getEnemy('vulture').behaviour).toBe('erratic');
   });
 });

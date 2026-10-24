@@ -5,21 +5,38 @@ export const Tex = {
   puff: 'puff',
   enemyBolt: 'enemy-bolt',
   stoneGuardian: 'stone-guardian',
+  sandWyrm: 'sand-wyrm',
+  fireball: 'fireball',
+  explosion: 'explosion',
+  quicksand: 'quicksand',
 } as const;
 
 export const Sfx = {
   shoot: 'sfx-shoot',
   hit: 'sfx-hit',
+  explosion: 'sfx-explosion',
 } as const;
 
 export const Music = {
   ruins: 'music-ruins',
+  desert: 'music-desert',
   boss: 'music-boss',
 } as const;
 
 export const MapKey = {
   ruins: 'ruins',
+  desert: 'desert',
 } as const;
+
+/** Music cache key -> file under assets/. */
+export const MUSIC_FILES: Record<string, string> = {
+  [Music.ruins]: 'music/ruins.mp3',
+  [Music.desert]: 'music/desert.mp3',
+  [Music.boss]: 'music/boss.mp3',
+};
+
+/** Pixel explosion atlas frames (Kenney Explosion Pack). */
+export const EXPLOSION_FRAMES = Array.from({ length: 9 }, (_, i) => `pixelExplosion0${i}.png`);
 
 export const FONT = 'KenneyPixel';
 
@@ -31,6 +48,13 @@ export const Frame = {
   floor: 0,
   floorRubble: 12,
   floorPebbles: 24,
+  sand: [48, 49, 50, 51] as readonly number[],
+  sandDune: 52,
+  rocks: 42,
+  boulder: 66,
+  gravestone: 65,
+  cactus: 64,
+  scroll: 63,
   wall: 40,
   wallWindow: 28,
   wallAlt: [57, 58, 59],
@@ -52,6 +76,9 @@ export const Frame = {
   bat: 120,
   ghost: 121,
   spider: 122,
+  hooded: 111,
+  bandit: 112,
+  serpent: 123,
 } as const;
 
 /** Kenney Onscreen Controls "flat-dark" atlas frames. */

@@ -76,6 +76,47 @@ export const stoneGuardianLoot: LootTable = {
   ],
 };
 
+const charms = (power: number, swiftness: number, vitality: number): LootEntry[] => [
+  epic('charmOfPower', power),
+  epic('charmOfSwiftness', swiftness),
+  epic('charmOfVitality', vitality),
+];
+
+export const scorpionLoot: LootTable = {
+  id: 'scorpion',
+  rolls: 1,
+  nothingWeight: 170,
+  entries: [common('coin', 380), common('coinPile', 280), rare('healthPotionSmall', 150), ...charms(7, 7, 6)],
+};
+
+export const banditLoot: LootTable = {
+  id: 'bandit',
+  rolls: 1,
+  nothingWeight: 150,
+  entries: [common('coin', 330), common('coinPile', 300), common('goldPile', 20), rare('healthPotionSmall', 150), rare('healthPotionLarge', 30), ...charms(7, 7, 6)],
+};
+
+export const mummyLoot: LootTable = {
+  id: 'mummy',
+  rolls: 1,
+  nothingWeight: 100,
+  entries: [common('coinPile', 360), common('goldPile', 160), rare('healthPotionSmall', 150), rare('healthPotionLarge', 150), ...charms(30, 25, 25)],
+};
+
+export const vultureLoot: LootTable = {
+  id: 'vulture',
+  rolls: 1,
+  nothingWeight: 220,
+  entries: [common('coin', 400), common('coinPile', 200), rare('healthPotionSmall', 150), ...charms(10, 10, 10)],
+};
+
+export const sandWyrmLoot: LootTable = {
+  id: 'sandWyrm',
+  rolls: 5,
+  nothingWeight: 0,
+  entries: [common('coinPile', 350), common('goldPile', 350), rare('healthPotionSmall', 50), rare('healthPotionLarge', 150), ...charms(34, 33, 33)],
+};
+
 export const lootTables: Record<string, LootTable> = Object.fromEntries(
-  [slimeLoot, batLoot, cyclopsLoot, ghostLoot, stoneGuardianLoot].map((table) => [table.id, table]),
+  [slimeLoot, batLoot, cyclopsLoot, ghostLoot, stoneGuardianLoot, scorpionLoot, banditLoot, mummyLoot, vultureLoot, sandWyrmLoot].map((table) => [table.id, table]),
 );

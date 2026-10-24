@@ -2,8 +2,8 @@ import { MAX_LEVEL, type PlayerProgress } from './progression';
 import { xpToNextLevel } from './xp';
 import { noCharms, type CharmId, type Charms } from './stats';
 
-/** v2: added `settings`; v1 saves load through the same tolerant parse. */
-export const SAVE_VERSION = 2;
+/** v2: added `settings`; v3: added `powers`. Older saves load through the same tolerant parse. */
+export const SAVE_VERSION = 3;
 export const STARTING_WEAPON = 'apprenticeStaff';
 
 export interface SaveData {
@@ -14,6 +14,7 @@ export interface SaveData {
   weapons: { owned: string[]; equipped: string };
   levels: { cleared: string[]; bestTimes?: Record<string, number> };
   settings: { muted: boolean };
+  powers: { unlocked: string[] };
 }
 
 export function defaultSave(): SaveData {
@@ -25,6 +26,7 @@ export function defaultSave(): SaveData {
     weapons: { owned: [STARTING_WEAPON], equipped: STARTING_WEAPON },
     levels: { cleared: [] },
     settings: { muted: false },
+    powers: { unlocked: [] },
   };
 }
 
@@ -75,6 +77,7 @@ export function parseSave(json: string | null | undefined): SaveData {
     }
   }
   if (isRecord(raw.settings)) save.settings = { muted: raw.settings.muted === true };
+  if (isRecord(raw.powers)) save.powers = { unlocked: strings(raw.powers.unlocked) };
   return save;
 }
 
@@ -97,9 +100,15 @@ export function grantWeapon(save: SaveData, weaponId: string, equip = true): Sav
   return { ...save, weapons: { owned, equipped: equip ? weaponId : save.weapons.equipped } };
 }
 
+export function unlockPower(save: SaveData, powerId: string): SaveData {
+  if (save.powers.unlocked.includes(powerId)) return save;
+  return { ...save, powers: { unlocked: [...save.powers.unlocked, powerId] } };
+}
+
 export interface LevelClear {
   levelId: string;
   rewardWeaponId?: string;
+  rewardPowerId?: string;
   timeMs?: number;
   runCoins?: number;
 }
@@ -107,6 +116,7 @@ export interface LevelClear {
 export function applyLevelClear(save: SaveData, clear: LevelClear): SaveData {
   let next = addCoins(save, clear.runCoins ?? 0);
   if (clear.rewardWeaponId) next = grantWeapon(next, clear.rewardWeaponId, !next.weapons.owned.includes(clear.rewardWeaponId));
+  if (clear.rewardPowerId) next = unlockPower(next, clear.rewardPowerId);
   const cleared = next.levels.cleared.includes(clear.levelId) ? next.levels.cleared : [...next.levels.cleared, clear.levelId];
   const levels: SaveData['levels'] = { ...next.levels, cleared };
   const best = next.levels.bestTimes?.[clear.levelId];

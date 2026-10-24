@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { Frame, TILE_SIZE, Tex } from '../content/assetKeys';
 import type { LevelConfig } from '../content/levels';
+import { rectCenter, type Rect } from '../logic/geometry';
 import { parseLevelObjects, type TiledMapLike } from '../logic/tiledObjects';
 import { DoorLayer } from '../systems/DoorLayer';
 import { ENVIRONMENT_TINT, type LevelMap } from './RoomBuilder';
@@ -17,9 +18,21 @@ export function buildTiledMap(scene: Phaser.Scene, level: LevelConfig): LevelMap
   walls.setCollisionByExclusion([-1]);
   const doorTiles = map.createBlankLayer('doors', tileset, 0, 0, map.width, map.height)!.setDepth(1);
   const tint = ENVIRONMENT_TINT[level.environment];
-  if (tint !== null) for (const layer of [ground, walls, doorTiles]) layer.setTint(tint);
+  if (tint.ground !== null) ground.setTint(tint.ground);
+  if (tint.walls !== null) for (const layer of [walls, doorTiles]) layer.setTint(tint.walls);
 
   const world = parseLevelObjects(scene.cache.tilemap.get(level.mapKey!).data as TiledMapLike);
   const doors = new DoorLayer(doorTiles, world.doors, FIRST_GID + Frame.doorClosed);
-  return { walls, solid: [doorTiles], playerStart: world.playerStart, world, doors };
+  const slowZones = world.hazards.map((h) => h.rect);
+  for (const rect of slowZones) drawQuicksand(scene, rect);
+  return { walls, solid: [doorTiles], playerStart: world.playerStart, world, doors, slowZones };
+}
+
+/** A dark, softly pulsing sand pit; the slowdown itself is pure logic (`logic/hazards`). */
+function drawQuicksand(scene: Phaser.Scene, rect: Rect): void {
+  const { x, y } = rectCenter(rect);
+  const outer = scene.add.ellipse(x, y, rect.w, rect.h, 0x8a6430, 0.55).setDepth(0.5);
+  scene.add.ellipse(x, y, rect.w * 0.66, rect.h * 0.62, 0x5e4220, 0.6).setDepth(0.5);
+  scene.add.ellipse(x, y, rect.w * 0.3, rect.h * 0.3, 0x3c2a14, 0.6).setDepth(0.5);
+  scene.tweens.add({ targets: outer, alpha: 0.35, duration: 1100, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
 }

@@ -9,7 +9,7 @@
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
     "copy-assets": "tsx tools/copy-assets.ts",
-    "gen-maps": "tsx tools/generate-ruins.ts"
+    "gen-maps": "tsx tools/generate-maps.ts"
   },
   "dependencies": {
     "phaser": "^3.90.0"

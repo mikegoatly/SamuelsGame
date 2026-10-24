@@ -1,3 +1,4 @@
+import { MapKey, Music } from '../assetKeys';
 import type { LevelConfig } from './types';
 
 export const desert: LevelConfig = {
@@ -7,10 +8,16 @@ export const desert: LevelConfig = {
   recommendedLevel: 5,
   monsterLevelRange: [5, 9],
   enemyPool: [
-    { enemyId: 'slime', weight: 2 },
-    { enemyId: 'bat', weight: 4 },
-    { enemyId: 'cyclops', weight: 3 },
+    { enemyId: 'scorpion', weight: 4 },
+    { enemyId: 'bandit', weight: 3 },
+    { enemyId: 'vulture', weight: 3 },
+    { enemyId: 'mummy', weight: 2 },
   ],
+  bossId: 'sandWyrm',
+  bossLevel: 10,
   rewardPowerId: 'fireball',
   unlockedBy: 'ruins',
+  mapKey: MapKey.desert,
+  music: Music.desert,
+  bossMusic: Music.boss,
 };

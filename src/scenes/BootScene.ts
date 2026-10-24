@@ -10,6 +10,7 @@ export class BootScene extends Phaser.Scene {
     this.generateBoltTexture();
     this.generateEnemyBoltTexture();
     this.generatePuffTexture();
+    this.generateFireballTexture();
     this.game.canvas.addEventListener('contextmenu', (e) => e.preventDefault());
     document.fonts
       .load(`16px ${FONT}`)
@@ -37,6 +38,15 @@ export class BootScene extends Phaser.Scene {
     const g = this.add.graphics();
     g.fillStyle(0xffffff, 1).fillCircle(3, 3, 3);
     g.generateTexture(Tex.puff, 6, 6);
+    g.destroy();
+  }
+
+  private generateFireballTexture(): void {
+    const g = this.add.graphics();
+    g.fillStyle(0xff5a20, 0.45).fillCircle(8, 8, 8);
+    g.fillStyle(0xff9a30, 0.9).fillCircle(8, 8, 5.5);
+    g.fillStyle(0xfff0b0, 1).fillCircle(8, 8, 3);
+    g.generateTexture(Tex.fireball, 16, 16);
     g.destroy();
   }
 }

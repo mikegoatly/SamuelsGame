@@ -49,3 +49,25 @@ export function pickRectSpawn(
   }
   return best ?? { x: area.x + area.w / 2, y: area.y + area.h / 2 };
 }
+
+const EMERGE_ATTEMPTS = 12;
+
+/** A free point `offset` px from `near` (so not directly under the player), kept inside the arena rect shrunk by `inset`. */
+export function pickEmergePoint(
+  rect: Rect,
+  near: Point,
+  offset: number,
+  rng: () => number,
+  blocked: (x: number, y: number) => boolean,
+  inset: number,
+): Point {
+  const area = insetRect(rect, inset);
+  const clamp = (p: Point): Point => ({ x: Math.min(area.x + area.w, Math.max(area.x, p.x)), y: Math.min(area.y + area.h, Math.max(area.y, p.y)) });
+  for (let attempt = 0; attempt < EMERGE_ATTEMPTS; attempt++) {
+    const angle = rng() * Math.PI * 2;
+    const spot = clamp({ x: near.x + Math.cos(angle) * offset, y: near.y + Math.sin(angle) * offset });
+    if (!blocked(spot.x, spot.y)) return spot;
+  }
+  const direct = clamp(near);
+  return blocked(direct.x, direct.y) ? pickRectSpawn(rect, near, 0, rng, blocked, inset) : direct;
+}

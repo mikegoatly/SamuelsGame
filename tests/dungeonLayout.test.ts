@@ -1,10 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { floorMask, generateLayout, reachableRooms, type DungeonLayout } from '../src/logic/dungeonLayout';
 import { rectArea, rectsOverlap } from '../src/logic/geometry';
+import { DESERT_PRESET, RUINS_PRESET, type LayoutPreset } from '../src/logic/layoutPresets';
 import { mulberry32 } from '../src/logic/rng';
 
 const SEEDS = Array.from({ length: 60 }, (_, i) => i * 7919 + 1);
-const layoutFor = (seed: number): DungeonLayout => generateLayout(mulberry32(seed));
+const layoutFor = (seed: number, preset: LayoutPreset = RUINS_PRESET): DungeonLayout => generateLayout(mulberry32(seed), preset);
 
 describe('generateLayout', () => {
   it('is deterministic for a seed', () => {
@@ -70,5 +71,47 @@ describe('generateLayout', () => {
       }
       expect(reachableRooms(layout, true).size).toBe(layout.rooms.length);
     }
+  });
+});
+
+describe('desert preset', () => {
+  it('has a start room, six combat rooms and the boss arena last', () => {
+    for (const seed of SEEDS) {
+      const { rooms } = layoutFor(seed, DESERT_PRESET);
+      expect(rooms.map((r) => r.kind)).toEqual(['start', 'combat', 'combat', 'combat', 'combat', 'combat', 'combat', 'boss']);
+    }
+  });
+
+  it('keeps rooms apart, reachable and the boss arena the largest, even with cover', () => {
+    for (const seed of SEEDS) {
+      const layout = layoutFor(seed, DESERT_PRESET);
+      expect(reachableRooms(layout, true).size).toBe(layout.rooms.length);
+      const boss = layout.rooms[layout.rooms.length - 1]!;
+      for (const a of layout.rooms) {
+        if (a !== boss) expect(rectArea(boss.rect)).toBeGreaterThan(rectArea(a.rect));
+        for (const b of layout.rooms) {
+          if (a === b) continue;
+          const padded = { x: a.rect.x - 4, y: a.rect.y - 4, w: a.rect.w + 8, h: a.rect.h + 8 };
+          expect(rectsOverlap(padded, b.rect), `seed ${seed}: ${a.index} vs ${b.index}`).toBe(false);
+        }
+      }
+    }
+  });
+
+  it('is more open than the ruins: larger combat rooms, less cover per area', () => {
+    const combat = (preset: LayoutPreset) => SEEDS.flatMap((seed) => layoutFor(seed, preset).rooms.filter((r) => r.kind === 'combat'));
+    const average = (preset: LayoutPreset): number => {
+      const rooms = combat(preset);
+      return rooms.reduce((sum, r) => sum + rectArea(r.rect), 0) / rooms.length;
+    };
+    const density = (preset: LayoutPreset): number => {
+      const cover = SEEDS.reduce((sum, seed) => {
+        const layout = layoutFor(seed, preset);
+        return sum + layout.pillars.filter((p) => layout.rooms[p.room]!.kind === 'combat').length;
+      }, 0);
+      return cover / combat(preset).reduce((sum, r) => sum + rectArea(r.rect), 0);
+    };
+    expect(average(DESERT_PRESET)).toBeGreaterThan(average(RUINS_PRESET));
+    expect(density(DESERT_PRESET)).toBeLessThan(density(RUINS_PRESET));
   });
 });

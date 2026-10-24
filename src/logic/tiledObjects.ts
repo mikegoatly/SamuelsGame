@@ -33,11 +33,17 @@ export interface BossArenaSpec {
   rect: Rect;
 }
 
+export interface HazardSpec {
+  kind: 'quicksand';
+  rect: Rect;
+}
+
 export interface LevelObjects {
   playerStart: Point;
   rooms: RoomSpec[];
   doors: DoorSpec[];
   bossArena: BossArenaSpec | null;
+  hazards: HazardSpec[];
   exit: Point | null;
 }
 
@@ -76,6 +82,9 @@ export function parseLevelObjects(map: TiledMapLike): LevelObjects {
     rooms: ofType('room').map(toRoom).sort((a, b) => a.order - b.order),
     doors: ofType('door').map((o) => ({ room: whole(propsOf(o).room, 0), rect: rectOf(o) })),
     bossArena: arena ? { order: whole(propsOf(arena).order, 0), rect: rectOf(arena) } : null,
+    hazards: ofType('hazard')
+      .filter((o) => propsOf(o).kind === 'quicksand')
+      .map((o): HazardSpec => ({ kind: 'quicksand', rect: rectOf(o) })),
     exit: exit ? pointOf(exit) : null,
   };
 }
