@@ -8,6 +8,7 @@ import { skillIds } from '../content/skills';
 import { GEM_LABEL, noGems, type Gems } from '../logic/gems';
 import { rollDrops, rollGemBurst } from '../logic/loot';
 import { rollSkillScroll, SCROLL_CHANCE } from '../logic/skillScroll';
+import { GoldBonus, potionHeal } from '../logic/passives';
 import { resolvePotion } from '../logic/pickups';
 import { addGem } from '../logic/save';
 import type { CardPresenter } from './CardPresenter';
@@ -30,6 +31,7 @@ const DUPLICATE_SCROLL_COINS = 10;
 
 export class LootSystem {
   readonly group: Phaser.Physics.Arcade.Group;
+  private readonly gold: GoldBonus;
 
   constructor(
     private readonly scene: Phaser.Scene,
@@ -42,6 +44,7 @@ export class LootSystem {
     private readonly acquisition: Pick<SkillAcquisition, 'learn'>,
     private readonly rng: () => number = Math.random,
   ) {
+    this.gold = new GoldBonus(player.effects.goldMultiplier);
     this.group = scene.physics.add.group({ allowGravity: false });
     scene.physics.add.overlap(player, this.group, (_, pickup) => (pickup as Pickup).tryCollect());
     events.on('enemy-died', (_level, x, y, tableId) => this.dropFrom(tableId, x, y));
@@ -55,9 +58,9 @@ export class LootSystem {
     const table = lootTables[tableId];
     if (!table) return;
     const burst = table.gemBurst ? rollGemBurst(table.gemBurst, this.rng) : [];
-    for (const itemId of [...rollDrops(table, this.rng), ...burst]) this.spawn(itemId, x, y);
+    for (const itemId of [...rollDrops(table, this.rng, this.player.effects.luck), ...burst]) this.spawn(itemId, x, y);
     const owned = [...this.save.data.skills.owned.map((skill) => skill.id), ...this.scrollsOnGround()];
-    const scroll = rollSkillScroll(table.scrollChance ?? SCROLL_CHANCE.normal, skillIds, owned, this.rng);
+    const scroll = rollSkillScroll((table.scrollChance ?? SCROLL_CHANCE.normal) * (1 + this.player.effects.luck), skillIds, owned, this.rng);
     if (scroll) this.spawn(`scroll_${scroll}`, x, y);
   }
 
@@ -72,12 +75,14 @@ export class LootSystem {
     const at = (text: string, color: string): void => floatText(this.scene, player.x, player.y - 14, text, color, 16, 20, 1500);
     const color = RARITY_COLOR[def.rarity];
     if (def.kind === 'coin') {
-      this.addCoins(def.value);
-      at(`+${def.value} gold`, color);
+      const value = this.gold.apply(def.value);
+      this.addCoins(value);
+      at(`+${value} gold`, color);
       playSfx(this.scene, 'coin', { rate: 1 + Math.min(def.value, 5) * 0.03 });
     } else if (def.kind === 'heal') {
-      const result = resolvePotion(player.hp, player.maxHp, def.heal);
+      const result = resolvePotion(player.hp, player.maxHp, potionHeal(def.heal, player.effects));
       player.heal(result.healed);
+      if (result.healed > 0) this.events.emit('potion-used');
       if (result.bonusCoins > 0) {
         this.addCoins(result.bonusCoins);
         at(`+${result.bonusCoins} gold`, RARITY_COLOR.common);

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { BoltHits, splitAngles } from '../src/logic/weaponTwists';
+import { BoltHits, spreadAngles, splitAngles } from '../src/logic/weaponTwists';
 
 describe('BoltHits', () => {
   it('ends on the first enemy without piercing', () => {
@@ -36,5 +36,15 @@ describe('splitAngles', () => {
     const [left, right] = splitAngles(1, 0.5);
     expect(left).toBeCloseTo(0.5);
     expect(right).toBeCloseTo(1.5);
+  });
+});
+
+describe('spreadAngles', () => {
+  it('fans an odd count around the aim', () => {
+    expect(spreadAngles(1, 3, 0.2).map((a) => Math.round(a * 100) / 100)).toEqual([0.8, 1, 1.2]);
+  });
+
+  it('is just the aim for a single shot', () => {
+    expect(spreadAngles(2, 1, 0.3)).toEqual([2]);
   });
 });

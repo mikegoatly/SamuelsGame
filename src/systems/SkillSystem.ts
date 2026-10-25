@@ -4,6 +4,7 @@ import { SLOT_COUNT } from '../logic/loadout';
 import { skillLevel } from '../logic/save';
 import { SkillCooldowns } from '../logic/skillCooldown';
 import { slotStatuses, type SkillSlotStatus } from '../logic/skillSlots';
+import type { GameEvents } from './GameEvents';
 import type { SaveSystem } from './SaveSystem';
 import { ArcaneShieldCaster } from './skills/ArcaneShieldCaster';
 import { BlinkStrikeCaster } from './skills/BlinkStrikeCaster';
@@ -20,6 +21,7 @@ const FIZZLE_MS = 300;
 
 export interface SkillSystemOptions extends SkillWorld {
   save: SaveSystem;
+  events: GameEvents;
 }
 
 /** Owns the three equipped slots and their cooldowns (on the pause-safe game clock); casting is delegated to one caster per skill kind. */
@@ -65,11 +67,12 @@ export class SkillSystem {
     const { clock, player } = this.o;
     if (!skill || player.dead || !this.cooldowns.ready(skill.id, clock.now) || !this.fizzles.ready(skill.id, clock.now)) return false;
     const level = this.levels[slot] ?? 1;
+    this.o.events.emit('skill-attempt', skill.id);
     if (!this.dispatch(skill, level, x, y, aim)) {
       this.fizzles.start(skill.id, clock.now, FIZZLE_MS);
       return false;
     }
-    this.cooldowns.start(skill.id, clock.now, skillCooldown(skill, level));
+    this.cooldowns.start(skill.id, clock.now, Math.round(skillCooldown(skill, level) * player.stats.skillCooldown));
     this.refresh();
     return true;
   }

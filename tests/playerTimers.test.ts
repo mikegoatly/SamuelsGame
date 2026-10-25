@@ -56,4 +56,13 @@ describe('PlayerTimers', () => {
     t.grantInvulnerability(1000, 100);
     expect(t.invulnerable(1500)).toBe(true);
   });
+
+  it('reports whether a shot is ready without spending it', () => {
+    const t = timers();
+    expect(t.canFire(0)).toBe(true);
+    t.tryFire(0, 300);
+    expect(t.canFire(100)).toBe(false);
+    expect(t.canFire(300)).toBe(true);
+    expect(t.canFire(300)).toBe(true);
+  });
 });

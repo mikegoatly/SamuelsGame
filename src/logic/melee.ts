@@ -31,3 +31,13 @@ export function meleeHits(origin: Point, aim: number, cone: MeleeCone, targets: 
 
 /** True when a point (e.g. an enemy bolt) lies inside the cone. */
 export const inCone = (origin: Point, aim: number, cone: MeleeCone, p: Point): boolean => meleeHits(origin, aim, cone, [{ ...p, reach: 0 }]).length === 1;
+
+/** Indices of targets whose body touches a circle (a shockwave), skipping the `except` indices. */
+export function radialHits(center: Point, radius: number, targets: readonly MeleeTarget[], except: readonly number[] = []): number[] {
+  const skip = new Set(except);
+  const hits: number[] = [];
+  targets.forEach((t, index) => {
+    if (!skip.has(index) && Math.hypot(t.x - center.x, t.y - center.y) - t.reach <= radius) hits.push(index);
+  });
+  return hits;
+}

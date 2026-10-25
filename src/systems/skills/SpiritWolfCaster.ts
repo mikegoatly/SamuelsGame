@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import type { WolfSkill } from '../../content/skills';
 import type { Enemy } from '../../entities/Enemy';
-import { SpiritWolf } from '../../entities/SpiritWolf';
+import { SpiritWolf, WOLF_LOOK, type AllyLook } from '../../entities/SpiritWolf';
 import { lineClear } from '../../logic/lineOfSight';
 import { StuckWatch, biteReady, nearestTarget, packSpawnOffsets } from '../../logic/spiritWolf';
 import { playSfx } from '../sfx';
@@ -30,17 +30,25 @@ export class SpiritWolfCaster implements SkillCaster<WolfSkill> {
   private readonly wolves = new Set<Pack>();
   private lastNow = 0;
 
-  constructor(private readonly world: SkillWorld) {
+  constructor(
+    private readonly world: SkillWorld,
+    private readonly look: AllyLook = WOLF_LOOK,
+  ) {
     const { scene } = world;
     scene.events.on(Phaser.Scenes.Events.UPDATE, this.update, this);
     scene.events.once(Phaser.Scenes.Events.SHUTDOWN, () => scene.events.off(Phaser.Scenes.Events.UPDATE, this.update, this));
+  }
+
+  /** Wolves or skeletons alive now. */
+  get live(): number {
+    return this.wolves.size;
   }
 
   cast({ x, y, params }: CastCall<WolfSkill>): boolean {
     const { scene, clock, isSolid } = this.world;
     for (const offset of packSpawnOffsets(params.count)) {
       const at = isSolid(x + offset.x, y + offset.y) ? { x, y } : { x: x + offset.x, y: y + offset.y };
-      const wolf = new SpiritWolf(scene, at.x, at.y, clock.now + params.durationMs, isSolid);
+      const wolf = new SpiritWolf(scene, at.x, at.y, clock.now + params.durationMs, isSolid, this.look);
       sparkBurst(scene, at.x, at.y, SPIRIT, 8, 50);
       this.wolves.add({ wolf, params, stuck: new StuckWatch(STUCK_MS, STUCK_MOVE), ignored: new Map() });
     }
@@ -87,7 +95,7 @@ export class SpiritWolfCaster implements SkillCaster<WolfSkill> {
 
   private bite(wolf: SpiritWolf, prey: Enemy, params: Pack['params']): void {
     wolf.nextBiteAt = this.world.clock.now + params.biteEveryMs;
-    hurtEnemy(this.world, prey, params.biteDamage, wolf.x, wolf.y, 1, 0.6);
+    hurtEnemy(this.world, prey, params.biteDamage, wolf.x, wolf.y, 1, 0.6, 'ally');
     sparkBurst(this.world.scene, prey.x, prey.y, SPIRIT, 4, 40);
     playSfx(this.world.scene, 'wolfBite');
     this.world.scene.tweens.add({ targets: wolf, scale: { from: 1.5, to: 1.1 }, duration: 120 });

@@ -41,6 +41,10 @@ const ORB_TINT = 0xc070ff;
 const ORB_RANGE = 320;
 const BODY_RADIUS = 7;
 const pathBudget = new PathBudget();
+const NO_STRIKE = { multiplier: 1, stunMs: 0 };
+
+/** Where a hit comes from: the basic attack (hero passives apply) or a skill. */
+export type HitSource = 'basic' | 'skill' | 'ally';
 
 export interface EnemyContext {
   target: Player;
@@ -68,6 +72,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
   private readonly baseTint: number | null;
   private readonly wobblePhase = Math.random() * Math.PI * 2;
   private readonly desired = new Phaser.Math.Vector2();
+  private lastHit: HitSource = 'basic';
   private knockbackUntil = 0;
   private nextContactAt = 0;
   private nextShotAt: number;
@@ -160,13 +165,16 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
   tryContact(player: Player): void {
     const now = this.clock.now;
     if (!this.alive || !this.armed || this.stunned || now < this.nextContactAt || now < this.knockbackUntil) return;
-    const applied = player.takeDamage(damageToPlayer(this.def.baseDamage, this.level, player.level), this.x, this.y);
+    const applied = player.takeDamage(damageToPlayer(this.def.baseDamage, this.level, player.level), this.x, this.y, 'melee');
     if (applied !== 'none') this.nextContactAt = now + CONTACT_COOLDOWN_MS;
   }
 
-  /** `direction` is the way the blow travels; `knockback` scales the shove (sword > bolt). */
-  takeHit(amount: number, directionX: number, directionY: number, knockback = 1): void {
+  /** `direction` is the way the blow travels; `knockback` scales the shove (sword > bolt). Basic attacks pick up the hero's per-hit passives; skills pass `'skill'`, allies `'ally'`. */
+  takeHit(amount: number, directionX: number, directionY: number, knockback = 1, source: HitSource = 'basic'): void {
     if (!this.alive) return;
+    this.lastHit = source;
+    const strike = source === 'basic' ? this.target.strike(this.x, this.y) : NO_STRIKE;
+    amount = Math.max(1, Math.round(amount * strike.multiplier));
     const { shield } = this.def;
     const blocked = shield !== undefined && isFrontal(this.facing, { x: -directionX, y: -directionY }, shield.arc);
     const dealt = shield ? shieldedDamage(amount, blocked, shield.reduction) : amount;
@@ -180,6 +188,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
       this.die();
       return;
     }
+    if (strike.stunMs > 0) this.stun(strike.stunMs);
     this.cancelDash();
     if (!this.def.boss) {
       const knock = new Phaser.Math.Vector2(directionX, directionY).normalize().scale(KNOCKBACK_SPEED * knockback);
@@ -427,7 +436,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     this.clearLane();
     this.label.destroy();
     this.shieldImage?.destroy();
-    this.events.emit('enemy-died', this.level, this.x, this.y, this.def.lootTableId);
+    this.events.emit('enemy-died', this.level, this.x, this.y, this.def.lootTableId, this.def.boss === true, this.lastHit === 'ally');
     deathBurst(this.scene, this.x, this.y, deathTint(this.def.id, this.def.tint), this.def.boss === true);
     playSfx(this.scene, 'enemyDie');
     this.scene.tweens.killTweensOf(this);

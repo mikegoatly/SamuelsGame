@@ -29,6 +29,11 @@ export class PlayerTimers {
     return true;
   }
 
+  /** True when tryFire would succeed (nothing is spent). */
+  canFire(now: number): boolean {
+    return now >= this.nextFireAt;
+  }
+
   hurt(now: number): void {
     this.invulnerableUntil = now + this.tuning.iframesMs;
     this.knockbackUntil = now + this.tuning.knockbackMs;

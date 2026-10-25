@@ -33,6 +33,7 @@ describe('parseSave', () => {
       loadout: { weapon: 'brokenWand', slots: ['fireball', null, 'frostNova'] },
       skills: { owned: [{ id: 'fireball', level: 2 }, { id: 'frostNova', level: 1 }] },
       levels: { cleared: ['ruins'], bestTimes: { ruins: 91000 } },
+      stats: { totalKills: 40, goldPeak: 200, bossKillsByHero: { wizard: ['stoneGuardian'] } },
     });
     expect(parseSave(serialize(save))).toEqual(save);
   });
@@ -75,7 +76,7 @@ describe('parseSave', () => {
   });
 
   it('ignores unknown fields and old version numbers', () => {
-    expect(parseSave(JSON.stringify({ version: 0, coins: 3, extra: true }))).toEqual({ ...defaultSave(), coins: 3 });
+    expect(parseSave(JSON.stringify({ version: 0, coins: 3, extra: true }))).toEqual({ ...defaultSave(), coins: 3, stats: { ...defaultSave().stats, goldPeak: 3 } });
   });
 });
 
@@ -150,8 +151,8 @@ describe('save repair and migration', () => {
   it('migrates a version 1 save to the current version keeping its data', () => {
     const v1 = { version: 1, progress: { level: 3, xp: 10 }, coins: 7, levels: { cleared: ['ruins'] } };
     const migrated = parseSave(JSON.stringify(v1));
-    expect(SAVE_VERSION).toBe(7);
-    expect(migrated.version).toBe(7);
+    expect(SAVE_VERSION).toBe(8);
+    expect(migrated.version).toBe(8);
     expect(migrated.coins).toBe(7);
     expect(migrated.levels.cleared).toEqual(['ruins']);
     expect(migrated.settings).toEqual(defaultSave().settings);
@@ -241,7 +242,7 @@ describe('migration to version 6', () => {
     const migrated = parseSave(JSON.stringify(v5));
     expect(migrated.skills.owned).toEqual([{ id: 'fireball', level: 1 }]);
     expect(migrated.loadout).toEqual({ weapon: 'brokenWand', slots: ['fireball', null, null] });
-    expect(migrated.version).toBe(7);
+    expect(migrated.version).toBe(8);
     expect(migrated).not.toHaveProperty('powers');
   });
 

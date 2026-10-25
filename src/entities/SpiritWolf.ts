@@ -3,6 +3,13 @@ import { Frame, TILE_SIZE, Tex } from '../content/assetKeys';
 import { Navigator, PathBudget } from '../logic/navigator';
 
 const WOLF = 0x9ad8ff;
+
+export interface AllyLook {
+  frame: number;
+  tint: number;
+}
+
+export const WOLF_LOOK: AllyLook = { frame: Frame.wolf, tint: WOLF };
 const BODY_RADIUS = 5;
 const budget = new PathBudget();
 
@@ -17,10 +24,11 @@ export class SpiritWolf extends Phaser.GameObjects.Image {
     y: number,
     readonly until: number,
     private readonly isSolid: (x: number, y: number) => boolean,
+    look: AllyLook = WOLF_LOOK,
   ) {
-    super(scene, x, y, Tex.tiles, Frame.wolf);
+    super(scene, x, y, Tex.tiles, look.frame);
     scene.add.existing(this);
-    this.setTint(WOLF).setAlpha(0.85).setDepth(6).setScale(1.1);
+    this.setTint(look.tint).setAlpha(0.85).setDepth(6).setScale(1.1);
     this.navigator = new Navigator(isSolid, TILE_SIZE, Math.random, budget);
   }
 

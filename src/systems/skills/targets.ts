@@ -1,6 +1,6 @@
 import type Phaser from 'phaser';
 import { GOD_DAMAGE_MULTIPLIER, GOD_MODE } from '../../debug';
-import type { Enemy } from '../../entities/Enemy';
+import type { Enemy, HitSource } from '../../entities/Enemy';
 import { damageToEnemy } from '../../logic/combat';
 import type { BlastTarget } from '../../logic/fireball';
 import { novaVictims } from '../../logic/frostNova';
@@ -14,11 +14,11 @@ export const liveEnemies = (group: Phaser.Physics.Arcade.Group): Enemy[] =>
 export const asTargets = (enemies: readonly Enemy[]): BlastTarget[] => enemies.map((e) => ({ x: e.x, y: e.y, reach: e.displayWidth / 2 }));
 
 /** Applies skill damage (scaled by the level gap and the player's damage bonuses) to an enemy, knocking it away from (fromX, fromY). */
-export function hurtEnemy(world: SkillWorld, enemy: Enemy, baseDamage: number, fromX: number, fromY: number, multiplier = 1, knockback = 1): void {
+export function hurtEnemy(world: SkillWorld, enemy: Enemy, baseDamage: number, fromX: number, fromY: number, multiplier = 1, knockback = 1, source: HitSource = 'skill'): void {
   const { player } = world;
   const raw = damageToEnemy(baseDamage, player.level, enemy.level, player.stats.damageMultiplier);
   const damage = Math.max(1, Math.round(raw * multiplier)) * (GOD_MODE ? GOD_DAMAGE_MULTIPLIER : 1);
-  enemy.takeHit(damage, enemy.x - fromX, enemy.y - fromY, knockback);
+  enemy.takeHit(damage, enemy.x - fromX, enemy.y - fromY, knockback, source);
 }
 
 /** Damage-over-time tick (poison, burning ground, static): scaled like skill damage but never knocks the enemy back. */

@@ -1,0 +1,111 @@
+import { describe, expect, it } from 'vitest';
+import { heroesCoverBosses, newlyUnlocked, recordBossKill, type RunRecord } from '../src/logic/unlocks';
+import { aRunRecord, anAccount } from './builders';
+
+const unlockedBy = (run: Partial<RunRecord>, account = anAccount(), already: string[] = ['wizard']): string[] => newlyUnlocked(already, account, aRunRecord(run));
+
+describe('knight', () => {
+  it('needs the whole Ruins level cleared without a single skill attempt', () => {
+    expect(unlockedBy({ levelId: 'ruins', skillAttempts: 0 })).toEqual(['knight']);
+  });
+
+  it('is not earned with an attempt (even a fizzle), another level, or no clear', () => {
+    expect(unlockedBy({ levelId: 'ruins', skillAttempts: 1 })).toEqual([]);
+    expect(unlockedBy({ levelId: 'desert', skillAttempts: 0 })).toEqual([]);
+    expect(unlockedBy({ levelId: 'ruins', skillAttempts: 0, cleared: false })).toEqual([]);
+  });
+});
+
+describe('rogue', () => {
+  it('needs the Lost Desert cleared in under four minutes', () => {
+    expect(unlockedBy({ levelId: 'desert', timeMs: 239_999 })).toEqual(['rogue']);
+  });
+
+  it('is not earned at four minutes, in another level or without a clear', () => {
+    expect(unlockedBy({ levelId: 'desert', timeMs: 240_000 })).toEqual([]);
+    expect(unlockedBy({ levelId: 'ruins', timeMs: 100_000 })).toEqual([]);
+    expect(unlockedBy({ levelId: 'desert', timeMs: 100_000, cleared: false })).toEqual([]);
+  });
+});
+
+describe('dwarf and necromancer (account stats, no run needed)', () => {
+  it('the dwarf comes from holding 500 gold at once', () => {
+    expect(newlyUnlocked(['wizard'], anAccount({ goldPeak: 499 }))).toEqual([]);
+    expect(newlyUnlocked(['wizard'], anAccount({ goldPeak: 500 }))).toEqual(['dwarf']);
+  });
+
+  it('the necromancer comes from 1000 kills in total', () => {
+    expect(newlyUnlocked(['wizard'], anAccount({ totalKills: 999 }))).toEqual([]);
+    expect(newlyUnlocked(['wizard'], anAccount({ totalKills: 1000 }))).toEqual(['necromancer']);
+  });
+});
+
+describe('ranger', () => {
+  const damageTaken = { melee: 0, ranged: 40, hazard: 10, boss: 60 };
+
+  it('needs the desert or palace cleared with no melee damage, other damage allowed', () => {
+    expect(unlockedBy({ levelId: 'desert', timeMs: 999_999, damageTaken })).toEqual(['ranger']);
+    expect(unlockedBy({ levelId: 'palace', damageTaken })).toEqual(['ranger']);
+  });
+
+  it('is not earned in the ruins, with melee damage, or without a clear', () => {
+    expect(unlockedBy({ levelId: 'ruins', damageTaken })).toEqual([]);
+    expect(unlockedBy({ levelId: 'palace', damageTaken: { ...damageTaken, melee: 1 } })).toEqual([]);
+    expect(unlockedBy({ levelId: 'palace', damageTaken, cleared: false })).toEqual([]);
+  });
+});
+
+describe('monk', () => {
+  it('needs a clear with no potion drunk and no dash', () => {
+    expect(unlockedBy({ potionsUsed: 0, dashes: 0 })).toEqual(['monk']);
+    expect(unlockedBy({ potionsUsed: 1, dashes: 0 })).toEqual([]);
+    expect(unlockedBy({ potionsUsed: 0, dashes: 1 })).toEqual([]);
+    expect(unlockedBy({ potionsUsed: 0, dashes: 0, cleared: false })).toEqual([]);
+  });
+});
+
+describe('secret hero', () => {
+  const all = ['stoneGuardian', 'sandRat', 'madKing'];
+
+  it('needs all three bosses beaten, each by a different hero', () => {
+    expect(heroesCoverBosses({ wizard: ['stoneGuardian'], knight: ['sandRat'], rogue: ['madKing'] }, all)).toBe(true);
+  });
+
+  it('is found when one hero did several but others cover the rest', () => {
+    expect(heroesCoverBosses({ wizard: ['stoneGuardian', 'sandRat'], knight: ['sandRat'], rogue: ['madKing'] }, all)).toBe(true);
+  });
+
+  it('is not earned with fewer than three heroes, or a missing boss', () => {
+    expect(heroesCoverBosses({ wizard: all }, all)).toBe(false);
+    expect(heroesCoverBosses({ wizard: all, knight: ['sandRat'] }, all)).toBe(false);
+    expect(heroesCoverBosses({ wizard: ['stoneGuardian'], knight: ['sandRat'] }, all)).toBe(false);
+    expect(heroesCoverBosses({ wizard: ['stoneGuardian', 'sandRat'], knight: ['stoneGuardian', 'sandRat'], rogue: ['stoneGuardian'] }, all)).toBe(false);
+  });
+
+  it('unlocks through newlyUnlocked', () => {
+    const account = anAccount({ bossKillsByHero: { wizard: ['stoneGuardian'], knight: ['sandRat'], rogue: ['madKing'] } });
+    expect(newlyUnlocked(['wizard'], account)).toEqual(['secret']);
+  });
+});
+
+describe('newlyUnlocked', () => {
+  it('skips heroes already unlocked and never reports the wizard', () => {
+    expect(newlyUnlocked(['wizard', 'dwarf'], anAccount({ goldPeak: 900 }))).toEqual([]);
+  });
+
+  it('reports several at once, in roster order', () => {
+    const account = anAccount({ goldPeak: 600, totalKills: 1200 });
+    expect(newlyUnlocked(['wizard'], account)).toEqual(['dwarf', 'necromancer']);
+  });
+});
+
+describe('recordBossKill', () => {
+  it('adds a boss to a hero once without mutating', () => {
+    const before = { wizard: ['sandRat'] };
+    const once = recordBossKill(before, 'wizard', 'madKing');
+    expect(once).toEqual({ wizard: ['sandRat', 'madKing'] });
+    expect(recordBossKill(once, 'wizard', 'madKing')).toEqual(once);
+    expect(before).toEqual({ wizard: ['sandRat'] });
+    expect(recordBossKill({}, 'knight', 'sandRat')).toEqual({ knight: ['sandRat'] });
+  });
+});

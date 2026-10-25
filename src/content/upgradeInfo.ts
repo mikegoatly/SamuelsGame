@@ -28,6 +28,10 @@ export const weaponUpgradeInfo: Readonly<Record<string, UpgradeInfo>> = {
   apprenticeStaff: { gem: 'red', tier: 1, twist: 'Bolts pierce 1 enemy' },
   brokenWand: { gem: 'red', tier: 2, twist: 'Bolts split in two on hit' },
   goldenSword: { gem: 'red', tier: 3, twist: 'Swings send out a slash wave' },
+  twinDaggers: { gem: 'green', tier: 2, twist: 'Every 4th swing throws a dagger' },
+  hammer: { gem: 'red', tier: 3, twist: 'Slams send a shockwave ring' },
+  bow: { gem: 'green', tier: 2, twist: 'Full draws loose 3 arrows' },
+  fists: { gem: 'blue', tier: 2, twist: 'The 3rd punch sends a force wave' },
 };
 
 export const TIER_MULTIPLIER: Record<SkillTier, number> = { 1: 1, 2: 1.25, 3: 1.5 };

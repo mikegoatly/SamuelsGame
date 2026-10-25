@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { Frame, Music } from '../content/assetKeys';
 import { CAMERA_ZOOM } from '../content/config';
+import { getHero } from '../content/heroes';
 import { getLevel, type LevelConfig } from '../content/levels';
 import { getEnemy } from '../content/enemies';
 import { rewardsOf } from '../content/rewards';
@@ -18,6 +19,8 @@ import { addCoins, applyLevelClear, weaponLevel, withProgress } from '../logic/s
 import { withRevive } from '../logic/campPurchases';
 import { feel } from '../systems/feel';
 import { GameClock } from '../systems/GameClock';
+import { HeroSystem } from '../systems/HeroSystem';
+import { HeroUnlocks } from '../systems/HeroUnlocks';
 import { EnemyFactory } from '../systems/EnemyFactory';
 import { GameEvents } from '../systems/GameEvents';
 import { floatText } from '../systems/floatText';
@@ -59,6 +62,7 @@ export class GameScene extends Phaser.Scene {
   private kills = 0;
   private clock!: GameClock;
   private enemies!: Phaser.Physics.Arcade.Group;
+  private unlocks!: HeroUnlocks;
 
   constructor() {
     super('Game');
@@ -92,6 +96,7 @@ export class GameScene extends Phaser.Scene {
       events,
       weapon,
       this.clock,
+      getHero(save.heroes.selected),
     );
     this.player = player;
     player.reviver = () => this.useRevive();
@@ -102,7 +107,9 @@ export class GameScene extends Phaser.Scene {
     const isSolid = (x: number, y: number): boolean => solidAt(walls, lookups, x, y);
     const factory = new EnemyFactory(this, enemies, { target: player, events, shots, clock: this.clock, isBlocked: isSolid });
     const director = this.createDirector(map, player, factory, events);
-    const skills = new SkillSystem({ scene: this, player, enemies, shots, clock: this.clock, isSolid, save: saveSystem });
+    const skills = new SkillSystem({ scene: this, player, enemies, shots, clock: this.clock, isSolid, save: saveSystem, events });
+    new HeroSystem({ scene: this, player, enemies, shots, clock: this.clock, isSolid }, events);
+    this.unlocks = new HeroUnlocks(this, player, events, saveSystem, player.hero.id, this.level.id, this.level.bossId, (ids) => this.announceHeroes(ids));
     this.acquisition = new SkillAcquisition(this, saveSystem, skills, this.cards);
     const loot = new LootSystem(this, player, events, this.run, saveSystem, this.clock, this.cards, this.acquisition);
 
@@ -114,7 +121,7 @@ export class GameScene extends Phaser.Scene {
     this.physics.add.overlap(player, shots.group, (_, boltObj) => {
       const bolt = boltObj as EnemyProjectile;
       if (!bolt.active) return;
-      player.takeDamage(bolt.damage, bolt.x, bolt.y);
+      player.takeDamage(bolt.damage, bolt.x, bolt.y, bolt.source);
       bolt.kill();
     });
 
@@ -146,6 +153,7 @@ export class GameScene extends Phaser.Scene {
     this.scene.launch('Hud', { events, progression, player, director, loot, skills, roomTotal: map.world?.rooms.length, bossName: this.level.bossId ? getEnemy(this.level.bossId).name : undefined });
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       director.stop();
+      this.unlocks.finish(false, 0);
       musicOf(this.game).fadeOut();
       events.clear();
       this.scene.stop('Hud');
@@ -175,6 +183,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   quitToLevelSelect(): void {
+    this.unlocks.finish(false, 0);
     this.bankRun();
     this.scene.stop('Pause');
     this.scene.start('LevelSelect');
@@ -199,6 +208,7 @@ export class GameScene extends Phaser.Scene {
         timeMs,
       }),
     );
+    this.unlocks.finish(true, timeMs);
     this.run.coins = 0;
     const camera = this.cameras.main;
     camera.fadeOut(REWARD_FADE_MS, 20, 18, 28);
@@ -310,6 +320,13 @@ export class GameScene extends Phaser.Scene {
     this.run.coins = 0;
   }
 
+  /** Mid-run unlock (gold or kills): a banner now; the full reveal card waits for the next menu screen. */
+  private announceHeroes(ids: string[]): void {
+    if (this.ending) return;
+    for (const id of ids) floatText(this, this.player.x, this.player.y - 30, `New hero: ${getHero(id).name}!`, '#ffe066', 16, 24, 2500);
+    playSfx(this, 'levelUp');
+  }
+
   private celebrateLevelUp(player: Player): void {
     floatText(this, player.x, player.y - 16, 'LEVEL UP!', '#7dffb0', 16, 24, 1500);
     playSfx(this, 'levelUp');
@@ -322,6 +339,7 @@ export class GameScene extends Phaser.Scene {
     this.cards.cancel();
     feel.lock();
     director.stop();
+    this.unlocks.finish(false, 0);
     const lostCoins = this.run.coins;
     this.run.coins = 0;
     this.persistProgress();

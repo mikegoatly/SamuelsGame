@@ -2,8 +2,11 @@ import Phaser from 'phaser';
 import { Tex } from '../content/assetKeys';
 import type { Point } from '../logic/geometry';
 import { homingStep } from '../logic/homing';
+import type { DamageSource } from '../logic/unlocks';
 
 export interface ShotStyle {
+  /** Who fired it, for damage tracking; defaults to ranged. */
+  source?: DamageSource;
   tint?: number;
   scale?: number;
   /** Steers toward `target` for `ms` at `turnRate` radians per second. */
@@ -12,6 +15,7 @@ export interface ShotStyle {
 
 export class EnemyProjectile extends Phaser.Physics.Arcade.Sprite {
   damage = 0;
+  source: DamageSource = 'ranged';
   private homing?: ShotStyle['homing'];
   private age = 0;
   private speed = 0;
@@ -25,6 +29,7 @@ export class EnemyProjectile extends Phaser.Physics.Arcade.Sprite {
 
   fire(x: number, y: number, dirX: number, dirY: number, speed: number, damage: number, range: number, style: ShotStyle = {}): void {
     this.damage = damage;
+    this.source = style.source ?? 'ranged';
     this.speed = speed;
     this.age = 0;
     this.homing = style.homing;

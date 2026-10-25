@@ -9,9 +9,9 @@ export interface PotionUse {
 }
 
 /** Drinking a carried potion heals 40% of max HP; nothing happens with none left or at full HP. */
-export function drinkPotion(carried: number, hp: number, maxHp: number): PotionUse {
+export function drinkPotion(carried: number, hp: number, maxHp: number, healMultiplier = 1): PotionUse {
   if (carried <= 0 || hp >= maxHp) return { used: false, healed: 0, carried };
-  return { used: true, healed: Math.min(maxHp - hp, Math.round(maxHp * POTION_HEAL_FRACTION)), carried: carried - 1 };
+  return { used: true, healed: Math.min(maxHp - hp, Math.round(maxHp * POTION_HEAL_FRACTION * healMultiplier)), carried: carried - 1 };
 }
 
 export const reviveHp = (maxHp: number): number => Math.max(1, Math.ceil(maxHp * REVIVE_HP_FRACTION));

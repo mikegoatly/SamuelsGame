@@ -75,7 +75,7 @@ export class FireballCaster implements SkillCaster<FireballSkill> {
       const enemy = enemies[index]!;
       if (!lineClear({ x, y }, enemy, isSolid)) continue;
       const raw = fireballDamage(params.damage, player.level, enemy.level, player.stats.damageMultiplier);
-      enemy.takeHit(Math.max(1, Math.round(raw * multiplier)) * (GOD_MODE ? GOD_DAMAGE_MULTIPLIER : 1), enemy.x - x, enemy.y - y);
+      enemy.takeHit(Math.max(1, Math.round(raw * multiplier)) * (GOD_MODE ? GOD_DAMAGE_MULTIPLIER : 1), enemy.x - x, enemy.y - y, 1, 'skill');
     }
     this.showBlast(x, y, params.radius);
     if (params.twist && !item.mini) this.split({ x, y }, heading, params);

@@ -1,8 +1,10 @@
+import Phaser from 'phaser';
 import { Music } from '../content/assetKeys';
 import { getLevel, levels } from '../content/levels';
 import { isLevelUnlocked, visibleLevels } from '../logic/levelRules';
 import { musicOf } from '../systems/MusicPlayer';
 import { CHARMS_NOTICE } from '../logic/save';
+import { revealNextHero } from './heroReveal';
 import { CHARMS_CARD } from './NoticeScene';
 import { saveSystem } from '../systems/SaveSystem';
 import { LevelCard } from '../ui/LevelCard';
@@ -46,7 +48,7 @@ export class LevelSelectScene extends MenuScene {
         playerLevel: progress.level,
         requirementName: level.unlockedBy ? getLevel(level.unlockedBy).name : undefined,
       };
-      return new LevelCard(this, x, y, cardWidth, cardHeight, level, state, () => this.scene.start('Loadout', { levelId: level.id }));
+      return new LevelCard(this, x, y, cardWidth, cardHeight, level, state, () => this.scene.start('HeroSelect', { levelId: level.id }));
     });
     const lastRowY = top + (rows - 1) * (cardHeight + GAP);
     const footerY = Math.min(height - 24, lastRowY + cardHeight / 2 + 26);
@@ -62,10 +64,15 @@ export class LevelSelectScene extends MenuScene {
     this.menu = new MenuList(this, [...cards, camp, back], { columns: COLUMNS, onBack: () => this.goBack() });
   }
 
-  /** First visit after charms became gems: a card over this screen, which waits underneath. */
+  /** First visit after charms became gems: a card over this screen, which waits underneath. Then any hero unlock reveals. */
   private showPendingNotice(): void {
-    if (!saveSystem.data.pendingNotices.includes(CHARMS_NOTICE) || this.scene.isActive('Notice')) return;
+    if (this.scene.isActive('Notice')) return;
+    if (!saveSystem.data.pendingNotices.includes(CHARMS_NOTICE)) {
+      revealNextHero(this);
+      return;
+    }
     this.time.delayedCall(0, () => {
+      this.events.once(Phaser.Scenes.Events.RESUME, () => revealNextHero(this));
       this.scene.launch('Notice', { ...CHARMS_CARD, under: 'LevelSelect', noticeId: CHARMS_NOTICE });
       this.scene.pause();
     });

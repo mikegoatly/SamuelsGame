@@ -17,6 +17,11 @@ describe('drinkPotion', () => {
   it('is not used with none carried', () => {
     expect(drinkPotion(0, 10, 100)).toEqual({ used: false, healed: 0, carried: 0 });
   });
+
+  it('heals more with a heal multiplier (dwarf), still capped at max HP', () => {
+    expect(drinkPotion(1, 30, 100, 1.5)).toEqual({ used: true, healed: 60, carried: 0 });
+    expect(drinkPotion(1, 70, 100, 1.5).healed).toBe(30);
+  });
 });
 
 describe('reviveHp', () => {

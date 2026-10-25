@@ -22,6 +22,7 @@ export class PreloadScene extends Phaser.Scene {
       frameWidth: TILE_SIZE,
       frameHeight: TILE_SIZE,
     });
+    this.load.image(Tex.weaponsExtra, 'extra/weapons-extra.png');
     this.load.atlasXML(Tex.controls, 'controls/flat-dark.png', 'controls/flat-dark.xml');
     this.load.spritesheet(Tex.prompts, 'controls/prompts.png', { frameWidth: PROMPT_SIZE, frameHeight: PROMPT_SIZE });
     for (const [id, file] of Object.entries(SKILL_ICON_SOURCES)) this.load.image(`skill-src-${id}`, file);
@@ -35,11 +36,25 @@ export class PreloadScene extends Phaser.Scene {
   }
 
   create(): void {
+    this.mergeWeaponFrames();
     this.makeStoneGuardianTexture();
     this.makePalaceTiles();
     this.makeVignetteTexture();
     this.makeSkillIcons();
     this.scene.start('MainMenu');
+  }
+
+  /** Rebuilds the tile sheet texture with the hand-drawn weapon strip as an extra row (frames 132+), so every Tex.tiles lookup works. */
+  private mergeWeaponFrames(): void {
+    const source = this.textures.get(Tex.tiles).getSourceImage() as HTMLImageElement;
+    const extra = this.textures.get(Tex.weaponsExtra).getSourceImage() as HTMLImageElement;
+    const rows = source.height / TILE_SIZE;
+    this.textures.remove(Tex.tiles);
+    const canvas = this.textures.createCanvas(Tex.tiles, source.width, (rows + 1) * TILE_SIZE)!;
+    canvas.context.drawImage(source, 0, 0);
+    canvas.context.drawImage(extra, 0, rows * TILE_SIZE);
+    canvas.refresh();
+    for (let i = 0; i < (rows + 1) * SHEET_COLS; i++) canvas.add(i, 0, (i % SHEET_COLS) * TILE_SIZE, Math.floor(i / SHEET_COLS) * TILE_SIZE, TILE_SIZE, TILE_SIZE);
   }
 
   /** Desaturated copy of the cyclops frame so the boss reads as stone rather than brown. */

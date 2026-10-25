@@ -1,4 +1,5 @@
 import { levels } from '../content/levels';
+import { heroes } from '../content/heroes';
 import { getSkill } from '../content/skills';
 import { defaultSave, parseSave, serialize, type LegacySkillRewards, type SaveData } from '../logic/save';
 
@@ -38,7 +39,7 @@ export class SaveSystem {
 
   private read(): SaveData {
     try {
-      return parseSave(this.storage()?.getItem(SAVE_KEY), LEGACY_REWARDS, (id) => getSkill(id) !== undefined);
+      return parseSave(this.storage()?.getItem(SAVE_KEY), LEGACY_REWARDS, (id) => getSkill(id) !== undefined, (id) => heroes[id] !== undefined);
     } catch {
       return defaultSave();
     }

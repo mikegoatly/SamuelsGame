@@ -3,7 +3,7 @@ import { computePlayerStats } from '../src/logic/stats';
 
 describe('computePlayerStats', () => {
   it('is the base stats at level 1', () => {
-    expect(computePlayerStats(1)).toEqual({ maxHp: 100, moveSpeed: 90, damageMultiplier: 1 });
+    expect(computePlayerStats(1)).toEqual({ maxHp: 100, moveSpeed: 90, damageMultiplier: 1, attackRate: 1, skillCooldown: 1 });
   });
 
   it('scales max HP with level', () => {

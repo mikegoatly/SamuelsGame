@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { Frame, Tex } from '../../content/assetKeys';
+import { Tex } from '../../content/assetKeys';
 import type { Enemy } from '../../entities/Enemy';
 import { newZone, zoneStep, type Zone } from '../../logic/zone';
 import { enemiesInRadius, runOver } from './targets';
@@ -49,7 +49,8 @@ export class ZoneField {
     });
   }
 
-  spawn(spec: ZoneSpec): void {
+  /** Starts a zone; the returned function ends it early. */
+  spawn(spec: ZoneSpec): () => void {
     const { scene, clock } = this.world;
     const disc = scene.add.circle(spec.x, spec.y, spec.radius, spec.color, 0.16).setStrokeStyle(1, spec.color, 0.7).setDepth(2);
     const mist = scene.add
@@ -64,8 +65,12 @@ export class ZoneField {
         blendMode: Phaser.BlendModes.ADD,
       })
       .setDepth(3);
-    const ghost = spec.ghost ? scene.add.image(spec.x, spec.y, Tex.tiles, Frame.hero).setTint(spec.color).setAlpha(0.6).setDepth(4) : undefined;
-    this.zones.add({ spec, zone: newZone(clock.now, spec.durationMs, spec.tickMs), disc, mist, ghost });
+    const ghost = spec.ghost ? scene.add.image(spec.x, spec.y, Tex.tiles, this.world.player.hero.frame).setTint(spec.color).setAlpha(0.6).setDepth(4) : undefined;
+    const live: Live = { spec, zone: newZone(clock.now, spec.durationMs, spec.tickMs), disc, mist, ghost };
+    this.zones.add(live);
+    return () => {
+      if (this.zones.has(live)) this.remove(live);
+    };
   }
 
   private update(): void {

@@ -15,6 +15,8 @@ export const Tex = {
   vignette: 'vignette',
   palaceTiles: 'tiny-dungeon-palace',
   prompts: 'prompts',
+  /** Hand-drawn weapon frames (public/assets/extra), merged into the tile sheet texture at load. */
+  weaponsExtra: 'weapons-extra',
 } as const;
 
 /** Particle sprites the skill icons are built from (PreloadScene tints them), by skill id. */
@@ -88,6 +90,12 @@ export const Frame = {
   staff: 125,
   sword: 104,
   blade: 105,
+  dagger: 103,
+  hammer: 117,
+  /** Hand-drawn frames merged in after the stock 132 tiles (tools/add_weapon_frames.py). */
+  bow: 132,
+  arrow: 133,
+  fist: 134,
   wolf: 124,
   coin: 102,
   ring: 101,

@@ -15,6 +15,8 @@ export interface BoltOptions {
   /** Split children do not split again. */
   child?: boolean;
   scale?: { x: number; y: number };
+  /** Draw as this Tiny Dungeon frame (an arrow, a thrown dagger) instead of the glowing bolt. */
+  frame?: number;
 }
 
 export class Projectile extends Phaser.Physics.Arcade.Sprite {
@@ -40,11 +42,14 @@ export class Projectile extends Phaser.Physics.Arcade.Sprite {
     if (weapon.tint === null) this.clearTint();
     else this.setTint(weapon.tint);
     this.spawn.set(x, y);
-    this.setScale(options.scale?.x ?? 1, options.scale?.y ?? 1).setRotation(options.scale ? direction.angle() : 0);
+    const frame = options.frame ?? weapon.projectileFrame;
+    if (frame === undefined) this.setTexture(Tex.bolt);
+    else this.setTexture(Tex.tiles, frame);
+    this.setScale(options.scale?.x ?? 1, options.scale?.y ?? 1).setRotation(options.scale ? direction.angle() : frame === undefined ? 0 : direction.angle() + Math.PI / 2);
     if (options.scale) {
       const radius = (this.height * options.scale.y) / 2;
       this.setCircle(radius, this.width / 2 - radius, this.height / 2 - radius);
-    } else this.setCircle(3, 2, 2);
+    } else this.setCircle(3, this.width / 2 - 3, this.height / 2 - 3);
     const speed = options.speed ?? weapon.speed;
     this.setVelocity(direction.x * speed, direction.y * speed);
   }

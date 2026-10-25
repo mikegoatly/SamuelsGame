@@ -1,6 +1,6 @@
 # v2 Proposal — Skills, Economy, Characters, Monsters, Hazards
 
-Based on playtest feedback (items 3, 4, 8, 9, 10). Status: **Phase 1 (skills + loadout) and Phase 2 economy (gems, upgrades, Camp shop, potions, revive) done**; decisions agreed (see §7).
+Based on playtest feedback (items 3, 4, 8, 9, 10). Status: **Phase 1 (skills + loadout), Phase 2 economy (gems, upgrades, Camp shop, potions, revive) and Phase 3 heroes done**; decisions agreed (see §7).
 
 ## 1. Skills & loadout (feedback 8)
 
@@ -127,7 +127,7 @@ affected too, so you can lure them in.
 1. **Skills and loadout core — DONE:** slot system, input remap, HUD with button glyphs, loadout screen, Fireball converted to a skill, swap prompt, plus Frost Nova, Chain Lightning, Arcane Shield and Blink Strike. 
    **Phase 2 skills: DONE.** Boomerang Blade, Poison Cloud, Spirit Wolf, Meteor and Gravity Well, all ten level 5 twists (flag in the per-level tables) and the new skills in the scroll pool. Upgrade UI and economy remain.
 2. **Economy - DONE:** Camp scene (upgrades + shop), gems, skill and weapon levels 1-5 with level 5 weapon twists, carry potions, revive token, save v7 migration.
-3. **Characters:** hero select, stats, passives, unlock tracking and hints.
+3. **Characters - DONE:** hero select (between level select and loadout), eight heroes with stats and passives, unlock tracking and hints, save v8. Frames used: 84, 96, 85, 86, 88, 98, 99, 100 (the proposal's 87, 100, 111 collide with enemy sprites; tints differentiate). Mid-run unlocks (gold, kills) show a banner and the reveal card at the next menu screen.
 4. **Content:** new monsters, elites, hazards, room intensity curves.
 5. **Balance pass and playtest.**
 

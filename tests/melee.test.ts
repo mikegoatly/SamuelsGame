@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { inCone, meleeHits, type MeleeCone } from '../src/logic/melee';
+import { inCone, meleeHits, radialHits, type MeleeCone } from '../src/logic/melee';
 
 const cone: MeleeCone = { arc: (100 * Math.PI) / 180, reach: 28 };
 const origin = { x: 0, y: 0 };
@@ -40,5 +40,15 @@ describe('inCone', () => {
     expect(inCone(origin, 0, cone, { x: 25, y: 5 })).toBe(true);
     expect(inCone(origin, 0, cone, { x: -25, y: 0 })).toBe(false);
     expect(inCone(origin, 0, cone, { x: 40, y: 0 })).toBe(false);
+  });
+});
+
+describe('radialHits', () => {
+  it('hits targets whose body touches the circle, all round', () => {
+    expect(radialHits({ x: 10, y: 0 }, 30, [at(10, 20), at(-15, 0), at(10, -34, 6), at(10, -50)])).toEqual([0, 1, 2]);
+  });
+
+  it('can leave out enemies already struck', () => {
+    expect(radialHits(origin, 30, [at(5, 0), at(10, 0), at(0, 10)], [1])).toEqual([0, 2]);
   });
 });

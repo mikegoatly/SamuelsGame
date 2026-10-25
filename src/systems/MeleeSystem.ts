@@ -4,67 +4,147 @@ import { GOD_DAMAGE_MULTIPLIER, GOD_MODE } from '../debug';
 import type { Enemy } from '../entities/Enemy';
 import type { EnemyProjectile, EnemyProjectiles } from '../entities/EnemyProjectile';
 import type { Player } from '../entities/Player';
+import { fireProjectile } from '../entities/Projectile';
+import { ComboCycle, type ComboStep } from '../logic/comboCycle';
 import { damageToEnemy } from '../logic/combat';
 import { lineClear } from '../logic/lineOfSight';
-import { fireProjectile } from '../entities/Projectile';
-import { WAVE } from '../logic/weaponTwists';
+import { inCone, meleeHits, radialHits, type MeleeCone, type MeleeTarget } from '../logic/melee';
+import { DAGGER_THROW, FORCE_WAVE, SHOCKWAVE, WAVE } from '../logic/weaponTwists';
+import { BowSystem } from './BowSystem';
 import { feel } from './feel';
+import { punchFx, ringFx, slashFx, sparkFx } from './MeleeFx';
 import { playSfx } from './sfx';
-import { inCone, meleeHits, type MeleeCone } from '../logic/melee';
 
 const DEFLECT_PADDING = 6;
-const SLASH_COLOR = 0xffe27a;
+const OPENING: ComboStep = { step: 0, last: false };
+
+interface WaveShape {
+  damageScale: number;
+  speed: number;
+  range: number;
+  scale: { x: number; y: number };
+}
+
+interface Swing {
+  x: number;
+  y: number;
+  aim: number;
+  combo: ComboStep;
+  targets: Enemy[];
+  bodies: MeleeTarget[];
+  hits: number[];
+}
 
 export interface MeleeOptions {
   scene: Phaser.Scene;
   player: Player;
   enemies: Phaser.Physics.Arcade.Group;
   shots: EnemyProjectiles;
-  /** Player bolt pool, used for the golden sword's slash wave. */
+  /** Player bolt pool, used for slash waves, thrown daggers, force waves and arrows. */
   projectiles: Phaser.Physics.Arcade.Group;
   isSolid: (x: number, y: number) => boolean;
 }
 
-/** Resolves sword swings: one cone test per swing hurts each enemy once, swats enemy bolts out of the air and draws the slash. */
+/** Resolves melee swings (sword, daggers, hammer, fists): one cone test per swing hurts each enemy once, swats enemy bolts away and draws the strike. Also hosts the bow. */
 export class MeleeSystem {
+  private readonly cycles = new Map<string, ComboCycle>();
+
   constructor(private readonly o: MeleeOptions) {
     o.player.meleeHandler = (x, y, aim, weapon) => this.swing(x, y, aim, weapon);
+    o.player.events.on('player-died', () => this.cycles.clear());
+    new BowSystem(o);
   }
 
-  private swing(x: number, y: number, aim: number, weapon: WeaponDef): void {
+  private comboFor(weapon: WeaponDef): ComboStep {
+    const spec = weapon.melee?.cycle;
+    if (!spec) return OPENING;
+    let cycle = this.cycles.get(weapon.id);
+    if (!cycle) this.cycles.set(weapon.id, (cycle = new ComboCycle(spec.length, spec.resetMs)));
+    return cycle.next(this.o.player.now);
+  }
+
+  private swing(x: number, y: number, aim: number, weapon: WeaponDef): { reverse: boolean } | undefined {
     const melee = weapon.melee;
-    if (!melee) return;
-    const { player, scene } = this.o;
+    if (!melee) return undefined;
+    const { scene } = this.o;
     const origin = { x, y };
+    const combo = this.comboFor(weapon);
+    const finisher = combo.last ? melee.finisher : undefined;
     const cone: MeleeCone = { arc: melee.arc, reach: melee.reach };
     const targets = (this.o.enemies.getChildren() as Enemy[]).filter((e) => e.active && e.alive && e.targetable && lineClear(origin, e, this.o.isSolid));
-    const hits = meleeHits(origin, aim, cone, targets.map((e) => ({ x: e.x, y: e.y, reach: e.displayWidth / 2 })));
-    for (const index of hits) {
-      const enemy = targets[index]!;
-      const raw = damageToEnemy(weapon.baseDamage, player.level, enemy.level, player.stats.damageMultiplier);
-      enemy.takeHit(raw * (GOD_MODE ? GOD_DAMAGE_MULTIPLIER : 1), enemy.x - x, enemy.y - y, melee.knockback);
-    }
+    const bodies = targets.map((e) => ({ x: e.x, y: e.y, reach: e.displayWidth / 2 }));
+    const hits = meleeHits(origin, aim, cone, bodies);
+    for (const index of hits) this.hurt(targets[index]!, weapon.baseDamage * (finisher?.damage ?? 1), x, y, melee.knockback * (finisher?.knockback ?? 1));
     const deflected = this.deflect(origin, aim, { ...cone, reach: cone.reach + DEFLECT_PADDING });
-    this.slash(x, y, aim, melee.arc, melee.reach, melee.swingMs);
-    if (weapon.activeTwist === 'wave') this.sendWave(x, y, aim, weapon, hits.map((i) => targets[i]));
-    playSfx(scene, 'swing');
+    const side = melee.cycle && !melee.finisher ? (combo.step % 2 === 0 ? -1 : 1) : 0;
+    if (melee.thrust) punchFx(scene, x + Math.cos(aim) * melee.reach, y + Math.sin(aim) * melee.reach, aim, melee.colour ?? 0xffffff, combo.last);
+    else slashFx(scene, x, y, aim, melee.arc, melee.reach, melee.swingMs, melee.colour, side);
+    this.twist(weapon, { x, y, aim, combo, targets, bodies, hits });
+    playSfx(scene, 'swing', melee.cycle ? { rate: 1.2 + combo.step * 0.1 } : {});
     if (hits.length > 0) {
-      playSfx(scene, 'swordHit');
-      feel.shake(70, 0.003);
-      feel.hitStop(45);
+      playSfx(scene, 'swordHit', finisher ? { rate: 0.7 } : {});
+      feel.shake(melee.shake ? 120 : 70, melee.shake ?? 0.003);
+      feel.hitStop(finisher || melee.shake ? 60 : 45);
     } else if (deflected) playSfx(scene, 'swordHit', { rate: 1.4, volume: 0.7 });
+    return { reverse: side > 0 };
   }
 
-  /** Level 5 twist: a short slash wave flies on from the swing, hurting what it reaches once. */
-  private sendWave(x: number, y: number, aim: number, weapon: WeaponDef, alreadyHit: readonly unknown[]): void {
+  private hurt(enemy: Enemy, base: number, fromX: number, fromY: number, knockback: number): void {
+    const { player } = this.o;
+    const raw = damageToEnemy(base, player.level, enemy.level, player.stats.damageMultiplier);
+    enemy.takeHit(raw * (GOD_MODE ? GOD_DAMAGE_MULTIPLIER : 1), enemy.x - fromX, enemy.y - fromY, knockback);
+  }
+
+  private twist(weapon: WeaponDef, swing: Swing): void {
+    const { x, y, aim, combo } = swing;
+    const alreadyHit = swing.hits.map((i) => swing.targets[i]);
+    switch (weapon.activeTwist) {
+      case 'wave':
+        this.sendWave(x, y, aim, weapon, alreadyHit, { ...WAVE, scale: { x: 2.6, y: 1.6 } });
+        break;
+      case 'forceWave':
+        if (combo.last) this.sendWave(x, y, aim, weapon, alreadyHit, { ...FORCE_WAVE, scale: { x: 1.6, y: 2.2 } });
+        break;
+      case 'daggerThrow':
+        if (combo.last) this.throwDagger(x, y, aim, weapon);
+        break;
+      case 'shockwave':
+        this.shockwave(weapon, swing);
+        break;
+      default:
+    }
+  }
+
+  /** Level 5 twist: a wave flies on from the swing, hurting what it reaches once. */
+  private sendWave(x: number, y: number, aim: number, weapon: WeaponDef, alreadyHit: readonly unknown[], shape: WaveShape): void {
     const direction = new Phaser.Math.Vector2(Math.cos(aim), Math.sin(aim));
-    const wave: WeaponDef = { ...weapon, kind: 'ranged', speed: WAVE.speed, range: WAVE.range, activeTwist: undefined };
+    const wave: WeaponDef = { ...weapon, kind: 'ranged', speed: shape.speed, range: shape.range, activeTwist: undefined, projectileFrame: undefined };
     fireProjectile(this.o.projectiles, x + direction.x * 14, y + direction.y * 14, direction, wave, {
-      damageScale: WAVE.damageScale,
+      damageScale: shape.damageScale,
       pierce: Infinity,
       skip: alreadyHit,
-      scale: { x: 2.6, y: 1.6 },
+      scale: shape.scale,
     });
+  }
+
+  private throwDagger(x: number, y: number, aim: number, weapon: WeaponDef): void {
+    const direction = new Phaser.Math.Vector2(Math.cos(aim), Math.sin(aim));
+    const thrown: WeaponDef = { ...weapon, kind: 'ranged', speed: DAGGER_THROW.speed, range: DAGGER_THROW.range, activeTwist: undefined };
+    fireProjectile(this.o.projectiles, x + direction.x * 12, y + direction.y * 12, direction, thrown, {
+      damageScale: DAGGER_THROW.damageScale,
+      frame: weapon.frame,
+    });
+  }
+
+  /** Level 5 hammer twist: a ring of force around where the head lands hurts and shoves everything near it. */
+  private shockwave(weapon: WeaponDef, swing: Swing): void {
+    const reach = (weapon.melee?.reach ?? 0) * 0.9;
+    const center = { x: swing.x + Math.cos(swing.aim) * reach, y: swing.y + Math.sin(swing.aim) * reach };
+    for (const index of radialHits(center, SHOCKWAVE.radius, swing.bodies, swing.hits)) {
+      this.hurt(swing.targets[index]!, weapon.baseDamage * SHOCKWAVE.damageScale, center.x, center.y, SHOCKWAVE.knockback);
+    }
+    ringFx(this.o.scene, center.x, center.y, SHOCKWAVE.radius, 0xd9c9b0);
+    playSfx(this.o.scene, 'slam', { volume: 0.6 });
   }
 
   private deflect(origin: { x: number; y: number }, aim: number, cone: MeleeCone): boolean {
@@ -73,18 +153,8 @@ export class MeleeSystem {
       if (!bolt.active || !inCone(origin, aim, cone, bolt) || !lineClear(origin, bolt, this.o.isSolid)) continue;
       bolt.kill();
       any = true;
-      const spark = this.o.scene.add.circle(bolt.x, bolt.y, 5, SLASH_COLOR, 0.9).setDepth(9);
-      this.o.scene.tweens.add({ targets: spark, scale: 2.2, alpha: 0, duration: 180, onComplete: () => spark.destroy() });
+      sparkFx(this.o.scene, bolt.x, bolt.y);
     }
     return any;
-  }
-
-  /** A gold crescent wedge sweeping through the arc and fading. */
-  private slash(x: number, y: number, aim: number, arc: number, reach: number, swingMs: number): void {
-    const g = this.o.scene.add.graphics({ x, y }).setDepth(9);
-    const radius = reach + 6;
-    g.fillStyle(SLASH_COLOR, 0.35).slice(0, 0, radius, aim - arc / 2, aim + arc / 2, false).fillPath();
-    g.lineStyle(2, 0xffffff, 0.9).beginPath().arc(0, 0, radius, aim - arc / 2, aim + arc / 2, false).strokePath();
-    this.o.scene.tweens.add({ targets: g, alpha: 0, scaleX: 1.12, scaleY: 1.12, duration: swingMs + 60, onComplete: () => g.destroy() });
   }
 }

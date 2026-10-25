@@ -7,7 +7,8 @@ import { spreadDirections } from '../logic/enemyAi';
 import { bossPhase, newBossState, stepBoss, summonCount, type BossAction, type BossBrainConfig, type BossState } from '../logic/bossBrain';
 import { feel } from '../systems/feel';
 import { playSfx } from '../systems/sfx';
-import { Enemy, type EnemyContext } from './Enemy';
+import { Enemy, type EnemyContext, type HitSource } from './Enemy';
+import type { ShotStyle } from './EnemyProjectile';
 import type { Player } from './Player';
 
 const BOLT_RANGE = 340;
@@ -56,9 +57,9 @@ export class Boss extends Enemy {
     return this.alive && this.brain.mode !== 'burrowed' && this.brain.mode !== 'rising';
   }
 
-  override takeHit(amount: number, directionX: number, directionY: number, knockback = 1): void {
+  override takeHit(amount: number, directionX: number, directionY: number, knockback = 1, source: HitSource = 'basic'): void {
     if (!this.targetable) return;
-    super.takeHit(amount, directionX, directionY, knockback);
+    super.takeHit(amount, directionX, directionY, knockback, source);
     if (this.alive) this.events.emit('boss-hp', this.hp, this.maxHp);
   }
 
@@ -77,7 +78,7 @@ export class Boss extends Enemy {
     if (this.brain.mode === 'dash') {
       if (this.lungeResolved) return;
       this.lungeResolved = true;
-      player.takeDamage(damageToPlayer(this.def.slamDamage ?? 20, this.level, player.level), this.x, this.y);
+      player.takeDamage(damageToPlayer(this.def.slamDamage ?? 20, this.level, player.level), this.x, this.y, 'melee');
       return;
     }
     super.tryContact(player);
@@ -212,7 +213,7 @@ export class Boss extends Enemy {
     for (let arm = 0; arm < arms; arm++) {
       const sign = arm % 2 === 0 ? 1 : -1;
       for (const bolt of spiralVolley(count, turns * sign, this.burstSpin + (arm * Math.PI) / arms, this.def.boltSpeed ?? 90)) {
-        this.shots.fire(this.x, this.y, bolt.x, bolt.y, bolt.speed, damage, BOLT_RANGE);
+        this.bolt(this.x, this.y, bolt.x, bolt.y, bolt.speed, damage, BOLT_RANGE);
       }
     }
     playSfx(this.scene, 'enemyShot', { rate: 0.7, volume: 1.6 });
@@ -226,7 +227,7 @@ export class Boss extends Enemy {
     const style = { tint: SEEK_TINT, scale: 1.35, homing: { turnRate, ms, target: this.target } };
     for (let i = 0; i < count; i++) {
       const angle = this.burstSpin + (i * Math.PI * 2) / count;
-      this.shots.fire(this.x, this.y, Math.cos(angle), Math.sin(angle), speed, damage, SEEK_RANGE, style);
+      this.bolt(this.x, this.y, Math.cos(angle), Math.sin(angle), speed, damage, SEEK_RANGE, style);
     }
     playSfx(this.scene, 'enemyShot', { rate: 0.55, volume: 1.6 });
   }
@@ -242,7 +243,7 @@ export class Boss extends Enemy {
     feel.shake(200, 0.01);
     playSfx(this.scene, 'slam');
     if (Phaser.Math.Distance.Between(x, y, this.target.x, this.target.y) <= radius + 4) {
-      this.target.takeDamage(damageToPlayer(this.def.slamDamage ?? 20, this.level, this.target.level), x, y);
+      this.target.takeDamage(damageToPlayer(this.def.slamDamage ?? 20, this.level, this.target.level), x, y, 'boss');
     }
   }
 
@@ -266,6 +267,11 @@ export class Boss extends Enemy {
     this.dust = undefined;
   }
 
+  /** Boss bolts count as boss damage, not ranged. */
+  private bolt(x: number, y: number, dirX: number, dirY: number, speed: number, damage: number, range: number, style: ShotStyle = {}): void {
+    this.shots.fire(x, y, dirX, dirY, speed, damage, range, { ...style, source: 'boss' });
+  }
+
   private boltDamage(): number {
     return damageToPlayer(this.def.boltDamage ?? 9, this.level, this.target.level);
   }
@@ -275,7 +281,7 @@ export class Boss extends Enemy {
     const damage = this.boltDamage();
     for (let i = 0; i < count; i++) {
       const angle = this.burstSpin + (i * Math.PI * 2) / count;
-      this.shots.fire(this.x, this.y, Math.cos(angle), Math.sin(angle), this.def.boltSpeed ?? 90, damage, BOLT_RANGE);
+      this.bolt(this.x, this.y, Math.cos(angle), Math.sin(angle), this.def.boltSpeed ?? 90, damage, BOLT_RANGE);
     }
     playSfx(this.scene, 'enemyShot', { volume: 1.6 });
   }
@@ -286,7 +292,7 @@ export class Boss extends Enemy {
     const dy = this.target.y - this.y;
     if (Math.hypot(dx, dy) > 1e-6) this.lastAim.set(dx, dy).normalize();
     for (const d of spreadDirections(dx, dy, count, arc, this.lastAim)) {
-      this.shots.fire(this.x, this.y, d.x, d.y, this.def.boltSpeed ?? 90, damage, BOLT_RANGE);
+      this.bolt(this.x, this.y, d.x, d.y, this.def.boltSpeed ?? 90, damage, BOLT_RANGE);
     }
     playSfx(this.scene, 'enemyShot', { volume: 1.6 });
   }

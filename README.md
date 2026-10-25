@@ -54,6 +54,7 @@ KENNEY_DIR="D:\path\to\Kenney Game Assets All-in-1 3.0.0" npm run copy-assets
 ```
 
 Frame indices for the Tiny Dungeon sheet are documented in `src/content/assetKeys.ts`.
+The bow, arrow and fist sprites are hand-drawn by `python tools/add_weapon_frames.py` (needs Pillow) into `public/assets/extra/weapons-extra.png` (committed); `PreloadScene` merges that strip into the Tiny Dungeon texture as frames 132-134, so Kenney's sheet stays untouched.
 
 ## Game flow, saves and loot
 
@@ -125,6 +126,24 @@ Skill scrolls drop rarely (0.5% per kill, 3% from bosses) for a skill you do not
 with all three slots full a swap prompt pauses the game: pick the slot to replace or keep the skill in the bag (it stays owned).
 The save (v6) stores `skills.owned: {id, level}[]` and `loadout {weapon, slots}`; older saves migrate (unlocked fireball power becomes the level 1 skill in slot 1,
 the equipped weapon becomes the loadout weapon, skill rewards of already cleared levels are granted).
+
+## Heroes (v2 phase 3)
+
+Level select leads to a hero screen (Continue, or Skip to reuse the last hero), then the loadout. Heroes change HP, speed, attack rate, damage and skill cooldown, have a passive, and deal +10% damage with their signature weapon.
+Unlocking a hero also gives you its signature weapon (and starting skill). Locked heroes show a silhouette and a hint; try playing differently.
+
+| Hero | Passive | Hint |
+|---|---|---|
+| Samuel the Wizard | Skills cool down 10% faster | (starting hero) |
+| Sir Brandt (knight) | 20% less damage from the front | "A true warrior needs no tricks, from the first door to the last." |
+| Vex (rogue) | A dash leaves a dagger trap where it ends (3s, two at once) | "The desert rewards the swift." |
+| Borin (dwarf) | +25% gold, potions heal 50% more | "Gold calls to the mountain folk." |
+| Wren (ranger) | Long-range basic hits crit (x1.5) | "Keep your distance, in the sand and the palace." |
+| Kai (monk) | Every 5th basic hit stuns (not bosses) | "Discipline over comfort. Stand your ground." |
+| Morwen (necromancer) | Enemies you slay may rise as a skeleton ally for 8s (three at once; ally kills never raise more, but they count toward total kills) | "So many souls..." |
+| The Wanderer (secret) | Rare drops 50% more often | "Many hands, one destiny." |
+
+Save v8 adds `heroes` and `stats`; v7 saves migrate with the wizard only. Dev: unlock everything by editing `heroes.unlocked` in the save.
 
 ## Adding a new level
 

@@ -20,7 +20,11 @@ function skillStats(id: string, level: number): Record<string, number> {
 
 function weaponStats(id: string, level: number): Record<string, number> {
   const weapon = weaponAtLevel(getWeapon(id), level);
-  return { damage: weapon.baseDamage, attacksPerSecond: Math.round((1000 / weapon.fireRateMs) * 100) / 100 };
+  const stats: Record<string, number> = { damage: weapon.baseDamage, attacksPerSecond: Math.round((1000 / weapon.fireRateMs) * 100) / 100 };
+  const finisher = weapon.melee?.finisher;
+  if (finisher) stats.finisherDamage = Math.round(weapon.baseDamage * finisher.damage * 10) / 10;
+  if (weapon.charge) stats.drawTimeMs = weapon.charge.maxMs;
+  return stats;
 }
 
 /** What going from `level` to `level + 1` changes, read from the per-level tables. */

@@ -3,6 +3,7 @@ import type { LootTable } from '../src/logic/loot';
 import type { PlayerProgress } from '../src/logic/progression';
 import { defaultSave, type SaveData } from '../src/logic/save';
 import type { RoomSpec } from '../src/logic/tiledObjects';
+import { newRunRecord, type AccountStats, type RunRecord } from '../src/logic/unlocks';
 
 export function expectClose(actual: number, expected: number): void {
   expect(actual).toBeCloseTo(expected, 6);
@@ -84,4 +85,13 @@ export function bossHp(ratio: number): { hp: number; max: number } {
 
 export function aRoom(order: number, x: number, y: number, overrides: Partial<RoomSpec> = {}): RoomSpec {
   return { order, encounter: `r${order}`, waves: 2, minLevel: 1, maxLevel: 2, rect: { x, y, w: 160, h: 112 }, ...overrides };
+}
+
+export function aRunRecord(overrides: Partial<RunRecord> = {}): RunRecord {
+  /** A cleared but messy run: melee damage taken and a potion drunk, so no clear-based hero unlocks unless a test asks for it. */
+  return { ...newRunRecord('wizard', 'ruins'), cleared: true, timeMs: 300_000, potionsUsed: 1, dashes: 4, skillAttempts: 6, damageTaken: { melee: 10, ranged: 0, hazard: 0, boss: 0 }, ...overrides };
+}
+
+export function anAccount(overrides: Partial<AccountStats> = {}): AccountStats {
+  return { totalKills: 0, goldPeak: 0, bossKillsByHero: {}, ...overrides };
 }

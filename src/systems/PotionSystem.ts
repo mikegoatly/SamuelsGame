@@ -18,7 +18,7 @@ export class PotionSystem {
 
   private drink(): void {
     const { player } = this;
-    const result = drinkPotion(this.save.data.potions, player.hp, player.maxHp);
+    const result = drinkPotion(this.save.data.potions, player.hp, player.maxHp, player.effects.potionMultiplier);
     const at = (text: string, color: string): void => floatText(this.scene, player.x, player.y - 14, text, color, 16, 20, 1200);
     if (!result.used) {
       at(this.save.data.potions > 0 ? 'HP full' : 'No potions', '#b0b0c8');
@@ -26,6 +26,7 @@ export class PotionSystem {
     }
     this.save.update((save) => withPotions(save, result.carried));
     player.heal(result.healed);
+    player.events.emit('potion-used');
     at(`+${result.healed} HP`, '#ff8a8a');
     playSfx(this.scene, 'potion');
   }

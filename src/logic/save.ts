@@ -3,10 +3,13 @@ import { xpToNextLevel } from './xp';
 import { CHARM_TO_GEM, GEM_COLOURS, LEGACY_CARD_IDS, noGems, totalGems, type GemColour, type Gems } from './gems';
 
 import type { CardMode } from './itemCards';
+import { WIZARD, type AccountStats } from './unlocks';
 import { emptySlots, equipInSlot, firstEmptySlot, sanitizeSlots, type Loadout } from './loadout';
 
-/** v7: `gems` replace `charms`; `potions`, `revive`, `shop`, `weapons.levels` added. v6: `skills` + `loadout` replace `powers` and `weapons.equipped`. v5: `seen` + `itemCards`; v4: volumes + reduceShake; v2: `settings`. Older saves load through the same tolerant parse. */
-export const SAVE_VERSION = 7;
+/** v8: `heroes` + `stats`. v7: `gems` replace `charms`; `potions`, `revive`, `shop`, `weapons.levels` added. v6: `skills` + `loadout` replace `powers` and `weapons.equipped`. v5: `seen` + `itemCards`; v4: volumes + reduceShake; v2: `settings`. Older saves load through the same tolerant parse. */
+export const SAVE_VERSION = 8;
+/** First version that stores `gems` instead of `charms`. */
+const GEMS_VERSION = 7;
 /** First version whose skills and loadout need no conversion from powers. */
 const SKILLS_VERSION = 6;
 export const MAX_SKILL_LEVEL = 5;
@@ -50,6 +53,10 @@ export interface SaveData {
   /** Basic weapon and the three skill slots chosen on the loadout screen. */
   loadout: Loadout;
   levels: { cleared: string[]; bestTimes?: Record<string, number> };
+  /** Hero roster: who is unlocked and who plays next. */
+  heroes: { unlocked: string[]; selected: string };
+  /** Lifetime totals the hero unlock rules read. */
+  stats: AccountStats;
   settings: Settings;
   /** Item/event ids whose card the player has already seen. */
   seen: string[];
@@ -69,6 +76,8 @@ export function defaultSave(): SaveData {
     skills: { owned: [] },
     loadout: { weapon: STARTING_WEAPON, slots: emptySlots() },
     levels: { cleared: [] },
+    heroes: { unlocked: [WIZARD], selected: WIZARD },
+    stats: { totalKills: 0, goldPeak: 0, bossKillsByHero: {} },
     settings: defaultSettings(),
     seen: [],
   };
@@ -101,12 +110,30 @@ function parseOwnedSkills(value: unknown): OwnedSkill[] {
 /** v7 stores `gems`; older saves held `charms`, which convert one to one. */
 function parseGems(raw: Record<string, unknown>): Gems {
   const gems = noGems();
-  const modern = typeof raw.version === 'number' && raw.version >= SAVE_VERSION;
+  const modern = typeof raw.version === 'number' && raw.version >= GEMS_VERSION;
   const source = modern ? raw.gems : raw.charms;
   if (!isRecord(source)) return gems;
   if (modern) for (const colour of GEM_COLOURS) gems[colour] = wholeNumber(source[colour], 0);
   else for (const [charm, colour] of Object.entries(CHARM_TO_GEM)) gems[colour] = wholeNumber(source[charm], 0);
   return gems;
+}
+
+function parseHeroes(raw: Record<string, unknown>, isKnown: (id: string) => boolean): Pick<SaveData, 'heroes' | 'stats'> {
+  const heroes = isRecord(raw.heroes) ? raw.heroes : {};
+  const unlocked = [WIZARD, ...strings(heroes.unlocked).filter((id) => id !== WIZARD && isKnown(id))];
+  const selected = typeof heroes.selected === 'string' && unlocked.includes(heroes.selected) ? heroes.selected : WIZARD;
+  const stats = isRecord(raw.stats) ? raw.stats : {};
+  const bossKillsByHero: Record<string, string[]> = {};
+  if (isRecord(stats.bossKillsByHero)) {
+    for (const [hero, bosses] of Object.entries(stats.bossKillsByHero)) {
+      const list = strings(bosses);
+      if (list.length > 0 && (hero === WIZARD || isKnown(hero))) bossKillsByHero[hero] = list;
+    }
+  }
+  return {
+    heroes: { unlocked, selected },
+    stats: { totalKills: wholeNumber(stats.totalKills, 0), goldPeak: Math.max(wholeNumber(stats.goldPeak, 0), wholeNumber(raw.coins, 0)), bossKillsByHero },
+  };
 }
 
 function parseWeaponLevels(value: unknown, owned: readonly string[]): Record<string, number> {
@@ -120,7 +147,7 @@ function parseWeaponLevels(value: unknown, owned: readonly string[]): Record<str
 }
 
 /** Tolerant: junk, partial or old data falls back to defaults field by field; never throws. */
-export function parseSave(json: string | null | undefined, legacyRewards: LegacySkillRewards = {}, isKnownSkill: (id: string) => boolean = () => true): SaveData {
+export function parseSave(json: string | null | undefined, legacyRewards: LegacySkillRewards = {}, isKnownSkill: (id: string) => boolean = () => true, isKnownHero: (id: string) => boolean = () => true): SaveData {
   const save = defaultSave();
   let raw: unknown;
   try {
@@ -154,6 +181,7 @@ export function parseSave(json: string | null | undefined, legacyRewards: Legacy
       save.levels.bestTimes = times;
     }
   }
+  Object.assign(save, parseHeroes(raw, isKnownHero));
   if (isRecord(raw.settings)) {
     const fallback = defaultSettings();
     save.settings = {
@@ -165,7 +193,7 @@ export function parseSave(json: string | null | undefined, legacyRewards: Legacy
     };
   }
   save.seen = strings(raw.seen).map((id) => LEGACY_CARD_IDS[id] ?? id);
-  const converted = !(typeof raw.version === 'number' && raw.version >= SAVE_VERSION) && totalGems(save.gems) > 0 && !save.seen.includes(CHARMS_NOTICE);
+  const converted = !(typeof raw.version === 'number' && raw.version >= GEMS_VERSION) && totalGems(save.gems) > 0 && !save.seen.includes(CHARMS_NOTICE);
   save.pendingNotices = [...new Set([...strings(raw.pendingNotices).filter((id) => !save.seen.includes(id)), ...(converted ? [CHARMS_NOTICE] : [])])];
   return parseSkills(save, raw, legacyRewards, isKnownSkill);
 }

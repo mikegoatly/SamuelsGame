@@ -11,6 +11,21 @@ export interface MeleeTuning {
   knockback: number;
   /** How long the swing animation plays. */
   swingMs: number;
+  /** Swings counted through a repeating cycle (dagger sides and throws, the fists combo). */
+  cycle?: { length: number; resetMs: number };
+  /** The last swing of the cycle hits harder (multiplier on damage and on knockback). */
+  finisher?: { damage: number; knockback: number };
+  /** Screen shake intensity on a hit (respects the reduce-shake setting). */
+  shake?: number;
+  /** The weapon stabs forward instead of sweeping. */
+  thrust?: boolean;
+  /** Slash colour. */
+  colour?: number;
+}
+
+export interface ChargeTuning {
+  /** Time to a full draw, ms. */
+  maxMs: number;
 }
 
 export interface WeaponDef {
@@ -25,6 +40,14 @@ export interface WeaponDef {
   /** Projectile tint; null keeps the bolt texture's own purple. */
   tint: number | null;
   melee?: MeleeTuning;
+  /** Hold-to-draw weapons (bow). */
+  charge?: ChargeTuning;
+  /** One line for the loadout screen. */
+  description?: string;
+  /** Two weapons held, one in each hand (twin daggers). */
+  dual?: boolean;
+  /** Tiles frame the shots are drawn with; bolts use the glowing bolt texture. */
+  projectileFrame?: number;
   /** What level 5 adds. */
   twist?: WeaponTwist;
   /** Upgrade level of this copy (1 when unset). */
@@ -74,7 +97,82 @@ export const goldenSword: WeaponDef = {
   twist: 'wave',
 };
 
-export const weaponList: readonly WeaponDef[] = [apprenticeStaff, brokenWand, goldenSword];
+/** Very fast stabs with a short reach; the sides alternate and every 4th swing also throws a dagger. */
+export const twinDaggers: WeaponDef = {
+  id: 'twinDaggers',
+  kind: 'melee',
+  name: 'Twin Daggers',
+  frame: Frame.dagger,
+  baseDamage: 5,
+  fireRateMs: 120,
+  speed: 0,
+  range: 20,
+  tint: 0xbfe3ff,
+  melee: { arc: (60 * Math.PI) / 180, reach: 20, knockback: 0.5, swingMs: 90, cycle: { length: 4, resetMs: Infinity }, colour: 0xbfe3ff },
+  twist: 'daggerThrow',
+  dual: true,
+  description: 'Rapid twin stabs, short reach',
+};
+
+/** Slow heavy swings over a wide cone that shove enemies back and shake the screen. */
+export const hammer: WeaponDef = {
+  id: 'hammer',
+  kind: 'melee',
+  name: 'Hammer',
+  frame: Frame.hammer,
+  baseDamage: 45,
+  fireRateMs: 700,
+  speed: 0,
+  range: 30,
+  tint: null,
+  melee: { arc: (140 * Math.PI) / 180, reach: 30, knockback: 4.5, swingMs: 260, shake: 0.006, colour: 0xd9c9b0 },
+  twist: 'shockwave',
+  description: 'Slow, wide, heavy blows that shove',
+};
+
+/** Hold to draw up to 0.8s: a tap is a weak quick arrow, a full draw hits 2.2x as hard and pierces. */
+export const bow: WeaponDef = {
+  id: 'bow',
+  kind: 'ranged',
+  name: 'Bow',
+  frame: Frame.bow,
+  baseDamage: 16,
+  fireRateMs: 350,
+  speed: 300,
+  range: 300,
+  tint: null,
+  charge: { maxMs: 800 },
+  projectileFrame: Frame.arrow,
+  twist: 'spread',
+  description: 'Hold to charge, release to fire',
+};
+
+/** Three-hit combo; the third punch hits twice as hard and knocks back, and the combo restarts after 0.8s idle. */
+export const fists: WeaponDef = {
+  id: 'fists',
+  kind: 'melee',
+  name: 'Fists',
+  frame: Frame.fist,
+  baseDamage: 7,
+  fireRateMs: 230,
+  speed: 0,
+  range: 22,
+  tint: null,
+  melee: {
+    arc: (90 * Math.PI) / 180,
+    reach: 22,
+    knockback: 0.8,
+    swingMs: 120,
+    cycle: { length: 3, resetMs: 800 },
+    finisher: { damage: 2, knockback: 3.5 },
+    thrust: true,
+    colour: 0xffb070,
+  },
+  twist: 'forceWave',
+  description: '3-hit combo, the last punch hits hard',
+};
+
+export const weaponList: readonly WeaponDef[] = [apprenticeStaff, brokenWand, goldenSword, twinDaggers, hammer, bow, fists];
 
 export const weapons: Record<string, WeaponDef> = Object.fromEntries(weaponList.map((weapon) => [weapon.id, weapon]));
 
@@ -88,6 +186,7 @@ export const weaponAtLevel = (weapon: WeaponDef, level: number): WeaponDef => ({
   ...weapon,
   baseDamage: weaponDamageAt(weapon.baseDamage, level),
   fireRateMs: weaponFireRateAt(weapon.fireRateMs, level),
+  charge: weapon.charge && { maxMs: weaponFireRateAt(weapon.charge.maxMs, level) },
   level,
   activeTwist: level >= TWIST_LEVEL ? weapon.twist : undefined,
 });

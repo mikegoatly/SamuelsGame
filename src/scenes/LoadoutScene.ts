@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { Tex } from '../content/assetKeys';
 import { Prompt } from '../content/inputGlyphs';
+import { getHero } from '../content/heroes';
 import { getLevel } from '../content/levels';
 import { cooldownText } from '../content/cards';
 import { getSkill, knownSkillIds } from '../content/skills';
@@ -51,6 +52,10 @@ export class LoadoutScene extends MenuScene {
     const cx = width / 2;
     menuText(this, cx, 20, 'Loadout', 24, '#b48cff');
     menuText(this, cx, 42, getLevel(this.levelId).name, 16, '#d8d8e8');
+    const hero = getHero(saveSystem.data.heroes.selected);
+    const heroIcon = this.add.image(26, 28, Tex.tiles, hero.frame).setScale(2);
+    if (hero.tint !== null) heroIcon.setTint(hero.tint);
+    gameText(this, 46, 28, hero.name, 16, { color: hero.color }).setOrigin(0, 0.5);
 
     const leftWidth = Math.min(300, Math.floor(width * 0.48));
     const left = Math.max(12, Math.floor((width - leftWidth - 16 - Math.min(300, width * 0.46)) / 2));
@@ -111,7 +116,7 @@ export class LoadoutScene extends MenuScene {
       info.add(this.add.image(14, 14, Tex.tiles, weapon.frame).setScale(2));
       text(36, `${weapon.name}  Lv ${level}/5`, '#ffe066');
       text(56, `Damage ${weapon.baseDamage}`);
-      text(74, weapon.kind === 'melee' ? `${(1000 / weapon.fireRateMs).toFixed(1)} swings/s, hits an arc` : `${(1000 / weapon.fireRateMs).toFixed(1)} shots/s, range ${weapon.range}`);
+      text(74, weapon.description ?? (weapon.kind === 'melee' ? `${(1000 / weapon.fireRateMs).toFixed(1)} swings/s, hits an arc` : `${(1000 / weapon.fireRateMs).toFixed(1)} shots/s, range ${weapon.range}`));
       text(110, knownWeapons(saveSystem.data.weapons.owned).length > 1 ? 'Left/Right or tap to change' : 'Win more weapons from bosses', '#9a9ab8');
       return;
     }
@@ -135,6 +140,6 @@ export class LoadoutScene extends MenuScene {
   }
 
   private goBack(): void {
-    this.scene.start('LevelSelect');
+    this.scene.start('HeroSelect', { levelId: this.levelId });
   }
 }

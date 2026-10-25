@@ -38,7 +38,7 @@ export class SpikeSystem {
       this.draw(trap, state, state === 'warn' && Math.floor(now / BLINK_MS) % 2 === 0);
       if (spikesHurt(state) && !this.player.dead && this.touching(trap)) {
         const { x, y, w, h } = trap.spec.rect;
-        if (this.player.takeDamage(spikeDamage(this.player.maxHp), x + w / 2, y + h / 2) === 'hurt') playSfx(this.scene, 'hurt', { rate: 1.4, volume: 0.6 });
+        if (this.player.takeDamage(spikeDamage(this.player.maxHp), x + w / 2, y + h / 2, 'hazard') === 'hurt') playSfx(this.scene, 'hurt', { rate: 1.4, volume: 0.6 });
       }
     }
   }

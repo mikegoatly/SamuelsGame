@@ -1,4 +1,4 @@
-import { Frame, Tex } from '../../content/assetKeys';
+import { Tex } from '../../content/assetKeys';
 import type { BlinkSkill } from '../../content/skills';
 import { blinkDestination, pathVictims } from '../../logic/blinkStrike';
 import type { Point } from '../../logic/geometry';
@@ -60,7 +60,7 @@ export class BlinkStrikeCaster implements SkillCaster<BlinkSkill> {
     const { scene } = this.world;
     for (let i = 0; i < GHOSTS; i++) {
       const t = i / GHOSTS;
-      const ghost = scene.add.image(from.x + (to.x - from.x) * t, from.y + (to.y - from.y) * t, Tex.tiles, Frame.hero).setTint(BLINK).setAlpha(0.7).setDepth(9);
+      const ghost = scene.add.image(from.x + (to.x - from.x) * t, from.y + (to.y - from.y) * t, Tex.tiles, this.world.player.hero.frame).setTint(BLINK).setAlpha(0.7).setDepth(9);
       ghost.setFlipX(to.x < from.x);
       scene.tweens.add({ targets: ghost, alpha: 0, duration: 260 + i * 40, onComplete: () => ghost.destroy() });
     }

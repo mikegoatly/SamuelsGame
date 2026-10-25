@@ -3,6 +3,7 @@ import { Frame } from './assetKeys';
 import { playerMaxHp } from '../logic/combat';
 import { gemCardText, type CardData } from '../logic/itemCards';
 import { skillCooldown, type SkillDef } from './skills';
+import type { HeroDef } from './heroes';
 
 type GemItem = Extract<ItemDef, { kind: 'gem' }>;
 
@@ -10,6 +11,15 @@ export function gemCard(item: GemItem, count: number): CardData {
   const { effect, total } = gemCardText(item.gem, count);
   return { title: item.name, subtitle: 'Epic gem', color: RARITY_COLOR[item.rarity], frame: item.frame, tint: item.tint ?? null, lines: [effect, total] };
 }
+
+export const heroCard = (hero: HeroDef): CardData => ({
+  title: hero.name,
+  subtitle: 'New hero unlocked!',
+  color: hero.color,
+  frame: hero.frame,
+  tint: hero.tint,
+  lines: [`${hero.passive.name}: ${hero.passive.text}`, hero.bio],
+});
 
 export const levelUpCard = (level: number): CardData => ({
   title: `Level ${level}!`,

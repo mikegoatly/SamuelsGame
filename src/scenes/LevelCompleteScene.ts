@@ -3,6 +3,7 @@ import type { Reward } from '../content/rewards';
 import { noGems, type Gems } from '../logic/gems';
 import { formatTime } from '../logic/format';
 import { playSfx } from '../systems/sfx';
+import { revealNextHero } from './heroReveal';
 import { MenuButton } from '../ui/MenuButton';
 import { MenuList } from '../ui/MenuList';
 import { menuText } from '../ui/menuText';
@@ -21,6 +22,7 @@ export interface LevelCompleteData {
 }
 
 const INPUT_DELAY_MS = 700;
+const FADE_IN_MS = 400;
 const EMPTY: LevelCompleteData = { title: 'Level complete!', timeMs: 0, kills: 0, coins: 0, gems: noGems(), xp: 0, level: 1 };
 
 export class LevelCompleteScene extends MenuScene {
@@ -37,6 +39,7 @@ export class LevelCompleteScene extends MenuScene {
   override create(): void {
     super.create();
     playSfx(this, 'victory');
+    revealNextHero(this, FADE_IN_MS + 300);
   }
 
   protected build(): void {
