@@ -19,6 +19,8 @@ export interface LevelCompleteData {
   xp: number;
   level: number;
   rewards?: Reward[];
+  /** Random map runs only. */
+  seed?: number;
 }
 
 const INPUT_DELAY_MS = 700;
@@ -45,7 +47,7 @@ export class LevelCompleteScene extends MenuScene {
   protected build(): void {
     const { width, height } = this.scale;
     const cx = width / 2;
-    const { title, timeMs, kills, coins, gems, xp, level, rewards = [] } = this.result;
+    const { title, timeMs, kills, coins, gems, xp, level, rewards = [], seed } = this.result;
     this.cameras.main.fadeIn(400);
     menuText(this, cx, height * 0.16, title, 32, '#ffe066');
     const rows: [string, string][] = [
@@ -63,6 +65,7 @@ export class LevelCompleteScene extends MenuScene {
     menuText(this, cx, earnedY + 2, 'Gold and gems found', 16, '#b0b0c8');
     drawCounts(this, cx, earnedY + 22, walletEntries(coins, gems, '+'));
     rewards.forEach((reward, i) => this.showReward(cx, earnedY + 50 + i * 26, reward));
+    if (seed !== undefined) menuText(this, cx, height * 0.16 + 26, `Map #${seed}`, 16, '#6c6c88');
     const next = new MenuButton(this, cx - 104, height * 0.88, 200, 34, 'Continue', () => this.leave());
     const camp = new MenuButton(this, cx + 104, height * 0.88, 200, 34, 'Visit Camp', () => this.inputReady(INPUT_DELAY_MS) && this.scene.start('Camp'));
     this.menu = new MenuList(this, [next, camp], { columns: 2, onBack: () => this.leave() });

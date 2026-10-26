@@ -10,8 +10,8 @@ const TILESET_NAME = 'tiny-dungeon';
 const FIRST_GID = 1;
 
 /** Builds ground/walls from the Tiled JSON, adds a blank door layer and parses the `objects` layer. */
-export function buildTiledMap(scene: Phaser.Scene, level: LevelConfig): LevelMap {
-  const map = scene.make.tilemap({ key: level.mapKey });
+export function buildTiledMap(scene: Phaser.Scene, level: LevelConfig, mapKey = level.mapKey!): LevelMap {
+  const map = scene.make.tilemap({ key: mapKey });
   const tileset = map.addTilesetImage(TILESET_NAME, Tex.tiles, TILE_SIZE, TILE_SIZE, 0, 0)!;
   const ground = map.createLayer('ground', level.environment === 'palace' ? palaceTileset(scene) : tileset, 0, 0)!;
   const walls = map.createLayer('walls', tileset, 0, 0)!;
@@ -22,7 +22,7 @@ export function buildTiledMap(scene: Phaser.Scene, level: LevelConfig): LevelMap
   if (tint.checker !== undefined) ground.forEachTile((tile) => void (tile.tint = (tile.x + tile.y) % 2 === 0 ? tint.checker! : tint.ground!));
   if (tint.walls !== null) for (const layer of [walls, doorTiles]) layer.setTint(tint.walls);
 
-  const world = parseLevelObjects(scene.cache.tilemap.get(level.mapKey!).data as TiledMapLike);
+  const world = parseLevelObjects(scene.cache.tilemap.get(mapKey).data as TiledMapLike);
   const doors = new DoorLayer(doorTiles, world.doors, FIRST_GID + Frame.doorClosed);
   const slowZones = world.hazards.filter((h) => h.kind === 'quicksand').map((h) => h.rect);
   for (const rect of slowZones) drawQuicksand(scene, rect);

@@ -7,7 +7,7 @@ export const CELL_H = 22;
 export const CORRIDOR_W = 3;
 const MARGIN = 3;
 
-export type RoomKind = 'start' | 'combat' | 'boss';
+export type RoomKind = 'start' | 'combat' | 'boss' | 'side';
 
 export interface LayoutRoom {
   index: number;
@@ -42,7 +42,12 @@ export interface DungeonLayout {
   rooms: LayoutRoom[];
   corridors: Corridor[];
   doors: LayoutDoor[];
+  /** Cover: solid tiles painted with the theme's cover art. */
   pillars: Pillar[];
+  /** Interior wall tiles (L-shape corners, split-room bars); not floor, painted as wall. */
+  blocks: Pillar[];
+  /** Optional dead-end treasure room; its index is `rooms.length`, and its corridor is the last one. */
+  sideRoom: LayoutRoom | null;
 }
 
 /** Picks a [start, size] span inside a cell that always covers the centre 3-tile block. */
@@ -60,7 +65,7 @@ function centreAxis(centre: number, extent: number, size: Range): [number, numbe
   return [centre - (length - 1) / 2, length];
 }
 
-function placeRoom(rng: () => number, plan: CellPlan, index: number, symmetric = false): LayoutRoom {
+export function placeRoom(rng: () => number, plan: CellPlan, index: number, symmetric = false): LayoutRoom {
   const x0 = plan.col * CELL_W;
   const y0 = plan.row * CELL_H;
   const width = plan.span * CELL_W;
@@ -71,7 +76,7 @@ function placeRoom(rng: () => number, plan: CellPlan, index: number, symmetric =
   return { index, kind: plan.kind, rect: { x, y, w, h }, cx, cy };
 }
 
-function connect(a: LayoutRoom, b: LayoutRoom): { corridor: Corridor; doors: LayoutDoor[] } {
+export function connect(a: LayoutRoom, b: LayoutRoom): { corridor: Corridor; doors: LayoutDoor[] } {
   const horizontal = a.cy === b.cy;
   const [first, second] = (horizontal ? a.cx < b.cx : a.cy < b.cy) ? [a, b] : [b, a];
   const start = horizontal ? first.rect.x + first.rect.w : first.rect.y + first.rect.h;
@@ -88,13 +93,18 @@ function connect(a: LayoutRoom, b: LayoutRoom): { corridor: Corridor; doors: Lay
   };
 }
 
-const clearOfCorridors = (room: LayoutRoom, x: number, y: number): boolean => Math.abs(x - room.cx) > 2 && Math.abs(y - room.cy) > 2;
-const insideInset = (rect: Rect, x: number, y: number, inset: number): boolean =>
+export const clearOfCorridors = (room: LayoutRoom, x: number, y: number): boolean => Math.abs(x - room.cx) > 2 && Math.abs(y - room.cy) > 2;
+export const insideInset = (rect: Rect, x: number, y: number, inset: number): boolean =>
   x >= rect.x + inset && x < rect.x + rect.w - inset && y >= rect.y + inset && y < rect.y + rect.h - inset;
 
-const SHAPES: [number, number][][] = [[[0, 0]], [[0, 0], [1, 0]], [[0, 0], [0, 1]], [[0, 0], [1, 0]], [[0, 0], [1, 0], [0, 1], [1, 1]]];
+const NO_TILES: ReadonlySet<string> = new Set();
+/** True when `(x, y)` or any of its 8 neighbours is in `tiles` (cover keeps a tile away from interior walls). */
+const nearTiles = (tiles: ReadonlySet<string>, x: number, y: number): boolean =>
+  tiles.size > 0 && [-1, 0, 1].some((dy) => [-1, 0, 1].some((dx) => tiles.has(`${x + dx},${y + dy}`)));
 
-function combatPillars(rng: () => number, room: LayoutRoom, cover: LayoutPreset['cover']): Pillar[] {
+export const SHAPES: [number, number][][] = [[[0, 0]], [[0, 0], [1, 0]], [[0, 0], [0, 1]], [[0, 0], [1, 0]], [[0, 0], [1, 0], [0, 1], [1, 1]]];
+
+export function combatPillars(rng: () => number, room: LayoutRoom, cover: LayoutPreset['cover'], avoid: ReadonlySet<string> = NO_TILES): Pillar[] {
   const { rect } = room;
   if (rect.w < 12 || rect.h < 9) return [];
   const tiles: Pillar[] = [];
@@ -105,7 +115,7 @@ function combatPillars(rng: () => number, room: LayoutRoom, cover: LayoutPreset[
     const roll = rng();
     const shape = SHAPES[roll < 0.6 ? 0 : roll < 0.8 ? 1 : 2]!;
     const cells = shape.map(([dx, dy]) => ({ room: room.index, x: x + dx, y: y + dy }));
-    const ok = cells.every((c) => insideInset(rect, c.x, c.y, 2) && clearOfCorridors(room, c.x, c.y));
+    const ok = cells.every((c) => insideInset(rect, c.x, c.y, 2) && clearOfCorridors(room, c.x, c.y) && !nearTiles(avoid, c.x, c.y));
     const spaced = cells.every((c) => tiles.every((t) => Math.max(Math.abs(t.x - c.x), Math.abs(t.y - c.y)) >= 3));
     if (ok && spaced) tiles.push(...cells);
   }
@@ -115,7 +125,7 @@ function combatPillars(rng: () => number, room: LayoutRoom, cover: LayoutPreset[
 const MIRROR_ATTEMPTS = 80;
 
 /** Cover placed in one quadrant and mirrored into the other three, clear of the corridor lines. */
-function mirroredPillars(rng: () => number, room: LayoutRoom, cover: LayoutPreset['cover']): Pillar[] {
+export function mirroredPillars(rng: () => number, room: LayoutRoom, cover: LayoutPreset['cover'], avoid: ReadonlySet<string> = NO_TILES): Pillar[] {
   const { rect } = room;
   const tiles = new Map<string, Pillar>();
   const target = Math.max(2, Math.floor((cover.base + Math.floor((rect.w * rect.h) / cover.divisor)) / 4) + 1);
@@ -126,7 +136,7 @@ function mirroredPillars(rng: () => number, room: LayoutRoom, cover: LayoutPrese
     const roll = rng();
     const shape = SHAPES[roll < 0.5 ? 0 : roll < 0.75 ? 3 : 4]!;
     const cells = shape.map(([dx, dy]) => ({ x: x + dx, y: y + dy }));
-    const ok = cells.every((c) => c.x <= room.cx - 3 && c.y <= room.cy - 3 && insideInset(rect, c.x, c.y, 2));
+    const ok = cells.every((c) => c.x <= room.cx - 3 && c.y <= room.cy - 3 && insideInset(rect, c.x, c.y, 2) && !nearTiles(avoid, c.x, c.y));
     const spaced = cells.every((c) => [...tiles.values()].every((t) => Math.max(Math.abs(t.x - c.x), Math.abs(t.y - c.y)) >= 3 || (t.x === c.x && t.y === c.y)));
     if (!ok || !spaced) continue;
     placed++;
@@ -138,7 +148,7 @@ function mirroredPillars(rng: () => number, room: LayoutRoom, cover: LayoutPrese
 }
 
 /** Two 2x2 colonnade rows either side of the throne room's centre line, mirrored left-right. */
-function colonnade(room: LayoutRoom): Pillar[] {
+export function colonnade(room: LayoutRoom): Pillar[] {
   const tiles: Pillar[] = [];
   for (const dx of [5, 11]) {
     for (const sx of [-1, 1]) {
@@ -161,7 +171,7 @@ export function throneTiles(room: LayoutRoom): Point[] {
   ];
 }
 
-function bossPillars(room: LayoutRoom): Pillar[] {
+export function bossPillars(room: LayoutRoom): Pillar[] {
   const mid = rectCenter(room.rect);
   const tiles: Pillar[] = [];
   for (const dx of [-13, -7, 7, 13]) {
@@ -188,6 +198,8 @@ export function generateLayout(rng: () => number, preset: LayoutPreset = RUINS_P
     corridors: links.map((l) => l.corridor),
     doors: links.flatMap((l) => l.doors),
     pillars,
+    blocks: [],
+    sideRoom: null,
   };
 }
 
@@ -195,11 +207,16 @@ function fill(mask: boolean[][], rect: Rect): void {
   for (let y = rect.y; y < rect.y + rect.h; y++) for (let x = rect.x; x < rect.x + rect.w; x++) mask[y]![x] = true;
 }
 
+/** Cover plus interior walls, as "x,y" keys. */
+export const solidTiles = (layout: DungeonLayout): Set<string> => new Set([...layout.pillars, ...layout.blocks].map((p) => `${p.x},${p.y}`));
+
 /** Walkable floor tiles (rooms + corridors), indexed [y][x]. */
 export function floorMask(layout: DungeonLayout): boolean[][] {
   const mask = Array.from({ length: layout.rows }, () => new Array<boolean>(layout.cols).fill(false));
   for (const room of layout.rooms) fill(mask, room.rect);
+  if (layout.sideRoom) fill(mask, layout.sideRoom.rect);
   for (const corridor of layout.corridors) fill(mask, corridor.rect);
+  for (const b of layout.blocks) mask[b.y]![b.x] = false;
   return mask;
 }
 
@@ -225,7 +242,7 @@ const PATCH_ATTEMPTS = 150;
 /** Quicksand patches (tile rects) in combat rooms: off the corridor strips and cover, in from the walls, never touching. */
 export function placeHazards(layout: DungeonLayout, rng: () => number, perRoom: number): Rect[] {
   if (perRoom <= 0) return [];
-  const solid = new Set(layout.pillars.map((p) => `${p.x},${p.y}`));
+  const solid = solidTiles(layout);
   const patches: Rect[] = [];
   for (const room of layout.rooms.filter((r) => r.kind === 'combat')) {
     for (let n = 0; n < perRoom; n++) {
@@ -256,7 +273,7 @@ function patchFits(room: LayoutRoom, patch: Rect, solid: Set<string>, others: Re
 /** Mirrored pairs (left-right) of spike-trap rects per combat room, off the corridor lines, cover and `taken` patches. */
 export function placeSpikeTraps(layout: DungeonLayout, rng: () => number, pairsPerRoom: number, taken: Rect[]): Rect[] {
   if (pairsPerRoom <= 0) return [];
-  const solid = new Set(layout.pillars.map((p) => `${p.x},${p.y}`));
+  const solid = solidTiles(layout);
   const traps: Rect[] = [];
   for (const room of layout.rooms.filter((r) => r.kind === 'combat')) {
     for (let n = 0; n < pairsPerRoom; n++) {

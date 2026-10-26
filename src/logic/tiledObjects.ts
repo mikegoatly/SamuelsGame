@@ -58,6 +58,8 @@ export interface LevelObjects {
   hazards: HazardSpec[];
   active: ActiveHazardSpec[];
   thrones: Point[];
+  /** Chest spots in random-map side rooms; empty for classic maps. */
+  treasures: Point[];
   exit: Point | null;
 }
 
@@ -112,6 +114,7 @@ export function parseLevelObjects(map: TiledMapLike): LevelObjects {
     }),
     active: ofType('hazard').flatMap(toActiveHazard),
     thrones: ofType('throne').map(pointOf),
+    treasures: ofType('treasure').map(pointOf),
     exit: exit ? pointOf(exit) : null,
   };
 }

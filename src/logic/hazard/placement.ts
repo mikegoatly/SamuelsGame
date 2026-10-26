@@ -1,5 +1,5 @@
 import { TILE_SIZE } from '../../content/assetKeys';
-import type { DungeonLayout, LayoutRoom } from '../dungeonLayout';
+import { solidTiles, type DungeonLayout, type LayoutRoom } from '../dungeonLayout';
 import { insetRect, rectsOverlap, type Rect } from '../geometry';
 import { randInt } from '../rng';
 import { ACTIVE_HAZARD_KINDS, type ActiveHazardKind } from './kinds';
@@ -204,7 +204,7 @@ function bossJets(s: Spot, count: number): PlacedHazard[] {
 
 /** Places every planned hazard of every combat room, then the boss arena's one kind; `taken` are rects already used (quicksand, spikes). Never touches the start room. */
 export function placeActiveHazards(layout: DungeonLayout, rng: () => number, plan: HazardPlan, taken: Rect[], boss?: BossHazard): PlacedHazard[] {
-  const solid = new Set(layout.pillars.map((p) => `${p.x},${p.y}`));
+  const solid = solidTiles(layout);
   const used = [...taken];
   const placed: PlacedHazard[] = [];
   for (const room of layout.rooms) {

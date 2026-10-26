@@ -43,10 +43,18 @@ import { SpikeSystem } from '../systems/SpikeSystem';
 import { exposeSpawner } from '../systems/debugSpawn';
 import { blockedByRects, spawnAvoidRects } from '../logic/spawnAvoid';
 import { buildLevelMap, type LevelMap } from './RoomBuilder';
+import { installRunMap, removeRunMap } from './runMap';
+import { TreasureSystem } from '../systems/TreasureSystem';
+import { chooseRunMap, parseSeed, type RunMap } from '../logic/runSeed';
+import { hasRandomMap } from '../logic/map';
 
 export interface GameSceneData {
   levelId: string;
+  /** Set when retrying: the same map as the run being retried. */
+  runMap?: RunMap;
 }
+
+const devSeed = (): number | undefined => (import.meta.env.DEV ? parseSeed(new URLSearchParams(window.location.search).get('seed')) : undefined);
 
 const BUTTON_START = 9;
 const REWARD_FADE_MS = 600;
@@ -66,6 +74,7 @@ export class GameScene extends Phaser.Scene {
   private clock!: GameClock;
   private enemies!: Phaser.Physics.Arcade.Group;
   private unlocks!: HeroUnlocks;
+  private runMap: RunMap = { seed: 0, classic: true };
 
   constructor() {
     super('Game');
@@ -82,7 +91,15 @@ export class GameScene extends Phaser.Scene {
     const save = saveSystem.data;
     const events = new GameEvents();
     const progression = (this.progression = new ProgressionSystem(events, save.progress));
-    const map = buildLevelMap(this, this.level);
+    this.runMap = chooseRunMap({
+      levelId: this.level.id,
+      cleared: save.levels.cleared,
+      hasRandomMap: hasRandomMap(this.level.id),
+      devSeed: devSeed(),
+      previous: data.runMap,
+      rng: Math.random,
+    });
+    const map = buildLevelMap(this, this.level, installRunMap(this, this.level, this.runMap));
     const { walls, playerStart } = map;
     const projectiles = createProjectilePool(this);
     const shots = new EnemyProjectiles(this);
@@ -148,6 +165,7 @@ export class GameScene extends Phaser.Scene {
     });
     this.startMusic(events);
     this.setUpReward(map, player, events);
+    if (map.world && map.world.treasures.length > 0) new TreasureSystem(this, player, loot, this.level, map.world.treasures);
 
     this.physics.world.setBounds(0, 0, walls.width, walls.height);
     const camera = this.cameras.main;
@@ -158,6 +176,7 @@ export class GameScene extends Phaser.Scene {
 
     this.scene.launch('Hud', { events, progression, player, director, loot, skills, roomTotal: map.world?.rooms.length, bossName: this.level.bossId ? getEnemy(this.level.bossId).name : undefined });
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      removeRunMap(this, this.level);
       director.stop();
       this.unlocks.finish(false, 0);
       musicOf(this.game).fadeOut();
@@ -228,6 +247,7 @@ export class GameScene extends Phaser.Scene {
         xp: this.progression.gainedXp,
         level: this.progression.level,
         rewards: rewardsOf(this.level),
+        seed: this.runMap.classic ? undefined : this.runMap.seed,
       }),
     );
   }
@@ -356,6 +376,7 @@ export class GameScene extends Phaser.Scene {
     camera.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () =>
       this.scene.start('GameOver', {
         levelId: this.level.id,
+        runMap: this.runMap,
         level: this.progression.level,
         progress: director.progressLabel(),
         lostCoins,

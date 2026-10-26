@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { hazardCount, introductionOrder, roomKinds, roomLoad } from '../src/logic/hazard/plan';
-import { DESERT_THEME, PALACE_THEME, RUINS_THEME, type MapTheme } from '../tools/mapThemes';
+import { DESERT_THEME, PALACE_THEME, RUINS_THEME, type MapTheme } from '../src/logic/map/mapThemes';
 
 const plan = { crackedFloor: [0, 1, 1, 2], rubble: [0, 0, 1, 1] };
 

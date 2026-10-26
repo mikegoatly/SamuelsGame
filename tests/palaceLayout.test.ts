@@ -5,8 +5,8 @@ import { rectArea, rectsOverlap } from '../src/logic/geometry';
 import { PALACE_PRESET } from '../src/logic/layoutPresets';
 import { mulberry32 } from '../src/logic/rng';
 import { parseLevelObjects } from '../src/logic/tiledObjects';
-import { buildTmj } from '../tools/mapBuilder';
-import { PALACE_THEME } from '../tools/mapThemes';
+import { buildTmj } from '../src/logic/map/mapBuilder';
+import { PALACE_THEME } from '../src/logic/map/mapThemes';
 import { aTiledMap, aTiledObject } from './builders';
 
 const SEEDS = Array.from({ length: 60 }, (_, i) => i * 7919 + 1);

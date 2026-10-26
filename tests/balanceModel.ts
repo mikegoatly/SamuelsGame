@@ -13,7 +13,7 @@ import { planWave, type WaveSpawn } from '../src/logic/waveMix';
 import { xpReward } from '../src/logic/xp';
 import { HAZARD_HITS } from '../src/logic/hazard/hits';
 import { hazardCount } from '../src/logic/hazard/plan';
-import type { Encounter, MapTheme } from '../tools/mapThemes';
+import type { Encounter, MapTheme } from '../src/logic/map/mapThemes';
 
 /** The imagined player the targets are written for: on-level, basic weapon plus a skill or two, dodging about half of what a standing target would eat. */
 export interface Reference {

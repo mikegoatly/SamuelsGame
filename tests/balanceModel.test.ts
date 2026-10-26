@@ -6,7 +6,7 @@ import { DWARF_GOLD, NECROMANCER_KILLS, ROGUE_TIME_MS } from '../src/logic/unloc
 import { upgradeCost } from '../src/logic/upgrades';
 import { TIER_MULTIPLIER } from '../src/content/upgradeInfo';
 import { totalGems, type Gems } from '../src/logic/gems';
-import { DESERT_THEME, PALACE_THEME, RUINS_THEME } from '../tools/mapThemes';
+import { DESERT_THEME, PALACE_THEME, RUINS_THEME } from '../src/logic/map/mapThemes';
 import { estimateLevel, estimateRoom, REFERENCE, type LevelEstimate } from './balanceModel';
 
 const CASES = [

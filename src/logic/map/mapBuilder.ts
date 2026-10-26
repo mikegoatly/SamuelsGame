@@ -1,9 +1,10 @@
-import { SHEET_COLS, TILE_SIZE } from '../src/content/assetKeys';
-import { floorMask, generateLayout, placeHazards, placeSpikeTraps, throneTiles, type DungeonLayout, type LayoutRoom } from '../src/logic/dungeonLayout';
-import type { Rect } from '../src/logic/geometry';
-import { placeActiveHazards, type PlacedHazard } from '../src/logic/hazard/placement';
-import { SPIKE_CYCLE } from '../src/logic/spikes';
-import { mulberry32, randInt } from '../src/logic/rng';
+import { SHEET_COLS, TILE_SIZE } from '../../content/assetKeys';
+import { generateRandomLayout } from '../layout/randomLayout';
+import { floorMask, generateLayout, placeHazards, placeSpikeTraps, throneTiles, type DungeonLayout, type LayoutRoom } from '../dungeonLayout';
+import type { Rect } from '../geometry';
+import { placeActiveHazards, type PlacedHazard } from '../hazard/placement';
+import { SPIKE_CYCLE } from '../spikes';
+import { mulberry32, randInt } from '../rng';
 import type { MapTheme } from './mapThemes';
 
 const WALL_RING = 2;
@@ -78,6 +79,7 @@ function paintWalls(layout: DungeonLayout, floor: boolean[][], rng: () => number
       walls[y]![x] = gid(edge ? (rng() < wall.accentChance ? wall.accent : wall.base) : rng() < wall.altChance ? alt : wall.base);
     }),
   );
+  for (const b of layout.blocks) if (!walls[b.y]![b.x]) walls[b.y]![b.x] = gid(wall.base);
   for (const p of layout.pillars) walls[p.y]![p.x] = gid(coverFrame(theme.cover, p.x, p.y));
   return walls;
 }
@@ -104,12 +106,14 @@ function buildObjects(layout: DungeonLayout, hazards: Rect[], spikes: Rect[], ac
     width: 0,
     height: 0,
   });
+  const side = layout.sideRoom;
   const [start, boss] = [layout.rooms[0]!, layout.rooms[layout.rooms.length - 1]!];
   const combat = layout.rooms.filter((room) => room.kind === 'combat');
   return [
     make('playerStart', 'playerStart', at(start), {}, true),
     ...combat.map((room, i) => make(`room${room.index}`, 'room', rectPx(room.rect), { order: room.index, encounter: `${theme.id}-room-${room.index}`, ...theme.encounters[i]! })),
     ...layout.doors.filter((d) => d.room > 0).map((d, i) => make(`door${i + 1}`, 'door', rectPx(d.rect), { room: d.room })),
+    ...(side ? [make('treasure1', 'treasure', at(side), {}, true)] : []),
     ...hazards.map((r, i) => make(`quicksand${i + 1}`, 'hazard', rectPx(r), { kind: 'quicksand' })),
     ...spikes.map((r, i) => make(`spikes${i + 1}`, 'hazard', rectPx(r), { kind: 'spikes', offset: (i % 2 === 0 ? i * 640 : (i - 1) * 640) % SPIKE_PERIOD })),
     ...active.map((h, i) => make(`${h.kind}${i + 1}`, 'hazard', rectPx(h.rect), { kind: h.kind, room: h.room, ...h.params })),
@@ -126,20 +130,31 @@ function tileLayer(id: number, name: string, layout: DungeonLayout, data: number
 /** Separate random stream, so adding or tuning hazards never moves the rooms, cover or quicksand. */
 const HAZARD_SEED_MIX = 0x5bd1e995;
 
-export function buildWorld(theme: MapTheme) {
-  const rng = mulberry32(theme.seed);
-  const layout = generateLayout(rng, theme.preset);
+function assemble(theme: MapTheme, seed: number, rng: () => number, layout: DungeonLayout) {
   const floor = floorMask(layout);
   const ground = paintGround(layout, floor, rng, theme);
   const walls = paintWalls(layout, floor, rng, theme);
   const hazards = placeHazards(layout, rng, theme.quicksandPerRoom);
   const spikes = placeSpikeTraps(layout, rng, theme.spikePairsPerRoom ?? 0, hazards);
-  const active = placeActiveHazards(layout, mulberry32(theme.seed ^ HAZARD_SEED_MIX), theme.hazards ?? {}, [...hazards, ...spikes], theme.bossHazard);
+  const active = placeActiveHazards(layout, mulberry32(seed ^ HAZARD_SEED_MIX), theme.hazards ?? {}, [...hazards, ...spikes], theme.bossHazard);
   return { layout, ground, walls, quicksand: hazards, spikes, active };
 }
 
-export function buildTmj(theme: MapTheme) {
-  const { layout, ground, walls, quicksand, spikes, active } = buildWorld(theme);
+/** The committed classic map: the theme's own seed and fixed serpentine preset. */
+export function buildWorld(theme: MapTheme) {
+  const rng = mulberry32(theme.seed);
+  return assemble(theme, theme.seed, rng, generateLayout(rng, theme.preset));
+}
+
+/** A fresh map for `seed`: random route, room shapes and optional side room, same rooms and encounters as the classic one. */
+export function buildRandomWorld(theme: MapTheme, seed: number) {
+  const rng = mulberry32(seed);
+  return assemble(theme, seed, rng, generateRandomLayout(rng, theme.preset, theme.random));
+}
+
+type World = ReturnType<typeof buildWorld>;
+
+function toTmj({ layout, ground, walls, quicksand, spikes, active }: World, theme: MapTheme) {
   const objects = buildObjects(layout, quicksand, spikes, active, theme);
   return {
     compressionlevel: -1,
@@ -177,3 +192,8 @@ export function buildTmj(theme: MapTheme) {
     ],
   };
 }
+
+export type TmjMap = ReturnType<typeof toTmj>;
+
+export const buildTmj = (theme: MapTheme): TmjMap => toTmj(buildWorld(theme), theme);
+export const buildRandomTmj = (theme: MapTheme, seed: number): TmjMap => toTmj(buildRandomWorld(theme, seed), theme);

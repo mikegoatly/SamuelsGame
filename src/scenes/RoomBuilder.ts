@@ -65,8 +65,8 @@ export const ENVIRONMENT_TINT: Record<Environment, EnvironmentTint> = {
 };
 
 /** Levels with a loaded `mapKey` build from their Tiled map, everything else uses the generated room. */
-export function buildLevelMap(scene: Phaser.Scene, level: LevelConfig): LevelMap {
-  if (level.mapKey && scene.cache.tilemap.exists(level.mapKey)) return buildTiledMap(scene, level);
+export function buildLevelMap(scene: Phaser.Scene, level: LevelConfig, mapKey = level.mapKey): LevelMap {
+  if (mapKey && scene.cache.tilemap.exists(mapKey)) return buildTiledMap(scene, level, mapKey);
   const walls = buildRoom(scene);
   const { walls: tint } = ENVIRONMENT_TINT[level.environment];
   if (tint !== null) walls.setTint(tint);

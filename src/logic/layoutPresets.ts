@@ -72,3 +72,15 @@ export const PALACE_PRESET: LayoutPreset = {
     { kind: 'boss', col: 2, row: 1, span: 2, w: [43, 45], h: [15, 15] },
   ],
 };
+
+export type RoomShape = 'plain' | 'ell' | 'pillared' | 'split';
+
+/** How the random generator reuses a preset's room plan: a bigger grid, a shape pool for combat rooms and the side-room odds. */
+export interface RandomPlan {
+  gridCols: number;
+  gridRows: number;
+  /** Combat room shapes drawn uniformly; repeat an entry to weight it. Symmetric presets must only list symmetric shapes. */
+  shapes: RoomShape[];
+  /** Chance (0-1) of one dead-end treasure room off a combat room. */
+  sideChance: number;
+}

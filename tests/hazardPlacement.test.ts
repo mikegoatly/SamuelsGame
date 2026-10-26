@@ -5,8 +5,8 @@ import { rectsOverlap, type Rect } from '../src/logic/geometry';
 import { hazardCount } from '../src/logic/hazard/plan';
 import { type ActiveHazardKind } from '../src/logic/hazard/kinds';
 import type { PlacedHazard } from '../src/logic/hazard/placement';
-import { buildWorld } from '../tools/mapBuilder';
-import { THEMES } from '../tools/mapThemes';
+import { buildWorld } from '../src/logic/map/mapBuilder';
+import { THEMES } from '../src/logic/map/mapThemes';
 
 const AREA_KINDS: ActiveHazardKind[] = ['rubble', 'wind', 'sandstorm'];
 const tiles = (r: Rect): [number, number][] => Array.from({ length: r.w * r.h }, (_, i) => [r.x + (i % r.w), r.y + Math.floor(i / r.w)]);

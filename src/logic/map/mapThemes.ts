@@ -1,6 +1,6 @@
-import { Frame } from '../src/content/assetKeys';
-import type { BossHazard, HazardPlan } from '../src/logic/hazard/plan';
-import { DESERT_PRESET, PALACE_PRESET, RUINS_PRESET, type LayoutPreset } from '../src/logic/layoutPresets';
+import { Frame } from '../../content/assetKeys';
+import type { BossHazard, HazardPlan } from '../hazard/plan';
+import { DESERT_PRESET, PALACE_PRESET, RUINS_PRESET, type LayoutPreset, type RandomPlan } from '../layoutPresets';
 
 export interface Encounter {
   waves: number;
@@ -14,6 +14,8 @@ export interface MapTheme {
   id: string;
   seed: number;
   preset: LayoutPreset;
+  /** Bigger grid, room shapes and side-room odds for runtime random maps (the preset above still gives sizes, order and cover). */
+  random: RandomPlan;
   /** Variants are rolled in order against cumulative chances; anything left over is `base`. */
   floor: { base: number; variants: { frame: number; chance: number }[] };
   wall: { base: number; alt: readonly number[]; altChance: number; accent: number; accentChance: number };
@@ -36,6 +38,7 @@ export const RUINS_THEME: MapTheme = {
   id: 'ruins',
   seed: 20240611,
   preset: RUINS_PRESET,
+  random: { gridCols: 4, gridRows: 3, shapes: ['plain', 'ell', 'pillared', 'split'], sideChance: 0.6 },
   floor: {
     base: Frame.floor,
     variants: [
@@ -61,6 +64,7 @@ export const DESERT_THEME: MapTheme = {
   id: 'desert',
   seed: 5150731,
   preset: DESERT_PRESET,
+  random: { gridCols: 5, gridRows: 3, shapes: ['plain', 'plain', 'ell', 'pillared', 'split'], sideChance: 0.6 },
   floor: {
     base: Frame.sand[0]!,
     variants: [
@@ -88,6 +92,7 @@ export const PALACE_THEME: MapTheme = {
   id: 'palace',
   seed: 7731905,
   preset: PALACE_PRESET,
+  random: { gridCols: 5, gridRows: 3, shapes: ['plain', 'pillared', 'split'], sideChance: 0.6 },
   floor: {
     base: Frame.floor,
     variants: [],
