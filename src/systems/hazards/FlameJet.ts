@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { rectContains, rectCenter, type Rect } from '../../logic/geometry';
 import { flamePhase, jetHurts } from '../../logic/hazard/vents';
+import { HAZARD_HITS } from '../../logic/hazard/hits';
 import { Cooldowns } from '../../logic/hazard/victims';
 import type { ActiveHazardSpec } from '../../logic/tiledObjects';
 import { emberBurst } from '../fx';
@@ -9,8 +10,8 @@ import { HazardBase } from './HazardBase';
 import type { Hazard, HazardWorld } from './types';
 import { dotEnemy, hazardTargets, hurtPlayer, playerAlive } from './victims';
 
-const TICK_MS = 700;
-const PLAYER_HIT = 0.15;
+const TICK_MS = HAZARD_HITS.flameJet.gapMs;
+const PLAYER_HIT = HAZARD_HITS.flameJet.fraction;
 const ENEMY_HIT = 0.14;
 const WALL_HALF = 8;
 
@@ -65,7 +66,7 @@ export class FlameJet extends HazardBase {
     const { player } = this.world;
     const zone = this.strip(0, this.reach * extent, 8);
     const area = { x: zone.x - 1, y: zone.y - 1, w: zone.w + 2, h: zone.h + 2 };
-    if (playerAlive(this.world) && rectContains(area, player) && this.hits.take('player', now, TICK_MS)) hurtPlayer(this.world, PLAYER_HIT, player.x, player.y);
+    if (playerAlive(this.world) && rectContains(area, player)) this.hits.tryTake('player', now, TICK_MS, () => hurtPlayer(this.world, PLAYER_HIT, player.x, player.y));
     for (const enemy of hazardTargets(this.world)) if (rectContains(area, enemy) && this.hits.take(enemy, now, TICK_MS)) dotEnemy(enemy, ENEMY_HIT, '#ff9a3c', 0xff8a3c);
   }
 

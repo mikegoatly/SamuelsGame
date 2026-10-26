@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { dropChance, rollDrops, rollGemBurst } from '../src/logic/loot';
+import { dropChance, rollDrops, rollGemBurst, scaleGemDrops } from '../src/logic/loot';
 import { pickWeighted } from '../src/logic/weighted';
 import { aLootTable, sequenceRng } from './builders';
 
@@ -72,5 +72,40 @@ describe('rollGemBurst', () => {
     expect(rollGemBurst({ min: 1, max: 1, weights: [1, 1, 2] }, sequenceRng(0, 0.0))).toEqual(['gemRed']);
     expect(rollGemBurst({ min: 1, max: 1, weights: [1, 1, 2] }, sequenceRng(0, 0.3))).toEqual(['gemGreen']);
     expect(rollGemBurst({ min: 1, max: 1, weights: [1, 1, 2] }, sequenceRng(0, 0.9))).toEqual(['gemBlue']);
+  });
+});
+
+describe('scaleGemDrops', () => {
+  const table = aLootTable({
+    nothingWeight: 100,
+    entries: [
+      { itemId: 'coin', weight: 800, rarity: 'common' },
+      { itemId: 'gemRed', weight: 100, rarity: 'epic' },
+    ],
+  });
+
+  it('scales gem weights and pays for it out of nothing, keeping the total', () => {
+    const scaled = scaleGemDrops(table, 1.5);
+    expect(scaled.entries.map((e) => e.weight)).toEqual([800, 150]);
+    expect(scaled.nothingWeight).toBe(50);
+  });
+
+  it('never drives a weight below zero, taking the shortfall from the biggest entries', () => {
+    const tight = aLootTable({
+      nothingWeight: 0,
+      entries: [
+        { itemId: 'coin', weight: 30, rarity: 'common' },
+        { itemId: 'pile', weight: 20, rarity: 'common' },
+        { itemId: 'gemRed', weight: 50, rarity: 'epic' },
+      ],
+    });
+    const scaled = scaleGemDrops(tight, 2);
+    const total = (t: typeof tight): number => t.nothingWeight + t.entries.reduce((s, e) => s + e.weight, 0);
+    expect(total(scaled)).toBe(total(tight));
+    expect([scaled.nothingWeight, ...scaled.entries.map((e) => e.weight)].every((w) => w >= 0)).toBe(true);
+  });
+
+  it('leaves everything else alone', () => {
+    expect(scaleGemDrops(table, 1).entries).toEqual(table.entries);
   });
 });

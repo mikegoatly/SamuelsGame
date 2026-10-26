@@ -2,6 +2,9 @@ export const PICKUP_LIFETIME_MS = 20_000;
 export const PICKUP_BLINK_MS = 5_000;
 export const FULL_HP_POTION_COINS = 2;
 
+/** Potions stay put until walked onto, so a no-potion run is a choice; everything else is pulled in. */
+export const magnetises = (kind: string): boolean => kind !== 'heal';
+
 const BLINK_PERIOD_MS = 160;
 
 export interface PotionResult {

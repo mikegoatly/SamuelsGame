@@ -158,20 +158,20 @@ describe('mad king balance', () => {
     return hp / (wand + fire);
   };
 
-  it('is a level 16 boss', () => {
-    expect(level).toBe(16);
+  it('is a level 15 boss', () => {
+    expect(level).toBe(15);
   });
 
-  it('takes a level 14-15 player with the broken wand and fireballs 2-3 minutes at ~50% uptime', () => {
-    for (const playerLevel of [14, 15]) {
+  it('takes a level 13-14 player with the broken wand and fireballs 2-3 minutes at ~50% uptime', () => {
+    for (const playerLevel of [13, 14]) {
       expect(secondsToKill(playerLevel, 0.5), `level ${playerLevel}`).toBeGreaterThanOrEqual(120);
       expect(secondsToKill(playerLevel, 0.5), `level ${playerLevel}`).toBeLessThanOrEqual(180);
     }
   });
 
   it('its blade ring bolts take at least 6 hits to kill an on-level player and a lunge at least 4', () => {
-    expect(playerMaxHp(15) / damageToPlayer(madKing.boltDamage!, level, 15)).toBeGreaterThanOrEqual(6);
-    expect(playerMaxHp(15) / damageToPlayer(madKing.slamDamage!, level, 15)).toBeGreaterThanOrEqual(4);
+    expect(playerMaxHp(14) / damageToPlayer(madKing.boltDamage!, level, 14)).toBeGreaterThanOrEqual(6);
+    expect(playerMaxHp(14) / damageToPlayer(madKing.slamDamage!, level, 14)).toBeGreaterThanOrEqual(4);
   });
 
   describe('a player who never dodges', () => {
@@ -331,7 +331,7 @@ describe('volume', () => {
     return total;
   };
 
-  it('each level fields at least 1.7x the monsters the old flat waves did', () => {
+  it('each level still fields at least four fifths of the monsters the old flat waves had', () => {
     const cases: [LevelConfig, number[]][] = [
       [ruins, [1, 2, 2, 2, 3]],
       [desert, [2, 2, 2, 2, 3, 3]],
@@ -340,7 +340,7 @@ describe('volume', () => {
     for (const [level, oldWaves] of cases) {
       const old = oldWaves.map(legacyTotal).reduce((a, b) => a + b, 0);
       const now = Array.from({ length: 20 }, (_, seed) => planned(level, oldWaves.length, seed)).reduce((a, b) => a + b, 0) / 20;
-      expect(now / old, level.id).toBeGreaterThan(1.7);
+      expect(now / old, level.id).toBeGreaterThan(0.8);
     }
   });
 });

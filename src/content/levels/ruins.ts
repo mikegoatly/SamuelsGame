@@ -21,8 +21,8 @@ export const ruins: LevelConfig = {
   ],
   curve: {
     intro: ['ratSwarm', 'bombBeetle', 'skeletonArcher', 'wisp', 'necromancer'],
-    waves: [1, 2, 2, 3, 3],
-    size: { base: 3, perRoom: 1, perWave: 1, max: 12 },
+    waves: [1, 2, 2, 2, 3],
+    size: { base: 3, perRoom: 0.8, perWave: 0.5, max: 12 },
     elite: { fromRoom: 3, base: 0.25, perRoom: 0.1, max: 0.5 },
   },
   bossId: 'stoneGuardian',

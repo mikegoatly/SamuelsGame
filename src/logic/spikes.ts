@@ -1,3 +1,5 @@
+import { HAZARD_HITS } from './hazard/hits';
+
 export type SpikeState = 'down' | 'warn' | 'up';
 
 export interface SpikeCycle {
@@ -19,6 +21,6 @@ export function spikeState(now: number, cycle: SpikeCycle): SpikeState {
 
 export const spikesHurt = (state: SpikeState): boolean => state === 'up';
 
-export const SPIKE_DAMAGE_FRACTION = 0.14;
+export const SPIKE_DAMAGE_FRACTION = HAZARD_HITS.spikes.fraction;
 
 export const spikeDamage = (playerMaxHp: number): number => Math.max(1, Math.round(playerMaxHp * SPIKE_DAMAGE_FRACTION));

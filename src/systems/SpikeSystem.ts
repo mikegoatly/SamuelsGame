@@ -2,6 +2,8 @@ import Phaser from 'phaser';
 import { playSfx } from './sfx';
 import type { Player } from '../entities/Player';
 import { rectContains } from '../logic/geometry';
+import { HAZARD_HITS } from '../logic/hazard/hits';
+import { Cooldowns } from '../logic/hazard/victims';
 import { SPIKE_CYCLE, spikeDamage, spikeState, spikesHurt, type SpikeState } from '../logic/spikes';
 import type { HazardSpec } from '../logic/tiledObjects';
 import type { GameClock } from './GameClock';
@@ -18,6 +20,7 @@ interface Trap {
 /** Floor spike traps cycling down / warning / up on the pause-safe game clock; only raised spikes hurt. */
 export class SpikeSystem {
   private readonly traps: Trap[];
+  private readonly hits = new Cooldowns<string>();
 
   constructor(
     private readonly scene: Phaser.Scene,
@@ -38,7 +41,11 @@ export class SpikeSystem {
       this.draw(trap, state, state === 'warn' && Math.floor(now / BLINK_MS) % 2 === 0);
       if (spikesHurt(state) && !this.player.dead && this.touching(trap)) {
         const { x, y, w, h } = trap.spec.rect;
-        if (this.player.takeDamage(spikeDamage(this.player.maxHp), x + w / 2, y + h / 2, 'hazard') === 'hurt') playSfx(this.scene, 'hurt', { rate: 1.4, volume: 0.6 });
+        this.hits.tryTake('player', now, HAZARD_HITS.spikes.gapMs, () => {
+          const result = this.player.takeDamage(spikeDamage(this.player.maxHp), x + w / 2, y + h / 2, 'hazard');
+          if (result === 'hurt') playSfx(this.scene, 'hurt', { rate: 1.4, volume: 0.6 });
+          return result !== 'none';
+        });
       }
     }
   }

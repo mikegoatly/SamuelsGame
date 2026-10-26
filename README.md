@@ -8,9 +8,9 @@ Every level adds five monsters, each featured in one room (`curve.intro` in the 
 
 | Level | Monsters |
 |---|---|
-| Ruins | Rat Swarm (8-12 flanking rats), Bomb Beetle (fuse flash, blast hurts monsters too), Skeleton Archer (shoots, retreats to cover), Wisp (orbits, then dives), Necromancer (raises each corpse once; kill first) |
+| Ruins | Rat Swarm (6-9 flanking rats), Bomb Beetle (fuse flash, blast hurts monsters too), Skeleton Archer (shoots, retreats to cover), Wisp (orbits, then dives), Necromancer (raises each corpse once; kill first) |
 | Desert | Fire Imp (fast, burning trail), Cactus Turret (rotating spine ring), Mummy Priest (heals and shields allies), Sand Shark (untargetable fin, leaps), Dust Devil (pulls you, bends bolts) |
-| Palace | Jester (bouncing bombs, confetti teleport), Mirror Knight (reflects bolts from the front), Houndmaster (+3 hounds that flee when he dies), Gargoyle (dormant statue; wakes near you or when nothing else is left), Twin Mages (a beam joins them) |
+| Palace | Jester (bouncing bombs, confetti teleport), Mirror Knight (throws back one bolt per 1.5s from the front, the rest hit its shield for half damage), Houndmaster (+2 hounds that flee when he dies), Gargoyle (dormant statue; wakes near you or when nothing else is left), Twin Mages (a beam joins them) |
 
 From room 3 a monster may be an **elite** with a glow and name tag: Armoured (half damage until its bar breaks), Swift, Splitting, Vampiric or Volatile (telegraphed blast on death). Elites drop an extra roll and sometimes a gem.
 
@@ -103,7 +103,7 @@ impact or at max range (radius 40, falloff to 40% at the edge, 2.5s cooldown). C
 
 ## Level 3: Killer Palace
 
-`public/assets/maps/palace.tmj` (theme `PALACE_THEME`, preset `PALACE_PRESET`): six grand symmetric combat rooms (monster Lv 10 to 15) with mirrored statue cover,
+`public/assets/maps/palace.tmj` (theme `PALACE_THEME`, preset `PALACE_PRESET`): six grand symmetric combat rooms (monster Lv 10 to 12) with mirrored statue cover,
 timed spike traps (warning blink, then raised spikes hurt) and a throne room with a colonnade. Enemies: palace guards (shield blocks 55% from the front; get round the side),
 royal archers (lead their shots), dark mages (blink away when you get close, then fire slow homing orbs) and assassins (nearly invisible until they strike).
 ### Hazards (v2 phase 4)
@@ -118,7 +118,7 @@ Every hazard is telegraphed, hurts monsters too (lure them in; bosses are immune
 
 Boss arenas get one: rubble (Ruins), gentle wind (Desert), north-wall flame jets (Palace). Hazards stop when the run ends. Counts per room live in `MapTheme.hazards` (`tools/mapThemes.ts`).
 
-The Mad King (Lv 16) lunges along a red lane, fires spinning blade rings, calls guards and, below 50% HP, teleports between thrones and fires spirals.
+The Mad King (Lv 15) lunges along a red lane, fires spinning blade rings, calls guards and, below 50% HP, teleports between thrones and fires spirals.
 Reward: the Golden Sword, a melee weapon (~100 degree swing, hits everything in the arc once, strong knockback, swats enemy bolts). It also teaches Chain Lightning. After clearing the palace a locked "???" card teases the next chapter. Music: `palace.mp3` and `boss-palace.mp3` (copied by `copy-assets`).
 
 ## Skills and loadout (v2 phase 1)
@@ -163,9 +163,15 @@ Unlocking a hero also gives you its signature weapon (and starting skill). Locke
 | Vex (rogue) | A dash leaves a dagger trap where it ends (3s, two at once) | "The desert rewards the swift." |
 | Borin (dwarf) | +25% gold, potions heal 50% more | "Gold calls to the mountain folk." |
 | Wren (ranger) | Long-range basic hits crit (x1.5) | "Keep your distance, in the sand and the palace." |
-| Kai (monk) | Every 5th basic hit stuns (not bosses) | "Discipline over comfort. Stand your ground." |
+| Kai (monk) | Every 5th basic hit stuns (not bosses) | "Discipline over comfort. Walk past the potions." |
 | Morwen (necromancer) | Enemies you slay may rise as a skeleton ally for 8s (three at once; ally kills never raise more, but they count toward total kills) | "So many souls..." |
 | The Wanderer (secret) | Rare drops 50% more often | "Many hands, one destiny." |
+
+Unlock rules: knight = clear the Ruins without casting a skill; rogue = clear the Desert in under 5:00; dwarf = hold 800 gold at once; ranger = clear Desert or Palace taking at most 20 melee damage; monk = clear any level without drinking a potion (dashing is fine); necromancer = 600 monsters in total; wanderer = three bosses with three heroes.
+
+### Balance (v2 phase 5)
+
+`tests/balanceModel.ts` is a headless model of a reference player (on-level Broken Wand, 60% accuracy, skills worth +25%, dodges half of what a standing player would take). It plays whole levels from the wave planner, loot tables and monster stats and reports damage, time, XP, gold, gems and potions per room; `tests/balanceModel.test.ts` pins the bands (no spike between rooms, steady rise inside and across levels, XP arrival levels, economy). Change a curve or a monster and those tests say if a room became a spike. Hazard hits live in `src/logic/hazard/hits.ts`.
 
 Save v8 adds `heroes` and `stats`; v7 saves migrate with the wizard only. Dev: unlock everything by editing `heroes.unlocked` in the save.
 
@@ -184,12 +190,13 @@ Volumes and the shake toggle live in the save (`settings`, save v4). Effects go 
 
 ## Economy and the Camp (v2 phase 2)
 
-- **Gems** replace the old passive charms: red (Power), green (Swiftness), blue (Vitality). They are spent, never passive. Normal kills drop one ~4% of the time
+- **Gems** replace the old passive charms: red (Power), green (Swiftness), blue (Vitality). They are spent, never passive. Normal kills drop one ~5.6% of the time (`GEM_DROP_SCALE` 1.4)
   (colour leans to the level theme: ruins blue, desert green, palace red); bosses add a burst of 3-5. The first gem of each colour shows an item card.
 - **Camp** (`CampScene`): Level Select has a Camp button and the results screen has Visit Camp. Tabs: Upgrades and Shop (left/right or tap), gold and gems on top, scrolling list (wheel, arrows, tap).
   - Upgrades: every owned weapon and skill goes level 1 to 5. Going from level L costs `round(60 * L^1.6 * tier)` gold (tier x1 / 1.25 / 1.5) plus L gems of the item colour
     (skills: offence red, utility green, defence and support blue; weapons red; mapping in `src/content/upgradeInfo.ts`). The preview reads the per-level tables, e.g. Fireball 1 to 2: Damage 30 -> 36, Cooldown 2.5s -> 2.35s.
   - Weapons gain +12% damage and +5% fire rate per level. Level 5 twists: staff bolts pierce one enemy, wand bolts split in two on hit (60% damage), sword swings send a short slash wave. Skill twists are in `skills.ts`.
   - Shop: 3 unowned skills for 150 / 250 / 400 gold (tier 1 / 2 / 3), rotating after every level clear (seeded from the save); Health Potions (40 gold, carry 3, heal 40% HP); one Revive Token (300 gold).
+- **Floor potions** no longer fly to you: gold and gems still magnetise, a potion is only drunk when you walk onto it. Coins are worth 2 / 12 / 24 gold (coin, pile, gold pile).
 - **In a level**: F / gamepad Y / the touch potion button drinks a carried potion (only when hurt). With a Revive Token you rise once at 50% HP with 2s of i-frames; the token is consumed.
 - Save v7: `gems`, `potions`, `revive`, `shop.rotation`, `weapons.levels`. v6 charms convert one to one (power to red, swiftness to green, vitality to blue) and seen card ids are renamed.

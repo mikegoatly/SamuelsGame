@@ -1,6 +1,7 @@
 import type Phaser from 'phaser';
 import { crackState, safeExit, type CrackState } from '../../logic/hazard/crack';
 import { rectContains } from '../../logic/geometry';
+import { HAZARD_HITS } from '../../logic/hazard/hits';
 import { Cooldowns } from '../../logic/hazard/victims';
 import { feel } from '../feel';
 import { playSfx } from '../sfx';
@@ -9,7 +10,7 @@ import { enemyRadius, hazardTargets, hurtEnemy, hurtPlayer, PLAYER_RADIUS, playe
 import type { Hazard, HazardWorld } from './types';
 import type { ActiveHazardSpec } from '../../logic/tiledObjects';
 
-const PLAYER_FALL = 0.12;
+const PLAYER_FALL = HAZARD_HITS.crackedFloor.fraction;
 const ENEMY_FALL = 0.25;
 const EXIT_MARGIN = 9;
 const SAFE_MS = 700;
@@ -55,12 +56,16 @@ export class CrackedFloor extends HazardBase {
 
   private dropVictims(now: number): void {
     const { player, isSolid } = this.world;
-    if (this.occupied(player.x, player.y, playerAlive(this.world)) && this.falls.take('player', now, 1200)) {
-      const out = safeExit(this.rect, player, EXIT_MARGIN, PLAYER_RADIUS, isSolid);
-      playSfx(this.world.scene, 'pitFall');
-      feel.shake(110, 0.004);
-      const hurt = hurtPlayer(this.world, PLAYER_FALL, player.x, player.y);
-      if (out) player.blinkTo(out.x, out.y, hurt ? SAFE_MS : 250);
+    if (this.occupied(player.x, player.y, playerAlive(this.world))) {
+      this.falls.tryTake('player', now, 1200, () => {
+        const hurt = hurtPlayer(this.world, PLAYER_FALL, player.x, player.y);
+        if (!hurt && player.invulnerable) return false;
+        const out = safeExit(this.rect, player, EXIT_MARGIN, PLAYER_RADIUS, isSolid);
+        playSfx(this.world.scene, 'pitFall');
+        feel.shake(110, 0.004);
+        if (out) player.blinkTo(out.x, out.y, hurt ? SAFE_MS : 250);
+        return true;
+      });
     }
     for (const enemy of hazardTargets(this.world)) {
       if (!this.inside(enemy.x, enemy.y) || !this.falls.take(enemy, now, 1500)) continue;

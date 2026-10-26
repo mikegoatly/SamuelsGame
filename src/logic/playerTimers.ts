@@ -1,3 +1,5 @@
+export const PLAYER_IFRAMES_MS = 600;
+
 export interface PlayerTimerTuning {
   dashMs: number;
   dashCooldownMs: number;

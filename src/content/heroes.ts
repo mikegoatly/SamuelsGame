@@ -108,7 +108,7 @@ export const monk: HeroDef = {
   stats: mods(RATING.mid, RATING.high, RATING.mid),
   passive: { id: 'stunStreak', name: 'Stunning Palm', text: 'Every 5th basic hit stuns for 0.8 seconds (not bosses).' },
   signatureWeaponId: 'fists',
-  hint: 'Discipline over comfort. Stand your ground.',
+  hint: 'Discipline over comfort. Walk past the potions.',
 };
 
 export const necromancer: HeroDef = {

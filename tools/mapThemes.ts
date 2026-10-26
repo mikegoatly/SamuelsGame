@@ -53,7 +53,7 @@ export const RUINS_THEME: MapTheme = {
     { waves: 3, minLevel: 4, maxLevel: 4 },
   ],
   quicksandPerRoom: 0,
-  hazards: { crackedFloor: [0, 1, 1, 2, 2], rubble: [0, 0, 1, 1, 2], gasVent: [0, 0, 0, 1, 2] },
+  hazards: { crackedFloor: [0, 1, 1, 1, 2], rubble: [0, 0, 1, 1, 1], gasVent: [0, 0, 0, 1, 1] },
   bossHazard: { kind: 'rubble', count: 2 },
 };
 
@@ -74,13 +74,13 @@ export const DESERT_THEME: MapTheme = {
   encounters: [
     { waves: 2, minLevel: 5, maxLevel: 5 },
     { waves: 2, minLevel: 5, maxLevel: 6 },
-    { waves: 2, minLevel: 6, maxLevel: 7 },
-    { waves: 2, minLevel: 7, maxLevel: 8 },
+    { waves: 2, minLevel: 6, maxLevel: 6 },
+    { waves: 3, minLevel: 6, maxLevel: 7 },
+    { waves: 3, minLevel: 7, maxLevel: 8 },
     { waves: 3, minLevel: 8, maxLevel: 9 },
-    { waves: 3, minLevel: 9, maxLevel: 9 },
   ],
   quicksandPerRoom: 1,
-  hazards: { firePit: [0, 1, 2, 2, 3, 3], wind: [0, 0, 1, 1, 2, 2], sandstorm: [0, 0, 0, 0, 1, 1] },
+  hazards: { firePit: [0, 1, 1, 2, 2, 3], wind: [0, 0, 1, 1, 2, 2], sandstorm: [0, 0, 0, 0, 1, 1] },
   bossHazard: { kind: 'wind', count: 1 },
 };
 
@@ -96,15 +96,15 @@ export const PALACE_THEME: MapTheme = {
   cover: Frame.statue,
   encounters: [
     { waves: 2, minLevel: 10, maxLevel: 10 },
+    { waves: 2, minLevel: 10, maxLevel: 10 },
     { waves: 2, minLevel: 10, maxLevel: 11 },
-    { waves: 2, minLevel: 11, maxLevel: 12 },
-    { waves: 2, minLevel: 12, maxLevel: 13 },
-    { waves: 3, minLevel: 13, maxLevel: 14 },
-    { waves: 3, minLevel: 14, maxLevel: 15 },
+    { waves: 2, minLevel: 11, maxLevel: 11 },
+    { waves: 3, minLevel: 11, maxLevel: 11 },
+    { waves: 3, minLevel: 11, maxLevel: 12 },
   ],
   quicksandPerRoom: 0,
   spikePairsPerRoom: 1,
-  hazards: { arrowWall: [0, 1, 1, 2, 2, 3], pendulum: [0, 0, 1, 1, 2, 2], flameJet: [0, 0, 0, 2, 2, 3] },
+  hazards: { arrowWall: [0, 1, 1, 1, 1, 2], pendulum: [0, 0, 0, 1, 1, 1], flameJet: [0, 0, 0, 0, 1, 1] },
   bossHazard: { kind: 'flameJet', count: 2 },
   thrones: true,
 };

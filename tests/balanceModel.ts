@@ -1,0 +1,226 @@
+import { getEnemy, type EnemyDef } from '../src/content/enemies';
+import { curveOf, infoOf } from '../src/content/levels/curve';
+import type { LevelConfig } from '../src/content/levels';
+import { items } from '../src/content/items';
+import { lootTables } from '../src/content/lootTables';
+import { getWeapon } from '../src/content/weapons';
+import { damageToEnemy, damageToPlayer, enemyMaxHp, playerMaxHp } from '../src/logic/combat';
+import { addLoot, expectedLoot, noLoot, type LootValue } from '../src/logic/lootValue';
+import { addXp } from '../src/logic/progression';
+import { REFLECT_COOLDOWN_MS } from '../src/logic/reflect';
+import { mulberry32 } from '../src/logic/rng';
+import { planWave, type WaveSpawn } from '../src/logic/waveMix';
+import { xpReward } from '../src/logic/xp';
+import { HAZARD_HITS } from '../src/logic/hazard/hits';
+import { hazardCount } from '../src/logic/hazard/plan';
+import type { Encounter, MapTheme } from '../tools/mapThemes';
+
+/** The imagined player the targets are written for: on-level, basic weapon plus a skill or two, dodging about half of what a standing target would eat. */
+export interface Reference {
+  weaponId: string;
+  accuracy: number;
+  /** Extra damage from skills on top of the basic attack. */
+  skillBoost: number;
+  /** Share of incoming hits avoided; a bot that only aims has 0. */
+  dodge: number;
+}
+
+export const REFERENCE: Reference = { weaponId: 'brokenWand', accuracy: 0.6, skillBoost: 1.25, dodge: 0.5 };
+
+/** Scales the hit rates so a standing player matches what the aim-only bot suffered in playtests (palace room 2 about 450, desert room 4 about 470). */
+const CALIBRATION = 0.43;
+const WAVE_OVERHEAD_S = 3;
+const SAMPLES = 24;
+const BOSS_XP_BONUS = 100;
+const TRANSIT_S = 6;
+const START_S = 4;
+/** Hits a standing player takes from one instance of each hazard over a room fight. */
+const HAZARD_EXPOSURE: Record<keyof typeof HAZARD_HITS, number> = { crackedFloor: 0.4, rubble: 0.5, gasVent: 0.6, firePit: 1, arrowWall: 1, pendulum: 0.8, flameJet: 0.6, spikes: 0.8 };
+
+/** Share of max health a standing player loses to the room's hazards. */
+function hazardShare(theme: Pick<MapTheme, 'hazards' | 'spikePairsPerRoom'>, order: number): number {
+  const plan = theme.hazards ?? {};
+  let share = 0;
+  for (const kind of Object.keys(HAZARD_EXPOSURE) as (keyof typeof HAZARD_HITS)[]) {
+    const count = kind === 'spikes' ? (theme.spikePairsPerRoom ?? 0) * 2 : kind in plan ? hazardCount(plan, kind as 'rubble', order) : 0;
+    share += count * HAZARD_HITS[kind].fraction * HAZARD_EXPOSURE[kind];
+  }
+  return share;
+}
+
+/** Chance a bomb beetle blast lands. */
+const BLAST_CHANCE = 0.4;
+
+/** Hits per second a living monster lands on a standing player, hit chance included. */
+const MELEE_RATE = 0.9;
+const BOLT_RATE = 0.35;
+const HIT_RATE: Record<string, number> = {
+  chaser: MELEE_RATE,
+  erratic: MELEE_RATE,
+  charger: 0.5,
+  beetle: 0,
+  archer: BOLT_RATE / 2.3,
+  wisp: 0.25,
+  rat: MELEE_RATE,
+  necromancer: BOLT_RATE / 2.8,
+  shark: 0.2,
+  imp: MELEE_RATE,
+  turret: 0.35,
+  devil: 0.5,
+  priest: BOLT_RATE / 2.3,
+  jester: 0.15,
+  gargoyle: MELEE_RATE,
+  twin: 0.3,
+  houndmaster: MELEE_RATE,
+  hound: MELEE_RATE,
+};
+
+/** Slow bodies are easy to kite, so they catch a moving player less often than fast ones. */
+const catchUp = (def: EnemyDef): number => Math.min(1, Math.max(0.35, def.speed / 60));
+
+const rateOf = (def: EnemyDef): number => {
+  if (def.behaviour === 'ranged' || def.behaviour === 'mage') return ((def.spread?.count ?? 1) * BOLT_RATE) / ((def.fireEveryMs ?? 2500) / 1000);
+  const rate = HIT_RATE[def.custom ?? def.behaviour] ?? MELEE_RATE;
+  return rate === MELEE_RATE ? rate * catchUp(def) : rate;
+};
+
+export interface MonsterShot {
+  def: EnemyDef;
+  level: number;
+  elite: boolean;
+}
+
+export interface RoomEstimate {
+  order: number;
+  playerLevel: number;
+  /** Damage taken by the reference player. */
+  damage: number;
+  damagePct: number;
+  /** Damage a standing bot would take. */
+  standingDamage: number;
+  seconds: number;
+  monsters: number;
+  xp: number;
+  loot: LootValue;
+}
+
+export interface LevelEstimate {
+  rooms: RoomEstimate[];
+  /** Whole run: fights, walking between rooms and the boss. */
+  runSeconds: number;
+  bossSeconds: number;
+  endLevel: number;
+  bossXp: number;
+  totalSeconds: number;
+  loot: LootValue;
+}
+
+const coinValue = (itemId: string): number => {
+  const item = items[itemId];
+  return item?.kind === 'coin' ? item.value : 0;
+};
+
+const healValue = (itemId: string): number => {
+  const item = items[itemId];
+  return item?.kind === 'heal' ? item.heal : 0;
+};
+
+function expand(spawns: WaveSpawn[]): MonsterShot[] {
+  const shots: MonsterShot[] = [];
+  for (const spawn of spawns) {
+    const def = getEnemy(spawn.enemyId);
+    if (!def.pack) {
+      shots.push({ def, level: spawn.level, elite: spawn.affix !== undefined });
+      continue;
+    }
+    const member = getEnemy(def.pack.member);
+    const count = Math.round((def.pack.count[0] + def.pack.count[1]) / 2);
+    if (def.pack.leader) shots.push({ def, level: spawn.level, elite: false });
+    for (let i = 0; i < count; i++) shots.push({ def: member, level: Math.max(1, spawn.level - (def.pack.levelDrop ?? 0)), elite: false });
+  }
+  return shots;
+}
+
+/** Bolts thrown back by a mirror: half the shots meet its front, at most one reflection per cooldown. */
+function reflectedPerSecond(def: EnemyDef, level: number, playerLevel: number, ref: Reference, shotsPerSecond: number): number {
+  const reflections = Math.min(shotsPerSecond * ref.accuracy * 0.5, 1000 / Math.max(1, REFLECT_COOLDOWN_MS));
+  return reflections * damageToPlayer(def.baseDamage, level, playerLevel) * def.reflect!.damageScale * BOLT_RATE;
+}
+
+/** One wave: monsters die one after another and each hurts until it does. Standing-player damage, seconds and xp. */
+function waveEstimate(shots: MonsterShot[], playerLevel: number, ref: Reference) {
+  const weapon = getWeapon(ref.weaponId);
+  const shotsPerSecond = 1000 / weapon.fireRateMs;
+  let clock = 0;
+  let damage = 0;
+  let xp = 0;
+  for (const { def, level, elite } of shots) {
+    const shield = def.shield ? (1 + (1 - def.shield.reduction)) / 2 : 1;
+    const dps = damageToEnemy(weapon.baseDamage, playerLevel, level) * shotsPerSecond * ref.accuracy * ref.skillBoost * shield;
+    clock += (enemyMaxHp(def.baseHp, level) * (elite ? 1.3 : 1)) / Math.max(1, dps);
+    let perSecond = CALIBRATION * rateOf(def) * damageToPlayer(def.custom === 'jester' ? def.blastDamage! : def.baseDamage, level, playerLevel);
+    if (def.reflect) perSecond += CALIBRATION * reflectedPerSecond(def, level, playerLevel, ref, shotsPerSecond);
+    damage += perSecond * clock;
+    if (def.custom === 'beetle' && def.blastDamage) damage += damageToPlayer(def.blastDamage, level, playerLevel) * BLAST_CHANCE * CALIBRATION;
+    xp += xpReward(level, playerLevel);
+  }
+  return { damage, seconds: clock + WAVE_OVERHEAD_S, xp };
+}
+
+export function estimateRoom(level: LevelConfig, order: number, encounter: Encounter, playerLevel: number, ref: Reference = REFERENCE, theme?: Pick<MapTheme, 'hazards' | 'spikePairsPerRoom'>): RoomEstimate {
+  const curve = curveOf(level);
+  const waves = curve.waves[Math.min(curve.waves.length, order) - 1] ?? 1;
+  let standing = 0;
+  let seconds = 0;
+  let xp = 0;
+  let monsters = 0;
+  let loot = noLoot();
+  for (let seed = 0; seed < SAMPLES; seed++) {
+    const rng = mulberry32(order * 7919 + seed * 104729);
+    for (let wave = 1; wave <= waves; wave++) {
+      const shots = expand(planWave(level.enemyPool, curve, { order, wave, levels: [encounter.minLevel, encounter.maxLevel] }, infoOf, rng));
+      const result = waveEstimate(shots, playerLevel, ref);
+      standing += result.damage / SAMPLES;
+      seconds += result.seconds / SAMPLES;
+      xp += result.xp / SAMPLES;
+      monsters += shots.length / SAMPLES;
+      for (const shot of shots) {
+        const table = lootTables[shot.def.lootTableId];
+        if (table) loot = addLoot(loot, expectedLoot(table, coinValue, shot.elite, healValue), 1 / SAMPLES);
+      }
+    }
+  }
+  standing += theme ? hazardShare(theme, order) * playerMaxHp(playerLevel) : 0;
+  const damage = standing * (1 - ref.dodge);
+  return { order, playerLevel, damage, damagePct: damage / playerMaxHp(playerLevel), standingDamage: standing, seconds, monsters, xp, loot };
+}
+
+/** The reference player against the boss: all their basic attacks and skills, at their accuracy. */
+function bossFightSeconds(level: LevelConfig, playerLevel: number, ref: Reference): number {
+  const weapon = getWeapon(ref.weaponId);
+  const boss = getEnemy(level.bossId!);
+  const bossLevel = level.bossLevel ?? 1;
+  const dps = damageToEnemy(weapon.baseDamage, playerLevel, bossLevel) * (1000 / weapon.fireRateMs) * ref.accuracy * ref.skillBoost;
+  return enemyMaxHp(boss.baseHp, bossLevel) / dps;
+}
+
+/** Walks the whole level: player level rises with xp between rooms; the boss adds its bonus and loot. */
+export function estimateLevel(level: LevelConfig, encounters: readonly Encounter[], startLevel: number, ref: Reference = REFERENCE, theme?: MapTheme): LevelEstimate {
+  let progress = { level: startLevel, xp: 0 };
+  let loot = noLoot();
+  const rooms: RoomEstimate[] = [];
+  encounters.forEach((encounter, i) => {
+    const room = estimateRoom(level, i + 1, encounter, progress.level, ref, theme);
+    rooms.push(room);
+    loot = addLoot(loot, room.loot);
+    progress = addXp(progress, room.xp).progress;
+  });
+  const boss = level.bossId ? getEnemy(level.bossId) : undefined;
+  const bossXp = boss ? xpReward(level.bossLevel ?? 1, progress.level) + BOSS_XP_BONUS : 0;
+  progress = addXp(progress, bossXp).progress;
+  const bossTable = boss ? lootTables[boss.lootTableId] : undefined;
+  if (bossTable) loot = addLoot(loot, expectedLoot(bossTable, coinValue, false, healValue));
+  const fights = rooms.reduce((sum, r) => sum + r.seconds, 0);
+  const bossSeconds = boss ? bossFightSeconds(level, rooms[rooms.length - 1]!.playerLevel, ref) : 0;
+  return { rooms, endLevel: progress.level, bossXp, totalSeconds: fights, bossSeconds, runSeconds: START_S + fights + TRANSIT_S * rooms.length + bossSeconds, loot };
+}

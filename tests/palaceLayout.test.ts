@@ -116,10 +116,10 @@ describe('palace map', () => {
     expect(JSON.parse(JSON.stringify(buildTmj(PALACE_THEME)))).toEqual(committed);
   });
 
-  it('has six combat rooms climbing from monster level 10 to 15, a throne room and doors on both sides of each corridor', () => {
+  it('has six combat rooms climbing from monster level 10 to 12, a throne room and doors on both sides of each corridor', () => {
     expect(parsed.rooms).toHaveLength(6);
     expect(parsed.rooms[0]!.minLevel).toBe(10);
-    expect(parsed.rooms[5]!.maxLevel).toBe(15);
+    expect(parsed.rooms[5]!.maxLevel).toBe(12);
     for (let i = 1; i < 6; i++) expect(parsed.rooms[i]!.maxLevel).toBeGreaterThanOrEqual(parsed.rooms[i - 1]!.maxLevel);
     expect(parsed.bossArena).not.toBeNull();
     expect(parsed.doors).toHaveLength(13);

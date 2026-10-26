@@ -9,8 +9,9 @@ import { playSfx } from '../sfx';
 import { HazardBase } from './HazardBase';
 import type { Hazard, HazardWorld } from './types';
 import { enemyRadius, hazardTargets, hurtEnemy, hurtPlayer, PLAYER_RADIUS, playerAlive } from './victims';
+import { HAZARD_HITS } from '../../logic/hazard/hits';
 
-const PLAYER_HIT = 0.16;
+const PLAYER_HIT = HAZARD_HITS.rubble.fraction;
 const ENEMY_HIT = 0.3;
 const CYCLE_MS = 1900 + 1000 + 280;
 const FALL_FROM = 150;

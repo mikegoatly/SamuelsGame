@@ -17,49 +17,50 @@ describe('knight', () => {
 });
 
 describe('rogue', () => {
-  it('needs the Lost Desert cleared in under four minutes', () => {
-    expect(unlockedBy({ levelId: 'desert', timeMs: 239_999 })).toEqual(['rogue']);
+  it('needs the Lost Desert cleared in under five minutes', () => {
+    expect(unlockedBy({ levelId: 'desert', timeMs: 299_999 })).toEqual(['rogue']);
   });
 
-  it('is not earned at four minutes, in another level or without a clear', () => {
-    expect(unlockedBy({ levelId: 'desert', timeMs: 240_000 })).toEqual([]);
+  it('is not earned at five minutes, in another level or without a clear', () => {
+    expect(unlockedBy({ levelId: 'desert', timeMs: 300_000 })).toEqual([]);
     expect(unlockedBy({ levelId: 'ruins', timeMs: 100_000 })).toEqual([]);
     expect(unlockedBy({ levelId: 'desert', timeMs: 100_000, cleared: false })).toEqual([]);
   });
 });
 
 describe('dwarf and necromancer (account stats, no run needed)', () => {
-  it('the dwarf comes from holding 500 gold at once', () => {
-    expect(newlyUnlocked(['wizard'], anAccount({ goldPeak: 499 }))).toEqual([]);
-    expect(newlyUnlocked(['wizard'], anAccount({ goldPeak: 500 }))).toEqual(['dwarf']);
+  it('the dwarf comes from holding 800 gold at once', () => {
+    expect(newlyUnlocked(['wizard'], anAccount({ goldPeak: 799 }))).toEqual([]);
+    expect(newlyUnlocked(['wizard'], anAccount({ goldPeak: 800 }))).toEqual(['dwarf']);
   });
 
-  it('the necromancer comes from 1000 kills in total', () => {
-    expect(newlyUnlocked(['wizard'], anAccount({ totalKills: 999 }))).toEqual([]);
-    expect(newlyUnlocked(['wizard'], anAccount({ totalKills: 1000 }))).toEqual(['necromancer']);
+  it('the necromancer comes from 600 kills in total', () => {
+    expect(newlyUnlocked(['wizard'], anAccount({ totalKills: 599 }))).toEqual([]);
+    expect(newlyUnlocked(['wizard'], anAccount({ totalKills: 600 }))).toEqual(['necromancer']);
   });
 });
 
 describe('ranger', () => {
   const damageTaken = { melee: 0, ranged: 40, hazard: 10, boss: 60 };
 
-  it('needs the desert or palace cleared with no melee damage, other damage allowed', () => {
+  it('needs the desert or palace cleared with at most a graze of melee damage (20), other damage allowed', () => {
     expect(unlockedBy({ levelId: 'desert', timeMs: 999_999, damageTaken })).toEqual(['ranger']);
     expect(unlockedBy({ levelId: 'palace', damageTaken })).toEqual(['ranger']);
   });
 
   it('is not earned in the ruins, with melee damage, or without a clear', () => {
     expect(unlockedBy({ levelId: 'ruins', damageTaken })).toEqual([]);
-    expect(unlockedBy({ levelId: 'palace', damageTaken: { ...damageTaken, melee: 1 } })).toEqual([]);
+    expect(unlockedBy({ levelId: 'palace', damageTaken: { ...damageTaken, melee: 21 } })).toEqual([]);
+    expect(unlockedBy({ levelId: 'palace', damageTaken: { ...damageTaken, melee: 20 } })).toEqual(['ranger']);
     expect(unlockedBy({ levelId: 'palace', damageTaken, cleared: false })).toEqual([]);
   });
 });
 
 describe('monk', () => {
-  it('needs a clear with no potion drunk and no dash', () => {
+  it('needs a clear with no potion drunk, dashing is fine', () => {
     expect(unlockedBy({ potionsUsed: 0, dashes: 0 })).toEqual(['monk']);
     expect(unlockedBy({ potionsUsed: 1, dashes: 0 })).toEqual([]);
-    expect(unlockedBy({ potionsUsed: 0, dashes: 1 })).toEqual([]);
+    expect(unlockedBy({ potionsUsed: 0, dashes: 12 })).toEqual(['monk']);
     expect(unlockedBy({ potionsUsed: 0, dashes: 0, cleared: false })).toEqual([]);
   });
 });
@@ -94,7 +95,7 @@ describe('newlyUnlocked', () => {
   });
 
   it('reports several at once, in roster order', () => {
-    const account = anAccount({ goldPeak: 600, totalKills: 1200 });
+    const account = anAccount({ goldPeak: 900, totalKills: 1200 });
     expect(newlyUnlocked(['wizard'], account)).toEqual(['dwarf', 'necromancer']);
   });
 });

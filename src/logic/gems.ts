@@ -5,6 +5,9 @@ export const GEM_COLOURS: readonly GemColour[] = ['red', 'green', 'blue'];
 export const GEM_LABEL: Record<GemColour, string> = { red: 'Power', green: 'Swiftness', blue: 'Vitality' };
 export const GEM_TINT: Record<GemColour, number> = { red: 0xff5a4a, green: 0x5aff8a, blue: 0x5aa8ff };
 
+/** Multiplies every gem drop weight; tuned so a few clears pay for several level 3 items. */
+export const GEM_DROP_SCALE = 1.4;
+
 export const noGems = (): Gems => ({ red: 0, green: 0, blue: 0 });
 
 /** v6 saves held charms; each one becomes a gem of the matching colour. */

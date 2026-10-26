@@ -7,7 +7,7 @@ import { speedFactorAt } from '../logic/hazards';
 import type { Rect } from '../logic/geometry';
 import { BowDraw } from '../logic/bowDraw';
 import { frontalDamage, passiveEffects, Strikes, type PassiveEffects, type Strike } from '../logic/passives';
-import { PlayerTimers } from '../logic/playerTimers';
+import { PLAYER_IFRAMES_MS, PlayerTimers } from '../logic/playerTimers';
 import { reviveHp, REVIVE_IFRAMES_MS } from '../logic/potions';
 import { computePlayerStats, type PlayerStats } from '../logic/stats';
 import type { DamageSource } from '../logic/unlocks';
@@ -32,7 +32,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   static readonly DASH_SPEED = 260;
   static readonly DASH_MS = 150;
   static readonly DASH_COOLDOWN_MS = 800;
-  static readonly IFRAMES_MS = 600;
+  static readonly IFRAMES_MS = PLAYER_IFRAMES_MS;
   static readonly KNOCKBACK_MS = 120;
 
   hp: number;

@@ -11,7 +11,7 @@
  "tilewidth": 16,
  "tileheight": 16,
  "nextlayerid": 4,
- "nextobjectid": 46,
+ "nextobjectid": 44,
  "tilesets": [
   {
    "firstgid": 1,
@@ -185,7 +185,7 @@
       {
        "name": "maxLevel",
        "type": "int",
-       "value": 7
+       "value": 6
       }
      ]
     },
@@ -213,17 +213,17 @@
       {
        "name": "waves",
        "type": "int",
-       "value": 2
+       "value": 3
       },
       {
        "name": "minLevel",
        "type": "int",
-       "value": 7
+       "value": 6
       },
       {
        "name": "maxLevel",
        "type": "int",
-       "value": 8
+       "value": 7
       }
      ]
     },
@@ -256,12 +256,12 @@
       {
        "name": "minLevel",
        "type": "int",
-       "value": 8
+       "value": 7
       },
       {
        "name": "maxLevel",
        "type": "int",
-       "value": 9
+       "value": 8
       }
      ]
     },
@@ -294,7 +294,7 @@
       {
        "name": "minLevel",
        "type": "int",
-       "value": 9
+       "value": 8
       },
       {
        "name": "maxLevel",
@@ -685,35 +685,7 @@
     },
     {
      "id": 28,
-     "name": "firePit3",
-     "type": "hazard",
-     "x": 1376,
-     "y": 112,
-     "width": 32,
-     "height": 32,
-     "rotation": 0,
-     "visible": true,
-     "properties": [
-      {
-       "name": "kind",
-       "type": "string",
-       "value": "firePit"
-      },
-      {
-       "name": "room",
-       "type": "int",
-       "value": 3
-      },
-      {
-       "name": "offset",
-       "type": "int",
-       "value": 1500
-      }
-     ]
-    },
-    {
-     "id": 29,
-     "name": "wind4",
+     "name": "wind3",
      "type": "hazard",
      "x": 1360,
      "y": 64,
@@ -735,7 +707,7 @@
       {
        "name": "offset",
        "type": "int",
-       "value": 3500
+       "value": 1000
       },
       {
        "name": "level",
@@ -745,7 +717,35 @@
       {
        "name": "dir",
        "type": "int",
-       "value": 180
+       "value": 90
+      }
+     ]
+    },
+    {
+     "id": 29,
+     "name": "firePit4",
+     "type": "hazard",
+     "x": 1744,
+     "y": 224,
+     "width": 48,
+     "height": 32,
+     "rotation": 0,
+     "visible": true,
+     "properties": [
+      {
+       "name": "kind",
+       "type": "string",
+       "value": "firePit"
+      },
+      {
+       "name": "room",
+       "type": "int",
+       "value": 4
+      },
+      {
+       "name": "offset",
+       "type": "int",
+       "value": 800
       }
      ]
     },
@@ -753,9 +753,9 @@
      "id": 30,
      "name": "firePit5",
      "type": "hazard",
-     "x": 1744,
+     "x": 1952,
      "y": 96,
-     "width": 32,
+     "width": 48,
      "height": 32,
      "rotation": 0,
      "visible": true,
@@ -773,41 +773,13 @@
       {
        "name": "offset",
        "type": "int",
-       "value": 3700
+       "value": 1900
       }
      ]
     },
     {
      "id": 31,
-     "name": "firePit6",
-     "type": "hazard",
-     "x": 1952,
-     "y": 224,
-     "width": 32,
-     "height": 32,
-     "rotation": 0,
-     "visible": true,
-     "properties": [
-      {
-       "name": "kind",
-       "type": "string",
-       "value": "firePit"
-      },
-      {
-       "name": "room",
-       "type": "int",
-       "value": 4
-      },
-      {
-       "name": "offset",
-       "type": "int",
-       "value": 1200
-      }
-     ]
-    },
-    {
-     "id": 32,
-     "name": "wind7",
+     "name": "wind6",
      "type": "hazard",
      "x": 1744,
      "y": 96,
@@ -829,7 +801,7 @@
       {
        "name": "offset",
        "type": "int",
-       "value": 1600
+       "value": 3500
       },
       {
        "name": "level",
@@ -839,7 +811,35 @@
       {
        "name": "dir",
        "type": "int",
-       "value": 90
+       "value": 270
+      }
+     ]
+    },
+    {
+     "id": 32,
+     "name": "firePit7",
+     "type": "hazard",
+     "x": 1760,
+     "y": 448,
+     "width": 48,
+     "height": 32,
+     "rotation": 0,
+     "visible": true,
+     "properties": [
+      {
+       "name": "kind",
+       "type": "string",
+       "value": "firePit"
+      },
+      {
+       "name": "room",
+       "type": "int",
+       "value": 5
+      },
+      {
+       "name": "offset",
+       "type": "int",
+       "value": 100
       }
      ]
     },
@@ -847,10 +847,10 @@
      "id": 33,
      "name": "firePit8",
      "type": "hazard",
-     "x": 1776,
-     "y": 448,
-     "width": 32,
-     "height": 48,
+     "x": 1936,
+     "y": 592,
+     "width": 48,
+     "height": 32,
      "rotation": 0,
      "visible": true,
      "properties": [
@@ -867,69 +867,13 @@
       {
        "name": "offset",
        "type": "int",
-       "value": 1200
+       "value": 200
       }
      ]
     },
     {
      "id": 34,
-     "name": "firePit9",
-     "type": "hazard",
-     "x": 1936,
-     "y": 592,
-     "width": 32,
-     "height": 32,
-     "rotation": 0,
-     "visible": true,
-     "properties": [
-      {
-       "name": "kind",
-       "type": "string",
-       "value": "firePit"
-      },
-      {
-       "name": "room",
-       "type": "int",
-       "value": 5
-      },
-      {
-       "name": "offset",
-       "type": "int",
-       "value": 700
-      }
-     ]
-    },
-    {
-     "id": 35,
-     "name": "firePit10",
-     "type": "hazard",
-     "x": 1744,
-     "y": 608,
-     "width": 32,
-     "height": 32,
-     "rotation": 0,
-     "visible": true,
-     "properties": [
-      {
-       "name": "kind",
-       "type": "string",
-       "value": "firePit"
-      },
-      {
-       "name": "room",
-       "type": "int",
-       "value": 5
-      },
-      {
-       "name": "offset",
-       "type": "int",
-       "value": 2800
-      }
-     ]
-    },
-    {
-     "id": 36,
-     "name": "wind11",
+     "name": "wind9",
      "type": "hazard",
      "x": 1728,
      "y": 448,
@@ -951,7 +895,7 @@
       {
        "name": "offset",
        "type": "int",
-       "value": 3000
+       "value": 400
       },
       {
        "name": "level",
@@ -966,8 +910,8 @@
      ]
     },
     {
-     "id": 37,
-     "name": "sandstorm12",
+     "id": 35,
+     "name": "sandstorm10",
      "type": "hazard",
      "x": 1712,
      "y": 432,
@@ -989,7 +933,7 @@
       {
        "name": "offset",
        "type": "int",
-       "value": 3500
+       "value": 300
       },
       {
        "name": "level",
@@ -999,11 +943,11 @@
      ]
     },
     {
-     "id": 38,
-     "name": "firePit13",
+     "id": 36,
+     "name": "firePit11",
      "type": "hazard",
-     "x": 1344,
-     "y": 576,
+     "x": 1504,
+     "y": 432,
      "width": 48,
      "height": 32,
      "rotation": 0,
@@ -1022,18 +966,18 @@
       {
        "name": "offset",
        "type": "int",
-       "value": 500
+       "value": 600
       }
      ]
     },
     {
-     "id": 39,
-     "name": "firePit14",
+     "id": 37,
+     "name": "firePit12",
      "type": "hazard",
-     "x": 1520,
-     "y": 432,
+     "x": 1360,
+     "y": 592,
      "width": 32,
-     "height": 48,
+     "height": 32,
      "rotation": 0,
      "visible": true,
      "properties": [
@@ -1050,13 +994,13 @@
       {
        "name": "offset",
        "type": "int",
-       "value": 2100
+       "value": 3700
       }
      ]
     },
     {
-     "id": 40,
-     "name": "firePit15",
+     "id": 38,
+     "name": "firePit13",
      "type": "hazard",
      "x": 1536,
      "y": 576,
@@ -1078,13 +1022,13 @@
       {
        "name": "offset",
        "type": "int",
-       "value": 700
+       "value": 1500
       }
      ]
     },
     {
-     "id": 41,
-     "name": "wind16",
+     "id": 39,
+     "name": "wind14",
      "type": "hazard",
      "x": 1328,
      "y": 432,
@@ -1106,7 +1050,7 @@
       {
        "name": "offset",
        "type": "int",
-       "value": 3100
+       "value": 2600
       },
       {
        "name": "level",
@@ -1116,13 +1060,13 @@
       {
        "name": "dir",
        "type": "int",
-       "value": 270
+       "value": 90
       }
      ]
     },
     {
-     "id": 42,
-     "name": "sandstorm17",
+     "id": 40,
+     "name": "sandstorm15",
      "type": "hazard",
      "x": 1312,
      "y": 416,
@@ -1144,7 +1088,7 @@
       {
        "name": "offset",
        "type": "int",
-       "value": 1400
+       "value": 2800
       },
       {
        "name": "level",
@@ -1154,8 +1098,8 @@
      ]
     },
     {
-     "id": 43,
-     "name": "wind18",
+     "id": 41,
+     "name": "wind16",
      "type": "hazard",
      "x": 496,
      "y": 416,
@@ -1177,7 +1121,7 @@
       {
        "name": "offset",
        "type": "int",
-       "value": 1800
+       "value": 1400
       },
       {
        "name": "level",
@@ -1187,12 +1131,12 @@
       {
        "name": "dir",
        "type": "int",
-       "value": 270
+       "value": 90
       }
      ]
     },
     {
-     "id": 44,
+     "id": 42,
      "name": "bossArena",
      "type": "bossArena",
      "x": 480,
@@ -1210,7 +1154,7 @@
      ]
     },
     {
-     "id": 45,
+     "id": 43,
      "name": "exit",
      "type": "exit",
      "x": 512,

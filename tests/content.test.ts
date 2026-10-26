@@ -44,11 +44,11 @@ describe('content integrity', () => {
     expect(weapons.brokenWand!.baseDamage).toBeGreaterThan(weapons.apprenticeStaff!.baseDamage);
   });
 
-  it('drop rates: potions ~10%, gems ~4% for bats, better for cyclops', () => {
+  it('drop rates: potions ~10%, gems ~5.6% for bats, better for cyclops', () => {
     const charmChance = (table: string) =>
       ['gemRed', 'gemGreen', 'gemBlue'].reduce((sum, id) => sum + dropChance(lootTables[table]!, id), 0);
     expect(dropChance(lootTables.bat!, 'healthPotionSmall')).toBeCloseTo(0.1);
-    expect(charmChance('bat')).toBeCloseTo(0.04);
+    expect(charmChance('bat')).toBeCloseTo(0.056);
     expect(charmChance('cyclops')).toBeGreaterThan(charmChance('bat'));
   });
 

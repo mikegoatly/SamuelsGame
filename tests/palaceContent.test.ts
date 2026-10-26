@@ -23,8 +23,8 @@ const coins = (table: string) => {
 };
 
 describe('palace level', () => {
-  it('is the level 10 to 15 palace with the Mad King and the golden sword, unlocked by the desert', () => {
-    expect(palace).toMatchObject({ recommendedLevel: 10, monsterLevelRange: [10, 15], bossId: 'madKing', bossLevel: 16, rewardWeaponId: 'goldenSword', unlockedBy: 'desert', mapKey: 'palace' });
+  it('is the level 10 to 12 palace with the Mad King and the golden sword, unlocked by the desert', () => {
+    expect(palace).toMatchObject({ recommendedLevel: 10, monsterLevelRange: [10, 12], bossId: 'madKing', bossLevel: 15, rewardWeaponId: 'goldenSword', unlockedBy: 'desert', mapKey: 'palace' });
     expect(getEnemy(palace.bossId!)).toBe(madKing);
     expect(madKing.boss).toBe(true);
     expect(rewardsOf(palace)[0]).toMatchObject({ kind: 'weapon', id: 'goldenSword', headline: 'Golden Sword acquired!' });

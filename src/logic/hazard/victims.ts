@@ -8,6 +8,14 @@ export class Cooldowns<K> {
     return true;
   }
 
+  /** Runs `attempt` unless the window is still running; the window is only spent when it returns true (the hit landed). */
+  tryTake(key: K, now: number, windowMs: number, attempt: () => boolean): boolean {
+    if (now < (this.next.get(key) ?? -Infinity)) return false;
+    if (!attempt()) return false;
+    this.next.set(key, now + windowMs);
+    return true;
+  }
+
   clear(): void {
     this.next.clear();
   }

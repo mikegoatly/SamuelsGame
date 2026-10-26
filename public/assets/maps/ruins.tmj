@@ -11,7 +11,7 @@
  "tilewidth": 16,
  "tileheight": 16,
  "nextlayerid": 4,
- "nextobjectid": 33,
+ "nextobjectid": 31,
  "tilesets": [
   {
    "firstgid": 1,
@@ -615,35 +615,7 @@
     },
     {
      "id": 23,
-     "name": "crackedFloor6",
-     "type": "hazard",
-     "x": 1504,
-     "y": 608,
-     "width": 32,
-     "height": 32,
-     "rotation": 0,
-     "visible": true,
-     "properties": [
-      {
-       "name": "kind",
-       "type": "string",
-       "value": "crackedFloor"
-      },
-      {
-       "name": "room",
-       "type": "int",
-       "value": 4
-      },
-      {
-       "name": "offset",
-       "type": "int",
-       "value": 0
-      }
-     ]
-    },
-    {
-     "id": 24,
-     "name": "rubble7",
+     "name": "rubble6",
      "type": "hazard",
      "x": 1312,
      "y": 496,
@@ -665,7 +637,7 @@
       {
        "name": "offset",
        "type": "int",
-       "value": 2100
+       "value": 200
       },
       {
        "name": "rocks",
@@ -675,8 +647,8 @@
      ]
     },
     {
-     "id": 25,
-     "name": "gasVent8",
+     "id": 24,
+     "name": "gasVent7",
      "type": "hazard",
      "x": 1104,
      "y": 592,
@@ -698,7 +670,7 @@
       {
        "name": "offset",
        "type": "int",
-       "value": 3000
+       "value": 2600
       },
       {
        "name": "radius",
@@ -708,41 +680,8 @@
      ]
     },
     {
-     "id": 26,
-     "name": "gasVent9",
-     "type": "hazard",
-     "x": 912,
-     "y": 592,
-     "width": 48,
-     "height": 48,
-     "rotation": 0,
-     "visible": true,
-     "properties": [
-      {
-       "name": "kind",
-       "type": "string",
-       "value": "gasVent"
-      },
-      {
-       "name": "room",
-       "type": "int",
-       "value": 5
-      },
-      {
-       "name": "offset",
-       "type": "int",
-       "value": 2300
-      },
-      {
-       "name": "radius",
-       "type": "int",
-       "value": 26
-      }
-     ]
-    },
-    {
-     "id": 27,
-     "name": "crackedFloor10",
+     "id": 25,
+     "name": "crackedFloor8",
      "type": "hazard",
      "x": 1104,
      "y": 464,
@@ -764,17 +703,17 @@
       {
        "name": "offset",
        "type": "int",
-       "value": 3100
+       "value": 2000
       }
      ]
     },
     {
-     "id": 28,
-     "name": "crackedFloor11",
+     "id": 26,
+     "name": "crackedFloor9",
      "type": "hazard",
-     "x": 976,
-     "y": 576,
-     "width": 32,
+     "x": 944,
+     "y": 608,
+     "width": 64,
      "height": 32,
      "rotation": 0,
      "visible": true,
@@ -792,13 +731,13 @@
       {
        "name": "offset",
        "type": "int",
-       "value": 100
+       "value": 3200
       }
      ]
     },
     {
-     "id": 29,
-     "name": "rubble12",
+     "id": 27,
+     "name": "rubble10",
      "type": "hazard",
      "x": 912,
      "y": 464,
@@ -820,18 +759,18 @@
       {
        "name": "offset",
        "type": "int",
-       "value": 400
+       "value": 0
       },
       {
        "name": "rocks",
        "type": "int",
-       "value": 2
+       "value": 1
       }
      ]
     },
     {
-     "id": 30,
-     "name": "rubble13",
+     "id": 28,
+     "name": "rubble11",
      "type": "hazard",
      "x": 144,
      "y": 416,
@@ -853,7 +792,7 @@
       {
        "name": "offset",
        "type": "int",
-       "value": 500
+       "value": 1000
       },
       {
        "name": "rocks",
@@ -863,7 +802,7 @@
      ]
     },
     {
-     "id": 31,
+     "id": 29,
      "name": "bossArena",
      "type": "bossArena",
      "x": 128,
@@ -881,7 +820,7 @@
      ]
     },
     {
-     "id": 32,
+     "id": 30,
      "name": "exit",
      "type": "exit",
      "x": 160,

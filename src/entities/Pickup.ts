@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { Tex } from '../content/assetKeys';
 import type { ItemDef } from '../content/items';
 import type { GameClock } from '../systems/GameClock';
-import { isPickupExpired, isPickupVisible } from '../logic/pickups';
+import { isPickupExpired, isPickupVisible, magnetises } from '../logic/pickups';
 
 const POP_MS = 380;
 const POP_RADIUS = 20;
@@ -48,7 +48,7 @@ export class Pickup extends Phaser.Physics.Arcade.Sprite {
       return;
     }
     this.setVisible(isPickupVisible(age));
-    if (!this.popping) this.attract();
+    if (!this.popping && magnetises(this.def.kind)) this.attract();
   }
 
   private attract(): void {

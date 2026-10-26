@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { reflectDirection, reflectsBolt } from '../src/logic/reflect';
+import { canReflect, REFLECT_COOLDOWN_MS, reflectDirection, reflectsBolt } from '../src/logic/reflect';
 import { newBomb, stepBomb } from '../src/logic/bomb';
 import { clearStatus, shouldWake } from '../src/logic/clear';
 import { beamTouches, distanceToSegment } from '../src/logic/beam';
@@ -7,6 +7,12 @@ import { aWall, noWalls } from './builders';
 
 describe('mirror knight', () => {
   const knight = { x: 100, y: 100 };
+
+  it('throws back at most one bolt per cooldown', () => {
+    expect(canReflect(0, -Infinity)).toBe(true);
+    expect(canReflect(REFLECT_COOLDOWN_MS - 1, 0)).toBe(false);
+    expect(canReflect(REFLECT_COOLDOWN_MS, 0)).toBe(true);
+  });
 
   it('reflects bolts that arrive on the facing side only', () => {
     expect(reflectsBolt(0, knight, { x: 120, y: 100 }, 2.4)).toBe(true);

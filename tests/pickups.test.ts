@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { isPickupExpired, isPickupVisible, PICKUP_LIFETIME_MS, resolvePotion } from '../src/logic/pickups';
+import { isPickupExpired, magnetises, isPickupVisible, PICKUP_LIFETIME_MS, resolvePotion } from '../src/logic/pickups';
+
+describe('magnetises', () => {
+  it('pulls gold, gems and scrolls but leaves potions where they fall', () => {
+    expect(['coin', 'gem', 'skill'].every(magnetises)).toBe(true);
+    expect(magnetises('heal')).toBe(false);
+  });
+});
 
 describe('resolvePotion', () => {
   it.each([

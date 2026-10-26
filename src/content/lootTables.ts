@@ -1,4 +1,5 @@
-import type { GemColour } from '../logic/gems';
+import { GEM_DROP_SCALE, type GemColour } from '../logic/gems';
+import { scaleGemDrops } from '../logic/loot';
 import type { GemBurst, LootEntry, LootTable } from '../logic/loot';
 import { SCROLL_CHANCE } from '../logic/skillScroll';
 import { monsterLoot } from './monsterLoot';
@@ -158,5 +159,5 @@ export const madKingLoot: LootTable = {
 };
 
 export const lootTables: Record<string, LootTable> = Object.fromEntries(
-  [slimeLoot, batLoot, cyclopsLoot, ghostLoot, stoneGuardianLoot, scorpionLoot, banditLoot, mummyLoot, vultureLoot, sandRatLoot, palaceGuardLoot, royalArcherLoot, darkMageLoot, assassinLoot, madKingLoot, ...monsterLoot].map((table) => [table.id, table]),
+  [slimeLoot, batLoot, cyclopsLoot, ghostLoot, stoneGuardianLoot, scorpionLoot, banditLoot, mummyLoot, vultureLoot, sandRatLoot, palaceGuardLoot, royalArcherLoot, darkMageLoot, assassinLoot, madKingLoot, ...monsterLoot].map((table) => [table.id, scaleGemDrops(table, GEM_DROP_SCALE)]),
 );

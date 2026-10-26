@@ -1,4 +1,5 @@
 import { bladeHits, bladeTip, pendulumAngle, type PendulumSwing } from '../../logic/hazard/pendulum';
+import { HAZARD_HITS } from '../../logic/hazard/hits';
 import { Cooldowns } from '../../logic/hazard/victims';
 import type { ActiveHazardSpec } from '../../logic/tiledObjects';
 import { playSfx } from '../sfx';
@@ -8,9 +9,9 @@ import { enemyRadius, hazardTargets, hurtEnemy, hurtPlayer, PLAYER_RADIUS, playe
 
 const BLADE_RADIUS = 5;
 const BLADE_FROM = 0.35;
-const PLAYER_HIT = 0.14;
+const PLAYER_HIT = HAZARD_HITS.pendulum.fraction;
 const ENEMY_HIT = 0.25;
-const HIT_GAP_MS = 850;
+const HIT_GAP_MS = HAZARD_HITS.pendulum.gapMs;
 const rad = (deg: number): number => (deg * Math.PI) / 180;
 
 /** A blade swinging on an arm around a fixed pivot; the swept arc is always shown, so the danger zone can be read before it comes round. */
@@ -39,8 +40,8 @@ export class Pendulum extends HazardBase {
     const tip = bladeTip(this.pivot, angle, this.length);
     const from = bladeTip(this.pivot, angle, this.length * BLADE_FROM);
     const { player } = this.world;
-    if (playerAlive(this.world) && bladeHits(from, tip, BLADE_RADIUS, player, PLAYER_RADIUS) && this.hits.take('player', now, HIT_GAP_MS)) {
-      hurtPlayer(this.world, PLAYER_HIT, tip.x, tip.y, 'bladeSwish');
+    if (playerAlive(this.world) && bladeHits(from, tip, BLADE_RADIUS, player, PLAYER_RADIUS)) {
+      this.hits.tryTake('player', now, HIT_GAP_MS, () => hurtPlayer(this.world, PLAYER_HIT, tip.x, tip.y, 'bladeSwish'));
     }
     for (const enemy of hazardTargets(this.world)) {
       if (bladeHits(from, tip, BLADE_RADIUS, enemy, enemyRadius(enemy)) && this.hits.take(enemy, now, HIT_GAP_MS)) hurtEnemy(enemy, ENEMY_HIT, tip.x, tip.y);

@@ -23,7 +23,7 @@ export const ratSwarm: EnemyDef = {
   id: 'ratSwarm',
   name: 'Rat Swarm',
   cost: 2,
-  pack: { member: 'rat', count: [8, 12], levelDrop: 0 },
+  pack: { member: 'rat', count: [6, 9], levelDrop: 0 },
 };
 export const bombBeetle: EnemyDef = {
   id: 'bombBeetle',
@@ -35,7 +35,7 @@ export const bombBeetle: EnemyDef = {
   behaviour: 'custom',
   custom: 'beetle',
   lootTableId: 'bombBeetle',
-  blastDamage: 18,
+  blastDamage: 12,
   raisable: false,
 };
 export const skeletonArcher: EnemyDef = {
@@ -152,15 +152,15 @@ export const mirrorKnight: EnemyDef = {
   id: 'mirrorKnight',
   name: 'Mirror Knight',
   frame: Frame.knightVisor,
-  baseHp: 70,
-  baseDamage: 16,
+  baseHp: 52,
+  baseDamage: 11,
   speed: 26,
   behaviour: 'chaser',
   lootTableId: 'mirrorKnight',
   tint: 0xb8f0ff,
   scale: 1.15,
   shield: { arc: 2.4, reduction: 0.5, turnRate: 1.1 },
-  reflect: { damageScale: 0.7 },
+  reflect: { damageScale: 0.5 },
 };
 export const jester: EnemyDef = {
   id: 'jester',
@@ -173,15 +173,15 @@ export const jester: EnemyDef = {
   custom: 'jester',
   lootTableId: 'jester',
   tint: 0xff70d0,
-  blastDamage: 16,
+  blastDamage: 11,
   placement: 'back',
 };
 export const gargoyle: EnemyDef = {
   id: 'gargoyle',
   name: 'Gargoyle',
   ...drawn(MonsterFrame.gargoyle),
-  baseHp: 64,
-  baseDamage: 15,
+  baseHp: 56,
+  baseDamage: 13,
   speed: 46,
   behaviour: 'custom',
   custom: 'gargoyle',
@@ -217,8 +217,8 @@ export const hound: EnemyDef = {
   id: 'hound',
   name: 'Hound',
   frame: Frame.wolf,
-  baseHp: 20,
-  baseDamage: 9,
+  baseHp: 18,
+  baseDamage: 8,
   speed: 82,
   behaviour: 'custom',
   custom: 'hound',
@@ -230,8 +230,8 @@ export const houndmaster: EnemyDef = {
   id: 'houndmaster',
   name: 'Houndmaster',
   frame: Frame.bandit,
-  baseHp: 50,
-  baseDamage: 14,
+  baseHp: 44,
+  baseDamage: 12,
   speed: 30,
   behaviour: 'custom',
   custom: 'houndmaster',
@@ -239,7 +239,7 @@ export const houndmaster: EnemyDef = {
   tint: 0xe09040,
   scale: 1.15,
   cost: 3,
-  pack: { member: 'hound', count: [3, 3], leader: true },
+  pack: { member: 'hound', count: [2, 2], leader: true },
 };
 
 export const ruinsMonsters = [ratSwarm, bombBeetle, skeletonArcher, wisp, necromancer];

@@ -8,7 +8,7 @@ Runs in browser (desktop + tablet). Phaser 3 + TypeScript + Vite.
 - Behaviours live one per file in `src/entities/behaviours/*.ts`; `Enemy` only dispatches (`def.custom` picks the module) and keeps health, hits, knockback and loot. Pure rules are in `src/logic` (`fuse`, `orbitDive`, `archer`+`cover`, `pack`, `graveyard`, `shark`, `trail`, `turret`, `whirl`, `support`, `reflect`, `bomb`, `clear`, `beam`).
 - Packs: an `EnemyDef.pack` is spawned by `EnemyFactory.spawnGroup` (rats scatter, twins are linked, hounds follow the master). Room clear counts every living monster (`ClearWatch`): split halves, raised dead and pack members all count; dormant gargoyles and fleeing hounds do not, and when only dormant statues remain they are woken.
 - Elites (`logic/elites`, `entities/behaviours/mods.ts`): one affix, never on bosses or packs; the ward bar (`logic/ward`) is shared with the Mummy Priest's shield.
-- Curves (`LevelConfig.curve`, `logic/waveMix`): waves per room, wave size = slots from `size` (a tank or swarm costs 2), the room's `intro` monster is in every wave of its room and later monsters wait for their room. Tanks spawn near the player, shooters far (`pickRoleSpawn`). Slots roughly double the old flat waves (ruins 68, desert/palace about 115 slots). The arena keeps endless waves with the same planner.
+- Curves (`LevelConfig.curve`, `logic/waveMix`): waves per room, wave size = slots from `size` (a tank or swarm costs 2), the room's `intro` monster is in every wave of its room and later monsters wait for their room. Tanks spawn near the player, shooters far (`pickRoleSpawn`). Phase 5 tuned the slots (about 65 to 80 monsters per clear, see Balance) and fixed the order of new monsters by difficulty rather than the proposal table (palace: Jester, Twin Mages, Houndmaster, Mirror Knight, Gargoyle; desert: Fire Imp, Mummy Priest, Cactus Turret, Sand Shark, Dust Devil). The arena keeps endless waves with the same planner.
 - Extra sprites: `tools/add_monster_frames.py` writes `public/assets/extra/monsters-extra.png` (`Tex.monsters`, `MonsterFrame`). Dev builds expose `window.__spawn(id, level, dx, dy, affix)`.
 
 ## 1. Core loop
@@ -26,7 +26,7 @@ Rushing ahead means under-levelled player → damage dealt reduced, damage taken
 |---|------|-------------|-------------|--------|
 | 1 | Broken Wand | Ruins | 1–4 | Broken Wand (basic magic bolt) |
 | 2 | Lost Desert | Desert | 5–9 | Skill: Fireball |
-| 3 | Killer Palace | Palace | 10–15 | Golden Sword (melee) |
+| 3 | Killer Palace | Palace | 10–12 | Golden Sword (melee) |
 | 4+ | (future) | … | … | … → Ultimate Boss |
 
 Each level config (`src/content/levels/*.ts`): id, name, tilemap key, music, enemy pool + spawn
@@ -43,19 +43,19 @@ weights, monster level range, boss id, reward id, unlock requirement (previous l
 
 ## 4. Progression maths (pure functions, unit tested)
 
-- XP to next level: `round(20 × level^1.5)`.
-- Monster XP reward: `5 × monsterLevel`, reduced when monster far below player level (anti-grind on easy stuff).
+- XP to next level: `round(25 × level^1.5)`.
+- Monster XP reward: `5 × monsterLevel × (1 + 0.06 × (monsterLevel − 1))`, reduced when monster far below player level (anti-grind on easy stuff).
 - Level-gap modifier (`gap = monsterLevel − playerLevel`):
   - damage dealt by player × `clamp(1 − 0.1 × gap, 0.3, 1.2)`
   - damage taken × `clamp(1 + 0.15 × gap, 0.7, 2.5)`
 - Drops: each enemy def references a loot table (`content/lootTables.ts`): `rolls` independent rolls, each picks
   one entry (or nothing) by weight (per-mille). `rollDrops(table, rng, luck)` in `logic/loot.ts`; luck inflates rare/epic weights.
-  Rarity: common (coins), rare (potions), epic (charms). Rates per roll: slime ~62% coins, 11% potion, 4% gem;
-  bat 60% coin, 10% potion, 4% gem; cyclops 60% coins/piles, 20% potion (7% large), 7% gem.
-- Items (`content/items.ts`): coin (1), coin pile (5), health potion small/large (+25/+60 HP, at full HP converts to 2 coins),
+  Rarity: common (coins), rare (potions), epic (charms). Rates per roll: slime ~62% coins, 11% potion, 5.6% gem;
+  bat 60% coin, 10% potion, 5.6% gem; cyclops 60% coins/piles, 20% potion (7% large), 9.8% gem (gem weights are x1.4, see Balance).
+- Items (`content/items.ts`): coin (2), coin pile (12), gold pile (24), health potion small/large (+25/+60 HP, at full HP converts to 2 coins),
   Gems (red Power, green Swiftness, blue Vitality) are spendable upgrade material (v2 phase 2), no passive bonus.
   `computePlayerStats(level)` gives maxHp, moveSpeed, damageMultiplier; weapon upgrade levels scale damage and fire rate (`weaponAtLevel`).
-- Pickups pop out of dead enemies, magnet to the player within 40px, auto-collect on overlap, blink then despawn after 20s.
+- Pickups pop out of dead enemies; coins, gems and scrolls magnet to the player within 40px, health potions do not (walk onto them); all auto-collect on overlap, blink then despawn after 20s.
 
 ### Save & run state
 `logic/save.ts` (pure): `{version, progress{level,xp}, coins, charms, weapons{owned,equipped}, levels{cleared,bestTimes}}`;
@@ -181,15 +181,15 @@ tests/                    Vitest specs for logic/
 - Palace: `PALACE_THEME` + `PALACE_PRESET` (5x2 grid mirrored from the desert: start on the right, six odd-sized symmetric combat rooms, throne room spanning two cells).
   `LayoutPreset.symmetric` centres rooms on their corridor lines, mirrors cover into four quadrants and lines the throne room with a mirrored colonnade;
   `placeSpikeTraps` adds mirrored pairs of timed spike traps and `throneTiles` the boss teleport points (`throne` objects). Ground is a tinted checkerboard
-  (per-tile tint, `EnvironmentTint.checker`), walls grey brick with banners, statues as cover. Monster levels 10-15 (2/2/2/2/3/3 waves). Music `palace.mp3` (Montage), boss `boss-palace.mp3` (Hard Rock).
-- Spike traps (`logic/spikes.ts`, `systems/SpikeSystem`): 3.2s cycle on the pause-safe GameClock, down -> 0.7s red-blinking warning -> up 0.9s; only up spikes hurt (14% max HP, i-frames and dash respected).
+  (per-tile tint, `EnvironmentTint.checker`), walls grey brick with banners, statues as cover. Monster levels 10-12 per room (`monsterLevelRange` 10-12, two waves each). Music `palace.mp3` (Montage), boss `boss-palace.mp3` (Hard Rock).
+- Spike traps (`logic/spikes.ts`, `systems/SpikeSystem`): 3.2s cycle on the pause-safe GameClock, down -> 0.7s red-blinking warning -> up 0.9s; only up spikes hurt (10% max HP through `HAZARD_HITS.spikes`, at most every 650ms, i-frames and dash respected).
 - Enemies: palaceGuard (shield: frontal hits take 55% less, shield turns at 1.3 rad/s so flanking works; `logic/shield.ts`), royalArcher (`leadAim` predictive shots),
   darkMage (`logic/blink.ts`: blinks 85px when the player is within 62px, then fires a slow homing orb; `logic/angle.ts steerToward`), assassin (charger, alpha 0.14 while stalking via `cloakAlpha`, revealed on windup/hit).
   Palace loot pays 3.5-4 coins/kill, 11-17% large potions, 8-11% gems.
-- Mad King (Lv16, base HP 1800 = 8550, scale 3): phase 1 (x1.1 speed) 3-lunge combos (0.65s red lane, then 0.5s re-aimed follow-ups, 400ms dashes), 16-bolt ring every 3.6s, double counter-rotating 14-bolt spirals, 2 guards every 24s;
+- Mad King (Lv15, base HP 1800 = 8100, scale 3): phase 1 (x1.1 speed) 3-lunge combos (0.65s red lane, then 0.5s re-aimed follow-ups, 400ms dashes), 16-bolt ring every 3.6s, double counter-rotating 14-bolt spirals, 2 guards every 24s;
   phase 2 (<=50%, x1.3 speed) swaps spirals for a 6-orb seeking ring every 2.8s (`seek` attack: `logic/homing.ts`, 1.3 rad/s for 3.2s at 0.8x bolt speed, so they can be outrun; walls and sword swings destroy them), 2-lunge combos, a 12-bolt ring and teleport between three thrones
   (vanish 0.8s, warning ring at the destination, shockwave on arrival; destinations clamped to the arena and unblocked). The brain keeps the running sequence in `BossState.current`,
-  so a phase change mid-lunge/hide always finishes it; hidden time pushes every other timer back. A Lv14-15 player with wand + fireballs needs ~137-164s at 50% uptime. A player who never moves dies in ~13s (phase 1) / ~9s (phase 2) with i-frames respected (`tests/bossSim.ts`).
+  so a phase change mid-lunge/hide always finishes it; hidden time pushes every other timer back. A Lv13-14 player with wand + fireballs needs ~120-170s at 50% uptime. A player who never moves dies in ~13s (phase 1) / ~9s (phase 2) with i-frames respected (`tests/bossSim.ts`).
 - Clearing it grants and equips the Golden Sword ("Golden Sword acquired!"). `ultimate` (comingSoon, no map) shows as a locked "??? / The Ultimate Boss awaits / Coming soon" card once the palace is cleared (`visibleLevels`); a level 4 is a new config + theme + preset.
 
 ## 12. Chase navigation
@@ -219,7 +219,7 @@ tests/                    Vitest specs for logic/
 - `content/heroes.ts`: `HeroDef` (frame, tint, stat multipliers for HP, speed, attack rate, damage, skill cooldown, passive, signature weapon, optional starting skill, hint). Ratings: low 0.85, mid 1.0, high 1.2. `computePlayerStats(level, mods, signature)` applies them; the signature weapon adds +10% damage. Damage rides in `stats.damageMultiplier`, so bolts, melee and skills pick it up unchanged.
 - Passives are numbers in `logic/passives.ts` (`passiveEffects`): knight frontal reduction (`Player.takeDamage`), dwarf gold (`GoldBonus`, carries fractions) and potion multiplier, ranger crit and monk every-5th stun (`Strikes`, called from `Enemy.takeHit` for `source: 'basic'` hits only; skills pass `'skill'`), necromancer rise chance and rogue dash trap (`systems/HeroSystem`, reusing `SpiritWolfCaster` with an `AllyLook` and `ZoneField`), secret hero luck (`rollDrops` luck and scroll chance), wizard skill cooldown 0.9 via stats.
 - Unlocks: `logic/unlocks.ts` (pure rules over a `RunRecord` and `AccountStats`), `logic/runLog.ts` (builds the record), `logic/heroSave.ts` (select, unlock + kit grant, bank stats, pending reveals). `systems/HeroUnlocks` feeds the log from `GameEvents` (`player-damaged` with a `DamageSource`: contact = melee, enemy bolts = ranged, spikes = hazard, boss attacks = boss; `skill-cast`, `potion-used`, `boss-started`, `boss-died`), checks account rules live (kills, gold) and judges the run on clear, quit or death.
-- Unlock rules: knight = clear Ruins with zero skill attempts (fizzles count); rogue = Desert under 4:00; dwarf = 500 gold at once; ranger = clear Desert or Palace with no melee damage (boss contact and lunges count as melee); monk = clear with no potion and no dash; necromancer = 1000 total kills (allies' kills count); secret = three bosses by three heroes. Allies hit with `source: 'ally'`, which never triggers rising. Knight's frontal reduction ignores hazards. `GameScene` banks the run on SHUTDOWN if nothing else did; `parseSave` drops unknown hero ids.
+- Unlock rules: knight = clear Ruins with zero skill attempts (fizzles count); rogue = Desert under 5:00; dwarf = 800 gold at once; ranger = clear Desert or Palace with at most 20 melee damage (boss contact and lunges count as melee); monk = clear with no potion that actually healed you (walking over one at full HP gives gold and does not count; a revive token is not a potion; floor potions no longer magnetise; dashing is allowed); necromancer = 600 total kills (allies' kills count); secret = three bosses by three heroes. Allies hit with `source: 'ally'`, which never triggers rising. Knight's frontal reduction ignores hazards. `GameScene` banks the run on SHUTDOWN if nothing else did; `parseSave` drops unknown hero ids.
 - Save v8: `heroes {unlocked, selected}`, `stats {totalKills, goldPeak, bossKillsByHero}`; unlocking queues a `hero:<id>` notice shown by `scenes/heroReveal` on Level Select and the results screen. Flow: Level Select -> Hero Select -> Loadout -> Game.
 
 ## Economy (v2 phase 2)
@@ -228,3 +228,14 @@ Pure logic: `logic/upgrades.ts` (costs, weapon tables, stat diff lines), `shop.t
 `potions.ts`, `weaponTwists.ts` (pierce counting, split angles), `gems.ts`. Content: `content/upgradeInfo.ts` (gem colour, tier and twist per skill/weapon id), `campOffers.ts`
 (rows and panel text from a save), `upgradePreview.ts`. UI: `CampScene` with `CampRow`, `TabBar`, `Wallet`. In level: `PotionSystem`, `BoltHits` (player bolt damage, pierce, split),
 sword wave through `MeleeSystem`. Boss tables use `gemBurst`.
+
+## Balance (v2 phase 5)
+
+- Model: `tests/balanceModel.ts` (reference player, per-room damage / seconds / XP / loot, run time) with `src/logic/lootValue.ts` (expected gold, gems, potions and healing of a loot table). Hit rates are calibrated so a standing player matches the aim-only Playwright bot (palace room 2 about 450 damage, desert room 4 about 470 before the pass); the reference dodges half. `tests/balanceModel.test.ts` pins the bands.
+- Reference damage per room (% of max HP, hazards included): Ruins 6 12 16 21 35, Desert 16 22 28 36 51 47, Palace 22 28 34 35 49 60; a player starting each level on its recommended level ends the ruins at 6, the desert at 10, the palace at 13 (the Mad King is Lv15). A clear takes the reference player about 2 / 4 / 6 minutes.
+- Mirror Knight: reflects one bolt per 1.5s (`REFLECT_COOLDOWN_MS`) for 50% of its contact damage; other bolts on its front hit the shield for the usual reduction.
+- Hazards: `logic/hazard/hits.ts` holds every hit (fraction of max HP, gap between hits, duty); each hit is 3.5-12%, repeats no faster than the 600ms player i-frames, and standing in one for 10s never kills a full-health player. Flame jets hit once per jet (1s), pendulums every 1.2s at most.
+- Economy: coins are 2 / 12 / 24 gold; gem drop weights are scaled by `GEM_DROP_SCALE` 1.4 (`scaleGemDrops`, paid for out of "nothing"). Floor potions do not magnetise (`magnetises` in `logic/pickups`).
+- Hazard cooldowns (`Cooldowns.tryTake`) are only spent when the hit lands, so i-frames from another source never eat the next hazard hit. Every hazard drains at most 6% of max HP per second from someone who stays (pendulum 8% every 1.4s).
+- Existing saves keep their player level; only the XP needed for the next one changed (`25 x L^1.5`), so a long-time player is simply a little behind its bar.
+- Palace curve: two waves in rooms 1-4, three in rooms 5-6, slots 3 + 0.8 per wave.

@@ -89,7 +89,7 @@ export function aRoom(order: number, x: number, y: number, overrides: Partial<Ro
 
 export function aRunRecord(overrides: Partial<RunRecord> = {}): RunRecord {
   /** A cleared but messy run: melee damage taken and a potion drunk, so no clear-based hero unlocks unless a test asks for it. */
-  return { ...newRunRecord('wizard', 'ruins'), cleared: true, timeMs: 300_000, potionsUsed: 1, dashes: 4, skillAttempts: 6, damageTaken: { melee: 10, ranged: 0, hazard: 0, boss: 0 }, ...overrides };
+  return { ...newRunRecord('wizard', 'ruins'), cleared: true, timeMs: 400_000, potionsUsed: 1, dashes: 4, skillAttempts: 6, damageTaken: { melee: 40, ranged: 0, hazard: 0, boss: 0 }, ...overrides };
 }
 
 export function anAccount(overrides: Partial<AccountStats> = {}): AccountStats {

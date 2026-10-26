@@ -79,6 +79,8 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
   hp: number;
   alive = true;
   armed = true;
+  /** When a mirror last threw a bolt back; fresh for every spawn. */
+  lastReflectAt = -Infinity;
 
   readonly target: Player;
   readonly events: GameEvents;

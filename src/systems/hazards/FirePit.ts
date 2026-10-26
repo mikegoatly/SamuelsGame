@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { rectContains } from '../../logic/geometry';
+import { HAZARD_HITS } from '../../logic/hazard/hits';
 import { Cooldowns } from '../../logic/hazard/victims';
 import type { ActiveHazardSpec } from '../../logic/tiledObjects';
 import { puff, smokeEmitter, steady, type Emitter } from './emitters';
@@ -7,8 +8,8 @@ import { HazardBase } from './HazardBase';
 import type { Hazard, HazardWorld } from './types';
 import { dotEnemy, hazardTargets, hurtPlayer, playerAlive } from './victims';
 
-const TICK_MS = 650;
-const PLAYER_TICK = 0.06;
+const TICK_MS = HAZARD_HITS.firePit.gapMs;
+const PLAYER_TICK = HAZARD_HITS.firePit.fraction;
 const ENEMY_TICK = 0.06;
 
 /** Charred tiles that burn for as long as the level lasts: a flickering glow, rising flames, and a burn tick on anyone standing in them. */
@@ -54,7 +55,7 @@ export class FirePit extends HazardBase {
   private burn(now: number): void {
     const { player } = this.world;
     const area = { x: this.rect.x - 1, y: this.rect.y - 1, w: this.rect.w + 2, h: this.rect.h + 2 };
-    if (playerAlive(this.world) && rectContains(area, player) && this.ticks.take('player', now, TICK_MS)) hurtPlayer(this.world, PLAYER_TICK, player.x, player.y);
+    if (playerAlive(this.world) && rectContains(area, player)) this.ticks.tryTake('player', now, TICK_MS, () => hurtPlayer(this.world, PLAYER_TICK, player.x, player.y));
     for (const enemy of hazardTargets(this.world)) if (rectContains(area, enemy) && this.ticks.take(enemy, now, TICK_MS)) dotEnemy(enemy, ENEMY_TICK, '#ff9a3c', 0xff8a3c);
   }
 

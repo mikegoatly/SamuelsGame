@@ -19,10 +19,10 @@ export const desert: LevelConfig = {
     { enemyId: 'dustDevil', weight: 2 },
   ],
   curve: {
-    intro: ['fireImp', 'cactusTurret', 'mummyPriest', 'sandShark', 'dustDevil'],
+    intro: ['fireImp', 'mummyPriest', 'cactusTurret', 'sandShark', 'dustDevil'],
     waves: [2, 2, 2, 3, 3, 3],
-    size: { base: 4, perRoom: 1, perWave: 1, max: 12 },
-    elite: { fromRoom: 3, base: 0.25, perRoom: 0.1, max: 0.5 },
+    size: { base: 4, perRoom: 0, perWave: 1, max: 12 },
+    elite: { fromRoom: 3, base: 0.15, perRoom: 0.05, max: 0.35 },
   },
   bossId: 'sandRat',
   bossLevel: 10,

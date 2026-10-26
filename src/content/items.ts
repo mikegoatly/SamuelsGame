@@ -20,9 +20,9 @@ export type ItemDef =
 
 const GOLD = 0xffd84a;
 
-export const coin: ItemDef = { id: 'coin', name: 'Coin', kind: 'coin', value: 1, frame: Frame.coin, rarity: 'common', tint: GOLD };
-export const coinPile: ItemDef = { id: 'coinPile', name: 'Coin Pile', kind: 'coin', value: 5, frame: Frame.coin, rarity: 'common', tint: GOLD, scale: 1.4 };
-export const goldPile: ItemDef = { id: 'goldPile', name: 'Gold Pile', kind: 'coin', value: 10, frame: Frame.coin, rarity: 'common', tint: GOLD, scale: 1.8 };
+export const coin: ItemDef = { id: 'coin', name: 'Coin', kind: 'coin', value: 2, frame: Frame.coin, rarity: 'common', tint: GOLD };
+export const coinPile: ItemDef = { id: 'coinPile', name: 'Coin Pile', kind: 'coin', value: 12, frame: Frame.coin, rarity: 'common', tint: GOLD, scale: 1.4 };
+export const goldPile: ItemDef = { id: 'goldPile', name: 'Gold Pile', kind: 'coin', value: 24, frame: Frame.coin, rarity: 'common', tint: GOLD, scale: 1.8 };
 export const healthPotionSmall: ItemDef = { id: 'healthPotionSmall', name: 'Health Potion', kind: 'heal', heal: 25, frame: Frame.potionSmall, rarity: 'rare' };
 export const healthPotionLarge: ItemDef = { id: 'healthPotionLarge', name: 'Large Health Potion', kind: 'heal', heal: 60, frame: Frame.potionLarge, rarity: 'rare' };
 /** Spendable upgrade material at the Camp, one colour each. */

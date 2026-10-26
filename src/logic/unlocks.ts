@@ -7,9 +7,11 @@ export const WIZARD = 'wizard';
 const ROGUE_LEVEL = 'desert';
 const KNIGHT_LEVEL = 'ruins';
 const RANGER_LEVELS: readonly string[] = ['desert', 'palace'];
-const ROGUE_TIME_MS = 4 * 60 * 1000;
-const DWARF_GOLD = 500;
-const NECROMANCER_KILLS = 1000;
+export const ROGUE_TIME_MS = 5 * 60 * 1000;
+/** About one graze: a ranger keeps their distance but is not asked for a flawless run. */
+const RANGER_MELEE_ALLOWANCE = 20;
+export const DWARF_GOLD = 800;
+export const NECROMANCER_KILLS = 600;
 
 /** Everything one run adds up to; built while playing and judged when it ends. */
 export interface RunRecord {
@@ -70,8 +72,8 @@ const RULES: readonly (readonly [string, Rule])[] = [
   ['knight', (_, run) => !!run?.cleared && run.levelId === KNIGHT_LEVEL && run.skillAttempts === 0],
   ['rogue', (_, run) => !!run?.cleared && run.levelId === ROGUE_LEVEL && run.timeMs < ROGUE_TIME_MS],
   ['dwarf', (account) => account.goldPeak >= DWARF_GOLD],
-  ['ranger', (_, run) => !!run?.cleared && RANGER_LEVELS.includes(run.levelId) && run.damageTaken.melee === 0],
-  ['monk', (_, run) => !!run?.cleared && run.potionsUsed === 0 && run.dashes === 0],
+  ['ranger', (_, run) => !!run?.cleared && RANGER_LEVELS.includes(run.levelId) && run.damageTaken.melee <= RANGER_MELEE_ALLOWANCE],
+  ['monk', (_, run) => !!run?.cleared && run.potionsUsed === 0],
   ['necromancer', (account) => account.totalKills >= NECROMANCER_KILLS],
   ['secret', (account) => heroesCoverBosses(account.bossKillsByHero)],
 ];

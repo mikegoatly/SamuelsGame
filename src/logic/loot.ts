@@ -57,3 +57,17 @@ export function rollGemBurst(burst: GemBurst, rng: () => number): string[] {
   const count = randInt(rng, burst.min, burst.max);
   return Array.from({ length: count }, () => pickWeighted(colours, rng)?.id).filter((id): id is string => id !== undefined);
 }
+
+/** The table with every gem entry scaled; the extra weight comes out of "nothing", then the biggest other entries, so the total stays the same and no weight goes negative. */
+export function scaleGemDrops(table: LootTable, scale: number): LootTable {
+  const isGem = (entry: LootEntry): boolean => GEM_COLOURS.some((colour) => entry.itemId === gemItemId(colour));
+  const entries = table.entries.map((entry) => (isGem(entry) ? { ...entry, weight: Math.round(entry.weight * scale) } : { ...entry }));
+  const extra = entries.reduce((sum, e) => sum + e.weight, 0) - table.entries.reduce((sum, e) => sum + e.weight, 0);
+  let shortfall = Math.max(0, extra - table.nothingWeight);
+  for (const entry of entries.filter((e) => !isGem(e)).sort((a, b) => b.weight - a.weight)) {
+    const taken = Math.min(shortfall, entry.weight);
+    entry.weight -= taken;
+    shortfall -= taken;
+  }
+  return { ...table, nothingWeight: Math.max(0, table.nothingWeight - extra), entries };
+}

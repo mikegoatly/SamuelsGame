@@ -1,6 +1,6 @@
 # v2 Proposal — Skills, Economy, Characters, Monsters, Hazards
 
-Based on playtest feedback (items 3, 4, 8, 9, 10). Status: **Phase 1 (skills + loadout), Phase 2 economy (gems, upgrades, Camp shop, potions, revive), Phase 3 heroes and Phase 4 hazards done**; decisions agreed (see §7).
+Based on playtest feedback (items 3, 4, 8, 9, 10). Status: **Phase 1 (skills + loadout), Phase 2 economy (gems, upgrades, Camp shop, potions, revive), Phase 3 heroes, Phase 4 monsters and hazards and Phase 5 balance done**; decisions agreed (see §7).
 
 ## 1. Skills & loadout (feedback 8)
 
@@ -75,11 +75,11 @@ Each hero: stats + a passive + starting kit. Sprites from Tiny Dungeon.
 | Hero | Unlock condition | Hint text |
 |---|---|---|
 | Knight | Beat the Stone Guardian using only the basic attack | "A true warrior needs no tricks." |
-| Rogue | Clear the Lost Desert in under 4 minutes | "The desert rewards the swift." |
-| Dwarf | Carry 500 gold at once | "Gold calls to the mountain folk." |
-| Ranger | Clear any level without taking damage from melee enemies | "Keep your distance…" |
-| Monk | Clear a level without picking up any potion | "Discipline over comfort." |
-| Necromancer | Defeat 1,000 monsters in total | "So many souls…" |
+| Rogue | Clear the Lost Desert in under 5 minutes | "The desert rewards the swift." |
+| Dwarf | Carry 800 gold at once | "Gold calls to the mountain folk." |
+| Ranger | Clear the Desert or Palace taking at most 20 melee damage | "Keep your distance…" |
+| Monk | Clear a level without drinking a potion (only potions that heal you count; revive tokens do not; dashing is fine) | "Discipline over comfort." |
+| Necromancer | Defeat 600 monsters in total | "So many souls…" |
 | Secret | Beat all three bosses with three different heroes | "Many hands, one destiny." |
 
 Progress tracked as stats in the save (kills, best times, damage sources, potions used, per-hero clears).
@@ -109,7 +109,7 @@ Progress tracked as stats in the save (kills, best times, damage sources, potion
 | Palace | Jester | Bouncing bombs, teleports in confetti |
 | Palace | Gargoyle | Statue that wakes when you walk past |
 | Palace | Twin Mages | Linked by a beam that hurts if you cross it |
-| Palace | Houndmaster | Commands 3 hounds; hounds flee when he dies |
+| Palace | Houndmaster | Commands 2 hounds; hounds flee when he dies |
 
 ## 5. Environmental hazards that escalate (feedback 3)
 
@@ -129,7 +129,7 @@ affected too, so you can lure them in.
 2. **Economy - DONE:** Camp scene (upgrades + shop), gems, skill and weapon levels 1-5 with level 5 weapon twists, carry potions, revive token, save v7 migration.
 3. **Characters - DONE:** hero select (between level select and loadout), eight heroes with stats and passives, unlock tracking and hints, save v8. Frames used: 84, 96, 85, 86, 88, 98, 99, 100 (the proposal's 87, 100, 111 collide with enemy sprites; tints differentiate). Mid-run unlocks (gold, kills) show a banner and the reveal card at the next menu screen.
 4. **Content:** **Monsters: DONE** (all fifteen of the table, five elite affixes from room 3, per-level room intensity curves; see DESIGN.md). **Hazards: DONE** (all ten from the table; escalate by room, boss arenas get one, see DESIGN.md).
-5. **Balance pass and playtest.**
+5. **Balance pass and playtest - DONE:** headless balance model with pinned bands (`tests/balanceModel.test.ts`), smoothed room curves, Mirror Knight reflect cap, hazard hit table, economy (double gold, gems x1.4), XP curve, hero unlock rules re-tuned, floor potions no longer magnetise. Numbers in DESIGN.md (Balance).
 
 ## 6b. Phase 6 — Stats page (requested 2026-10-25)
 
@@ -140,7 +140,7 @@ affected too, so you can lure them in.
   "no potions so far ✓") so players can tell when a hint attempt has been broken.
 
 Playtest note: the Monk unlock felt nearly impossible. Floor potions auto-magnet and auto-drink, and
-the rule also forbade dashing. Phase 5 fix: floor potions no longer magnetise, and the no-dash
+the rule also forbade dashing. Phase 5 fix (done): floor potions no longer magnetise, and the no-dash
 condition is dropped.
 
 ## 7. Decisions (agreed 2026-10-24)

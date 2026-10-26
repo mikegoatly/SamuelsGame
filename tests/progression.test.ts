@@ -5,10 +5,10 @@ import { aProgress, expectProgress } from './builders';
 describe('addXp', () => {
   it.each([
     [1, 0, 5, 1, 5, 0],
-    [1, 15, 5, 2, 0, 1],
-    [1, 15, 10, 2, 5, 1],
-    [1, 0, 20 + 57, 3, 0, 2],
-    [1, 0, 20 + 57 + 10, 3, 10, 2],
+    [1, 20, 5, 2, 0, 1],
+    [1, 20, 10, 2, 5, 1],
+    [1, 0, 25 + 71, 3, 0, 2],
+    [1, 0, 25 + 71 + 10, 3, 10, 2],
     [1, 0, 0, 1, 0, 0],
   ])('level %i xp %i + %i => level %i xp %i (+%i levels)', (level, xp, amount, expLevel, expXp, expGained) => {
     const result = addXp(aProgress({ level, xp }), amount);

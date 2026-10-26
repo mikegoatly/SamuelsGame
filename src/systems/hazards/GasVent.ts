@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { rectCenter } from '../../logic/geometry';
 import { gasDensity, gasHurts, gasPhase } from '../../logic/hazard/vents';
+import { HAZARD_HITS } from '../../logic/hazard/hits';
 import { Cooldowns } from '../../logic/hazard/victims';
 import type { ActiveHazardSpec } from '../../logic/tiledObjects';
 import { playSfx } from '../sfx';
@@ -9,8 +10,8 @@ import { HazardBase } from './HazardBase';
 import type { Hazard, HazardWorld } from './types';
 import { dotEnemy, enemyRadius, hazardTargets, hurtPlayer, PLAYER_RADIUS, playerAlive } from './victims';
 
-const TICK_MS = 650;
-const PLAYER_TICK = 0.045;
+const TICK_MS = HAZARD_HITS.gasVent.gapMs;
+const PLAYER_TICK = HAZARD_HITS.gasVent.fraction;
 const ENEMY_TICK = 0.05;
 const GAS = 0x9be84a;
 
@@ -54,8 +55,8 @@ export class GasVent extends HazardBase {
   private poison(now: number): void {
     const { player } = this.world;
     const { x, y } = this.centre;
-    if (playerAlive(this.world) && Math.hypot(player.x - x, player.y - y) <= this.radius + PLAYER_RADIUS && this.ticks.take('player', now, TICK_MS)) {
-      hurtPlayer(this.world, PLAYER_TICK, player.x, player.y);
+    if (playerAlive(this.world) && Math.hypot(player.x - x, player.y - y) <= this.radius + PLAYER_RADIUS) {
+      this.ticks.tryTake('player', now, TICK_MS, () => hurtPlayer(this.world, PLAYER_TICK, player.x, player.y));
     }
     for (const enemy of hazardTargets(this.world)) {
       if (Math.hypot(enemy.x - x, enemy.y - y) <= this.radius + enemyRadius(enemy) && this.ticks.take(enemy, now, TICK_MS)) dotEnemy(enemy, ENEMY_TICK, '#8fe05a', 0x8fe05a);
