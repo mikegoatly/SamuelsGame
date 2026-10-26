@@ -4,6 +4,18 @@ import type { ChargeTuning } from '../logic/charge';
 import type { Shield } from '../logic/shield';
 import { Frame, Tex } from './assetKeys';
 import { madKingBrain, sandRatBrain, stoneGuardianBrain } from './bosses';
+import { newMonsters } from './monsters';
+
+export type CustomKind = 'beetle' | 'archer' | 'wisp' | 'rat' | 'necromancer' | 'shark' | 'imp' | 'turret' | 'devil' | 'priest' | 'jester' | 'gargoyle' | 'twin' | 'houndmaster' | 'hound';
+
+export interface PackSpec {
+  member: string;
+  count: readonly [min: number, max: number];
+  /** The def itself also spawns, leading the members. */
+  leader?: boolean;
+  /** Members are this many levels below the pack's level. */
+  levelDrop?: number;
+}
 
 export interface EnemyDef {
   id: string;
@@ -11,7 +23,27 @@ export interface EnemyDef {
   baseHp: number;
   baseDamage: number;
   speed: number;
-  behaviour: 'chaser' | 'erratic' | 'ranged' | 'charger' | 'mage' | 'boss';
+  behaviour: 'chaser' | 'erratic' | 'ranged' | 'charger' | 'mage' | 'boss' | 'custom';
+  /** Which behaviour module drives a `custom` monster (src/entities/behaviours). */
+  custom?: CustomKind;
+  /** Frame inside `texture` (the extra monster sheet has many). */
+  textureFrame?: number;
+  /** Spawn position relative to the player; defaults from the stats (tanks front, shooters back). */
+  placement?: 'front' | 'back';
+  /** Slots it takes from a wave's budget; defaults from its health. */
+  cost?: number;
+  /** Bolts that hit its shielded front are thrown back at the player. */
+  reflect?: { damageScale: number };
+  /** Spawned as a group: `member` monsters (and the def itself when `leader`). */
+  pack?: PackSpec;
+  /** Explosion damage on the player (base value, scaled like contact damage) for bombers. */
+  blastDamage?: number;
+  /** Does not hurt on touch. */
+  noContact?: boolean;
+  /** A necromancer can raise it (default yes). */
+  raisable?: boolean;
+  /** Can roll an elite affix (default yes). */
+  eliteOk?: boolean;
   lootTableId: string;
   tint?: number;
   name?: string;
@@ -214,6 +246,6 @@ export const madKing: EnemyDef = {
   boltSpeed: 85,
 };
 
-export const enemies: EnemyDef[] = [slime, bat, cyclops, spider, ghost, stoneGuardian, scorpion, bandit, mummy, vulture, sandRat, palaceGuard, royalArcher, darkMage, assassin, madKing];
+export const enemies: EnemyDef[] = [slime, bat, cyclops, spider, ghost, stoneGuardian, scorpion, bandit, mummy, vulture, sandRat, palaceGuard, royalArcher, darkMage, assassin, madKing, ...newMonsters];
 
 export const getEnemy = (id: string): EnemyDef => enemies.find((e) => e.id === id) ?? slime;

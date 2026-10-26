@@ -95,3 +95,18 @@ export function aRunRecord(overrides: Partial<RunRecord> = {}): RunRecord {
 export function anAccount(overrides: Partial<AccountStats> = {}): AccountStats {
   return { totalKills: 0, goldPeak: 0, bossKillsByHero: {}, ...overrides };
 }
+
+/** Blocked-test for a solid axis-aligned box (a wall) in world px. */
+export const aWall = (x0: number, y0: number, x1: number, y1: number) => (x: number, y: number): boolean => x >= x0 && x <= x1 && y >= y0 && y <= y1;
+
+export const noWalls = (): boolean => false;
+
+/** Calls `step(now)` every `stepMs` and collects the events it returns with their times. */
+export function eventsOver<E>(step: (now: number) => E | null | undefined, from: number, to: number, stepMs = 50): { at: number; event: E }[] {
+  const log: { at: number; event: E }[] = [];
+  for (let now = from; now <= to; now += stepMs) {
+    const event = step(now);
+    if (event) log.push({ at: now, event });
+  }
+  return log;
+}

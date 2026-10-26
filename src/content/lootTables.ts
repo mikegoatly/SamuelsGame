@@ -1,6 +1,7 @@
 import type { GemColour } from '../logic/gems';
 import type { GemBurst, LootEntry, LootTable } from '../logic/loot';
 import { SCROLL_CHANCE } from '../logic/skillScroll';
+import { monsterLoot } from './monsterLoot';
 
 const common = (itemId: string, weight: number): LootEntry => ({ itemId, weight, rarity: 'common' });
 const rare = (itemId: string, weight: number): LootEntry => ({ itemId, weight, rarity: 'rare' });
@@ -157,5 +158,5 @@ export const madKingLoot: LootTable = {
 };
 
 export const lootTables: Record<string, LootTable> = Object.fromEntries(
-  [slimeLoot, batLoot, cyclopsLoot, ghostLoot, stoneGuardianLoot, scorpionLoot, banditLoot, mummyLoot, vultureLoot, sandRatLoot, palaceGuardLoot, royalArcherLoot, darkMageLoot, assassinLoot, madKingLoot].map((table) => [table.id, table]),
+  [slimeLoot, batLoot, cyclopsLoot, ghostLoot, stoneGuardianLoot, scorpionLoot, banditLoot, mummyLoot, vultureLoot, sandRatLoot, palaceGuardLoot, royalArcherLoot, darkMageLoot, assassinLoot, madKingLoot, ...monsterLoot].map((table) => [table.id, table]),
 );

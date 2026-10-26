@@ -13,6 +13,7 @@ import { bodyClear, lineClear } from '../logic/lineOfSight';
 import { Navigator, PathBudget } from '../logic/navigator';
 import { applySlow, noSlow, slowFactor, type SlowState } from '../logic/slow';
 import { isFrontal, shieldedDamage } from '../logic/shield';
+import { grantsLoot, type Affix } from '../logic/elites';
 import { deathBurst } from '../systems/fx';
 import { feel } from '../systems/feel';
 import type { GameClock } from '../systems/GameClock';
@@ -20,7 +21,12 @@ import type { GameEvents } from '../systems/GameEvents';
 import { floatText } from '../systems/floatText';
 import { playSfx } from '../systems/sfx';
 import type { EnemyProjectiles, ShotStyle } from './EnemyProjectile';
+import { createBehaviour } from './behaviours';
+import { EnemyMods } from './behaviours/mods';
+import { reflectBolt } from './behaviours/reflect';
+import type { Behaviour, EnemyWorld } from './behaviours/types';
 import type { Player } from './Player';
+import type { Projectile } from './Projectile';
 
 const CONTACT_COOLDOWN_MS = 900;
 const KNOCKBACK_SPEED = 140;
@@ -53,7 +59,19 @@ export interface EnemyContext {
   clock: GameClock;
   /** Wall/door test in world px; lets enemies respect line of sight. */
   isBlocked?: (x: number, y: number) => boolean;
+  /** What monsters may ask of the level: who else is alive, spawning, the graveyard, the player's bolts. */
+  world?: EnemyWorld;
 }
+
+/** Per-spawn options: an elite affix, a raised or split monster. */
+export interface EnemyExtras {
+  affix?: Affix;
+  raised?: boolean;
+  hp?: number;
+  scale?: number;
+}
+
+let nextCorpseKey = 1;
 
 export class Enemy extends Phaser.Physics.Arcade.Sprite {
   readonly level: number;
@@ -62,11 +80,17 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
   alive = true;
   armed = true;
 
-  protected readonly target: Player;
-  protected readonly events: GameEvents;
-  protected readonly shots: EnemyProjectiles;
-  protected readonly clock: GameClock;
-  protected readonly isBlocked: (x: number, y: number) => boolean;
+  readonly target: Player;
+  readonly events: GameEvents;
+  readonly shots: EnemyProjectiles;
+  readonly clock: GameClock;
+  readonly isBlocked: (x: number, y: number) => boolean;
+  readonly mods: EnemyMods;
+  readonly behaviour?: Behaviour;
+  readonly raised: boolean;
+  private readonly world?: EnemyWorld;
+  private readonly corpseKey = nextCorpseKey++;
+  private readonly small: boolean;
   private readonly navigator?: Navigator;
   private readonly label: Phaser.GameObjects.Text;
   private readonly baseTint: number | null;
@@ -81,7 +105,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
   private lane?: Phaser.GameObjects.Rectangle;
   private blink: BlinkState = newBlinkState();
   /** Tint that survives the hit flash (e.g. a boss winding up a lunge). */
-  protected forcedTint: number | null = null;
+  forcedTint: number | null = null;
   private facing = 0;
   private slow: SlowState = noSlow();
   private stunnedUntil = 0;
@@ -97,8 +121,9 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     readonly def: EnemyDef,
     level: number,
     context: EnemyContext,
+    extras: EnemyExtras = {},
   ) {
-    super(scene, x, y, def.texture ?? Tex.tiles, def.texture ? 0 : def.frame);
+    super(scene, x, y, def.texture ?? Tex.tiles, def.texture ? (def.textureFrame ?? 0) : def.frame);
     this.target = context.target;
     this.events = context.events;
     this.shots = context.shots;
@@ -108,9 +133,12 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     scene.add.existing(this);
     scene.physics.add.existing(this);
     this.level = level;
-    this.maxHp = this.hp = enemyMaxHp(def.baseHp, level);
+    this.maxHp = this.hp = extras.hp ?? enemyMaxHp(def.baseHp, level);
+    this.raised = extras.raised === true;
+    this.small = extras.hp !== undefined;
+    this.world = context.world;
     this.setSize(10, 10).setOffset(3, 5).setDepth(5);
-    if (def.scale) this.setScale(def.scale);
+    if (def.scale || extras.scale) this.setScale((def.scale ?? 1) * (extras.scale ?? 1));
     this.nextShotAt = context.clock.now + 700 + Math.random() * 700;
 
     const gap = level - this.target.level;
@@ -123,11 +151,67 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
       .setOrigin(0.5)
       .setDepth(6)
       .setAlpha(0.8);
+
+    this.mods = new EnemyMods(this, def.boss ? undefined : extras.affix, context.world);
+    if (def.custom && context.world) this.behaviour = createBehaviour(def.custom, this, context.world);
   }
 
   /** False while the enemy cannot be hurt (e.g. a boss under the sand); bolts pass through. */
   get targetable(): boolean {
-    return this.alive && this.blink.phase !== 'vanish';
+    return this.alive && this.blink.phase !== 'vanish' && this.behaviour?.untargetable !== true;
+  }
+
+  /** Passes through the player and other monsters (but not walls). */
+  get phased(): boolean {
+    return this.behaviour?.phased === true;
+  }
+
+  /** Does this monster hold up the room clearing? Dormant statues and fleeing hounds do not. */
+  get countsForClear(): boolean {
+    return this.alive && this.behaviour?.ignoredForClear !== true;
+  }
+
+  /** A dormant statue the room can wake once everything else is dead. */
+  get canWake(): boolean {
+    return this.alive && this.behaviour?.ignoredForClear === true && this.behaviour.wake !== undefined;
+  }
+
+  wake(): void {
+    this.behaviour?.wake?.();
+  }
+
+  get facingAngle(): number {
+    return this.facing;
+  }
+
+  get isElite(): boolean {
+    return this.mods.affix !== undefined;
+  }
+
+  /** Replaces the level label (elites show their affix and name). */
+  setTag(text: string, color: string): void {
+    this.label.setText(text).setColor(color).setAlpha(1);
+  }
+
+  /** Mends the monster (priests, vampiric elites). */
+  heal(amount: number): void {
+    if (!this.alive || amount <= 0) return;
+    const healed = Math.min(amount, this.maxHp - this.hp);
+    if (healed <= 0) return;
+    this.hp += healed;
+    floatText(this.scene, this.x, this.y - this.displayHeight / 2, `+${healed}`, '#7dffb0', 7, 12, 500);
+  }
+
+  /** Dies on the spot with full death rewards (bombers going off). */
+  suicide(): void {
+    if (!this.alive) return;
+    this.hp = 0;
+    this.die();
+  }
+
+  /** A player bolt reached the monster: true when it was reflected away and must deal no damage. */
+  interceptBolt(bolt: Projectile): boolean {
+    return this.behaviour?.intercept?.(bolt) ?? reflectBolt(this, bolt);
   }
 
   override preUpdate(time: number, delta: number): void {
@@ -138,6 +222,8 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     else if (now >= this.knockbackUntil) this.act(now);
     if (this.def.shield) this.updateShield(delta);
     this.applyCloak(now);
+    this.behaviour?.update?.(time, delta);
+    this.mods.update();
     this.label.setPosition(this.x, this.y - this.displayHeight / 2 - 2);
   }
 
@@ -164,9 +250,13 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
 
   tryContact(player: Player): void {
     const now = this.clock.now;
-    if (!this.alive || !this.armed || this.stunned || now < this.nextContactAt || now < this.knockbackUntil) return;
-    const applied = player.takeDamage(damageToPlayer(this.def.baseDamage, this.level, player.level), this.x, this.y, 'melee');
-    if (applied !== 'none') this.nextContactAt = now + CONTACT_COOLDOWN_MS;
+    if (!this.targetable || this.def.noContact || !this.armed || this.stunned || now < this.nextContactAt || now < this.knockbackUntil) return;
+    const dealt = damageToPlayer(this.def.baseDamage, this.level, player.level);
+    const applied = player.takeDamage(dealt, this.x, this.y, 'melee');
+    if (applied !== 'none') {
+      this.nextContactAt = now + CONTACT_COOLDOWN_MS;
+      this.mods.onHitPlayer(dealt);
+    }
   }
 
   /** `direction` is the way the blow travels; `knockback` scales the shove (sword > bolt). Basic attacks pick up the hero's per-hit passives; skills pass `'skill'`, allies `'ally'`. */
@@ -177,7 +267,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     amount = Math.max(1, Math.round(amount * strike.multiplier));
     const { shield } = this.def;
     const blocked = shield !== undefined && isFrontal(this.facing, { x: -directionX, y: -directionY }, shield.arc);
-    const dealt = shield ? shieldedDamage(amount, blocked, shield.reduction) : amount;
+    const dealt = this.mods.hit(shield ? shieldedDamage(amount, blocked, shield.reduction) : amount);
     this.hp -= dealt;
     this.revealedUntil = this.clock.now + HIT_REVEAL_MS;
     floatText(this.scene, this.x, this.y - this.displayHeight / 2, String(dealt), blocked ? '#9ab4ff' : '#ffe066', 8, 14, 700);
@@ -199,24 +289,30 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     this.scene.time.delayedCall(80, () => this.alive && this.applyBaseTint());
   }
 
-  private flashShield(): void {
+  flashShield(): void {
     if (!this.shieldImage) return;
     this.shieldImage.setTint(0xffffff);
     this.scene.time.delayedCall(90, () => this.shieldImage?.active && this.shieldImage.setTint(SHIELD_TINT));
   }
 
   protected act(time: number): void {
-    if (this.def.behaviour === 'mage') this.castMage(time);
+    if (this.behaviour) this.behaviour.act(time);
+    else if (this.def.behaviour === 'mage') this.castMage(time);
     else if (this.def.behaviour === 'ranged') this.kite(time);
     else if (this.def.behaviour === 'charger') this.chargeAt(time);
     else this.chase(time);
   }
 
   /** Hides or shows the sprite and its level label (used by bosses burrowing). */
-  protected conceal(hidden: boolean): void {
+  conceal(hidden: boolean): void {
+    this.hide(hidden);
+    (this.body as Phaser.Physics.Arcade.Body).checkCollision.none = hidden;
+  }
+
+  /** Hides or shows the sprite and label but keeps the body solid to walls. */
+  hide(hidden: boolean): void {
     this.setAlpha(hidden ? 0 : 1);
     this.label.setVisible(!hidden);
-    (this.body as Phaser.Physics.Arcade.Body).checkCollision.none = hidden;
   }
 
   /** Stalks the player, freezes with a red lane marking the dash, then dashes in a straight line. */
@@ -285,6 +381,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
   /** Damage-over-time tick (poison, burning): no knockback or flash, and it never interrupts the enemy. */
   takeDot(amount: number, css = '#8fe05a', tint = POISON_TINT): void {
     if (!this.targetable) return;
+    amount = this.mods.hit(amount);
     this.hp -= amount;
     this.poisonedUntil = this.clock.now + 400;
     this.dotTint = tint;
@@ -318,16 +415,16 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     this.scene.time.delayedCall(ms + 30, () => this.alive && this.applyBaseTint());
   }
 
-  protected get speedFactor(): number {
-    return slowFactor(this.slow, this.clock.now);
+  get speedFactor(): number {
+    return slowFactor(this.slow, this.clock.now) * this.mods.speedMultiplier;
   }
 
   private get slowed(): boolean {
-    return this.speedFactor < 1;
+    return slowFactor(this.slow, this.clock.now) < 1;
   }
 
   /** Walks toward the player, round walls and pillars when a straight line would snag (skipped by `usePath = false`). */
-  protected chase(time: number, speed = this.def.speed, usePath = true): void {
+  chase(time: number, speed = this.def.speed, usePath = true): void {
     const walks = usePath && this.def.behaviour !== 'erratic';
     speed *= this.speedFactor;
     const goal = this.navigator && walks ? this.navigator.aim(time, this, this.target, this.bodyRadius(), speed) : this.target;
@@ -341,7 +438,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     this.setFlipX(this.desired.x < 0);
   }
 
-  private bodyRadius(): number {
+  bodyRadius(): number {
     const body = this.body as Phaser.Physics.Arcade.Body;
     return Math.max(body.halfWidth, body.halfHeight);
   }
@@ -422,6 +519,11 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     this.puff();
   }
 
+  private recordCorpse(): void {
+    if (this.raised || this.small || this.def.boss || this.def.raisable === false) return;
+    this.world?.graveyard.record({ key: this.corpseKey, enemyId: this.def.id, level: this.level, x: this.x, y: this.y, at: this.clock.now });
+  }
+
   /** Removes the enemy without death rewards (e.g. minions when their boss falls). */
   dismiss(): void {
     if (!this.alive) return;
@@ -436,7 +538,10 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     this.clearLane();
     this.label.destroy();
     this.shieldImage?.destroy();
-    this.events.emit('enemy-died', this.level, this.x, this.y, this.def.lootTableId, this.def.boss === true, this.lastHit === 'ally');
+    this.behaviour?.onDeath?.();
+    this.mods.onDeath();
+    this.recordCorpse();
+    this.events.emit('enemy-died', this.level, this.x, this.y, grantsLoot({ split: this.small, raised: this.raised }) ? this.def.lootTableId : '', this.def.boss === true, this.lastHit === 'ally', this.isElite);
     deathBurst(this.scene, this.x, this.y, deathTint(this.def.id, this.def.tint), this.def.boss === true);
     playSfx(this.scene, 'enemyDie');
     this.scene.tweens.killTweensOf(this);
@@ -449,7 +554,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     });
   }
 
-  protected puff(): void {
+  puff(): void {
     const emitter = this.scene.add.particles(this.x, this.y, Tex.puff, {
       speed: { min: 20, max: 70 },
       lifespan: 350,
@@ -461,7 +566,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     this.scene.time.delayedCall(500, () => emitter.destroy());
   }
 
-  protected applyBaseTint(): void {
+  applyBaseTint(): void {
     if (this.charge.phase === 'windup') this.setTint(WINDUP_TINT);
     else if (this.forcedTint !== null) this.setTint(this.forcedTint);
     else if (this.stunned || this.slowed) this.setTint(FROST_TINT);
@@ -471,6 +576,8 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
   }
 
   override destroy(fromScene?: boolean): void {
+    this.behaviour?.destroy?.();
+    this.mods.destroy();
     this.clearLane();
     this.label.destroy();
     this.shieldImage?.destroy();

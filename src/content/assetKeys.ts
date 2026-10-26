@@ -17,6 +17,8 @@ export const Tex = {
   prompts: 'prompts',
   /** Hand-drawn weapon frames (public/assets/extra), merged into the tile sheet texture at load. */
   weaponsExtra: 'weapons-extra',
+  /** Hand-drawn monster frames (public/assets/extra/monsters-extra.png), 16px tiles, 12 per row. */
+  monsters: 'monsters-extra',
 } as const;
 
 /** Particle sprites the skill icons are built from (PreloadScene tints them), by skill id. */
@@ -118,6 +120,9 @@ export const Frame = {
   statue: [64, 65, 41] as readonly number[],
   shield: 102,
 } as const;
+
+/** Frames of the hand-drawn monster sheet (tools/add_monster_frames.py). */
+export const MonsterFrame = { rat: 0, beetle: 1, skeleton: 2, wisp: 3, fin: 4, shark: 5, imp: 6, devil: 7, gargoyle: 8, cactus: 9 } as const;
 
 /** Kenney Onscreen Controls "flat-dark" atlas frames. */
 export const ControlFrame = {

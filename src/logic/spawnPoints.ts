@@ -50,6 +50,28 @@ export function pickRectSpawn(
   return best ?? { x: area.x + area.w / 2, y: area.y + area.h / 2 };
 }
 
+export type SpawnRole = 'front' | 'back' | 'any';
+
+const ROLE_ATTEMPTS = 16;
+
+/** Spawn point for a monster's role: tanks (`front`) take the nearest valid candidate to the player, shooters (`back`) the farthest. */
+export function pickRoleSpawn(rect: Rect, avoid: Point, role: SpawnRole, rng: () => number, blocked: (x: number, y: number) => boolean, inset: number, minDistance: number): Point {
+  if (role === 'any') return pickRectSpawn(rect, avoid, minDistance, rng, blocked, inset);
+  const area = insetRect(rect, inset);
+  let best: Point | undefined;
+  let bestDistance = role === 'front' ? Infinity : -Infinity;
+  for (let attempt = 0; attempt < ROLE_ATTEMPTS; attempt++) {
+    const candidate = { x: area.x + rng() * area.w, y: area.y + rng() * area.h };
+    const distance = Math.hypot(candidate.x - avoid.x, candidate.y - avoid.y);
+    if (blocked(candidate.x, candidate.y) || distance < minDistance) continue;
+    if (role === 'front' ? distance < bestDistance : distance > bestDistance) {
+      best = candidate;
+      bestDistance = distance;
+    }
+  }
+  return best ?? pickRectSpawn(rect, avoid, minDistance, rng, blocked, inset);
+}
+
 const EMERGE_ATTEMPTS = 12;
 
 /** A free point `offset` px from `near` (so not directly under the player), kept inside the arena rect shrunk by `inset`. */

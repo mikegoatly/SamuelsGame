@@ -12,7 +12,8 @@ import { apprenticeStaff, brokenWand, goldenSword, weapons } from '../src/conten
 import { dropChance } from '../src/logic/loot';
 import { isLevelUnlocked, visibleLevels } from '../src/logic/levelRules';
 
-const PALACE_ENEMIES = ['palaceGuard', 'royalArcher', 'darkMage', 'assassin'];
+const PALACE_BASE = ['palaceGuard', 'royalArcher', 'darkMage', 'assassin'];
+const PALACE_ENEMIES = [...PALACE_BASE, 'jester', 'mirrorKnight', 'houndmaster', 'gargoyle', 'twinMages'];
 const DESERT_ENEMIES = ['scorpion', 'bandit', 'mummy', 'vulture'];
 const charm = (table: string) => ['gemRed', 'gemGreen', 'gemBlue'].reduce((sum, id) => sum + dropChance(lootTables[table]!, id), 0);
 const large = (table: string) => dropChance(lootTables[table]!, 'healthPotionLarge');
@@ -30,7 +31,7 @@ describe('palace level', () => {
     expect(rewardsOf(palace)[1]).toMatchObject({ kind: 'skill', id: 'chainLightning' });
   });
 
-  it('draws only from the four palace enemies and has its own music, boss track included', () => {
+  it('draws only from the original four palace enemies and the five new monsters, and has its own music, boss track included', () => {
     expect(palace.enemyPool.map((e) => e.enemyId).sort()).toEqual([...PALACE_ENEMIES].sort());
     expect(MUSIC_FILES[palace.music!]).toBe('music/palace.mp3');
     expect(MUSIC_FILES[palace.bossMusic!]).toBe('music/boss-palace.mp3');
@@ -59,7 +60,7 @@ describe('palace loot', () => {
   it('pays richer coins, more large potions and higher charm chances than the desert', () => {
     const desertCoins = Math.max(...DESERT_ENEMIES.map(coins));
     const desertCharm = DESERT_ENEMIES.reduce((sum, id) => sum + charm(id), 0) / DESERT_ENEMIES.length;
-    for (const id of PALACE_ENEMIES) {
+    for (const id of PALACE_BASE) {
       expect(getEnemy(id).lootTableId).toBe(id);
       expect(coins(id), id).toBeGreaterThan(desertCoins);
       expect(large(id), id).toBeGreaterThanOrEqual(0.11);

@@ -2,6 +2,18 @@
 
 Top-down twin-stick action game (Phaser 3 + TypeScript + Vite). See `docs/DESIGN.md`.
 
+## Monsters (v2 Phase 4)
+
+Every level adds five monsters, each featured in one room (`curve.intro` in the level file) and mixed into later rooms:
+
+| Level | Monsters |
+|---|---|
+| Ruins | Rat Swarm (8-12 flanking rats), Bomb Beetle (fuse flash, blast hurts monsters too), Skeleton Archer (shoots, retreats to cover), Wisp (orbits, then dives), Necromancer (raises each corpse once; kill first) |
+| Desert | Fire Imp (fast, burning trail), Cactus Turret (rotating spine ring), Mummy Priest (heals and shields allies), Sand Shark (untargetable fin, leaps), Dust Devil (pulls you, bends bolts) |
+| Palace | Jester (bouncing bombs, confetti teleport), Mirror Knight (reflects bolts from the front), Houndmaster (+3 hounds that flee when he dies), Gargoyle (dormant statue; wakes near you or when nothing else is left), Twin Mages (a beam joins them) |
+
+From room 3 a monster may be an **elite** with a glow and name tag: Armoured (half damage until its bar breaks), Swift, Splitting, Vampiric or Volatile (telegraphed blast on death). Elites drop an extra roll and sometimes a gem.
+
 ## Run
 
 ```
@@ -94,6 +106,18 @@ impact or at max range (radius 40, falloff to 40% at the edge, 2.5s cooldown). C
 `public/assets/maps/palace.tmj` (theme `PALACE_THEME`, preset `PALACE_PRESET`): six grand symmetric combat rooms (monster Lv 10 to 15) with mirrored statue cover,
 timed spike traps (warning blink, then raised spikes hurt) and a throne room with a colonnade. Enemies: palace guards (shield blocks 55% from the front; get round the side),
 royal archers (lead their shots), dark mages (blink away when you get close, then fire slow homing orbs) and assassins (nearly invisible until they strike).
+### Hazards (v2 phase 4)
+
+Every hazard is telegraphed, hurts monsters too (lure them in; bosses are immune) and gets busier by room number. Each wakes when you enter its room and goes calm when it is cleared (fire pits keep burning).
+
+| Level | Hazards, in the order they appear |
+|---|---|
+| Ruins | Cracked floor (cracks 0.8s after a step, drops into a pit that hurts and ejects you, then re-forms), falling rubble (shadow circle for 1s), poison gas vents (hiss, then a damaging cloud) |
+| Desert | Quicksand, fire pits (always burning), wind gusts (chevrons, then a push), sandstorm (rising dust, then fog closes in around you) |
+| Palace | Spike traps, pressure-plate arrow walls (click, red lanes, volley), swinging pendulum blades (swept arc always shown), wall flame jets (glow, then fire) |
+
+Boss arenas get one: rubble (Ruins), gentle wind (Desert), north-wall flame jets (Palace). Hazards stop when the run ends. Counts per room live in `MapTheme.hazards` (`tools/mapThemes.ts`).
+
 The Mad King (Lv 16) lunges along a red lane, fires spinning blade rings, calls guards and, below 50% HP, teleports between thrones and fires spirals.
 Reward: the Golden Sword, a melee weapon (~100 degree swing, hits everything in the arc once, strong knockback, swats enemy bolts). It also teaches Chain Lightning. After clearing the palace a locked "???" card teases the next chapter. Music: `palace.mp3` and `boss-palace.mp3` (copied by `copy-assets`).
 

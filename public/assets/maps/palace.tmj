@@ -11,7 +11,7 @@
  "tilewidth": 16,
  "tileheight": 16,
  "nextlayerid": 4,
- "nextobjectid": 38,
+ "nextobjectid": 62,
  "tilesets": [
   {
    "firstgid": 1,
@@ -815,6 +815,1083 @@
     },
     {
      "id": 33,
+     "name": "arrowWall1",
+     "type": "hazard",
+     "x": 1104,
+     "y": 240,
+     "width": 16,
+     "height": 16,
+     "rotation": 0,
+     "visible": true,
+     "properties": [
+      {
+       "name": "kind",
+       "type": "string",
+       "value": "arrowWall"
+      },
+      {
+       "name": "room",
+       "type": "int",
+       "value": 2
+      },
+      {
+       "name": "offset",
+       "type": "int",
+       "value": 600
+      },
+      {
+       "name": "emitX",
+       "type": "int",
+       "value": 888
+      },
+      {
+       "name": "dir",
+       "type": "int",
+       "value": 0
+      },
+      {
+       "name": "stripY",
+       "type": "int",
+       "value": 224
+      },
+      {
+       "name": "stripH",
+       "type": "int",
+       "value": 64
+      }
+     ]
+    },
+    {
+     "id": 34,
+     "name": "pendulum2",
+     "type": "hazard",
+     "x": 688,
+     "y": 208,
+     "width": 80,
+     "height": 48,
+     "rotation": 0,
+     "visible": true,
+     "properties": [
+      {
+       "name": "kind",
+       "type": "string",
+       "value": "pendulum"
+      },
+      {
+       "name": "room",
+       "type": "int",
+       "value": 3
+      },
+      {
+       "name": "offset",
+       "type": "int",
+       "value": 3300
+      },
+      {
+       "name": "pivotX",
+       "type": "int",
+       "value": 728
+      },
+      {
+       "name": "pivotY",
+       "type": "int",
+       "value": 248
+      },
+      {
+       "name": "length",
+       "type": "int",
+       "value": 30
+      },
+      {
+       "name": "base",
+       "type": "int",
+       "value": 270
+      },
+      {
+       "name": "amp",
+       "type": "int",
+       "value": 60
+      },
+      {
+       "name": "period",
+       "type": "int",
+       "value": 2600
+      }
+     ]
+    },
+    {
+     "id": 35,
+     "name": "arrowWall3",
+     "type": "hazard",
+     "x": 672,
+     "y": 128,
+     "width": 16,
+     "height": 16,
+     "rotation": 0,
+     "visible": true,
+     "properties": [
+      {
+       "name": "kind",
+       "type": "string",
+       "value": "arrowWall"
+      },
+      {
+       "name": "room",
+       "type": "int",
+       "value": 3
+      },
+      {
+       "name": "offset",
+       "type": "int",
+       "value": 2600
+      },
+      {
+       "name": "emitX",
+       "type": "int",
+       "value": 472
+      },
+      {
+       "name": "dir",
+       "type": "int",
+       "value": 0
+      },
+      {
+       "name": "stripY",
+       "type": "int",
+       "value": 80
+      },
+      {
+       "name": "stripH",
+       "type": "int",
+       "value": 64
+      }
+     ]
+    },
+    {
+     "id": 36,
+     "name": "pendulum4",
+     "type": "hazard",
+     "x": 80,
+     "y": 80,
+     "width": 48,
+     "height": 80,
+     "rotation": 0,
+     "visible": true,
+     "properties": [
+      {
+       "name": "kind",
+       "type": "string",
+       "value": "pendulum"
+      },
+      {
+       "name": "room",
+       "type": "int",
+       "value": 4
+      },
+      {
+       "name": "offset",
+       "type": "int",
+       "value": 1300
+      },
+      {
+       "name": "pivotX",
+       "type": "int",
+       "value": 120
+      },
+      {
+       "name": "pivotY",
+       "type": "int",
+       "value": 120
+      },
+      {
+       "name": "length",
+       "type": "int",
+       "value": 30
+      },
+      {
+       "name": "base",
+       "type": "int",
+       "value": 180
+      },
+      {
+       "name": "amp",
+       "type": "int",
+       "value": 60
+      },
+      {
+       "name": "period",
+       "type": "int",
+       "value": 2600
+      }
+     ]
+    },
+    {
+     "id": 37,
+     "name": "arrowWall5",
+     "type": "hazard",
+     "x": 160,
+     "y": 240,
+     "width": 16,
+     "height": 16,
+     "rotation": 0,
+     "visible": true,
+     "properties": [
+      {
+       "name": "kind",
+       "type": "string",
+       "value": "arrowWall"
+      },
+      {
+       "name": "room",
+       "type": "int",
+       "value": 4
+      },
+      {
+       "name": "offset",
+       "type": "int",
+       "value": 1400
+      },
+      {
+       "name": "emitX",
+       "type": "int",
+       "value": 376
+      },
+      {
+       "name": "dir",
+       "type": "int",
+       "value": 180
+      },
+      {
+       "name": "stripY",
+       "type": "int",
+       "value": 224
+      },
+      {
+       "name": "stripH",
+       "type": "int",
+       "value": 64
+      }
+     ]
+    },
+    {
+     "id": 38,
+     "name": "arrowWall6",
+     "type": "hazard",
+     "x": 288,
+     "y": 96,
+     "width": 16,
+     "height": 16,
+     "rotation": 0,
+     "visible": true,
+     "properties": [
+      {
+       "name": "kind",
+       "type": "string",
+       "value": "arrowWall"
+      },
+      {
+       "name": "room",
+       "type": "int",
+       "value": 4
+      },
+      {
+       "name": "offset",
+       "type": "int",
+       "value": 2500
+      },
+      {
+       "name": "emitX",
+       "type": "int",
+       "value": 56
+      },
+      {
+       "name": "dir",
+       "type": "int",
+       "value": 0
+      },
+      {
+       "name": "stripY",
+       "type": "int",
+       "value": 80
+      },
+      {
+       "name": "stripH",
+       "type": "int",
+       "value": 64
+      }
+     ]
+    },
+    {
+     "id": 39,
+     "name": "flameJet7",
+     "type": "hazard",
+     "x": 320,
+     "y": 224,
+     "width": 48,
+     "height": 16,
+     "rotation": 0,
+     "visible": true,
+     "properties": [
+      {
+       "name": "kind",
+       "type": "string",
+       "value": "flameJet"
+      },
+      {
+       "name": "room",
+       "type": "int",
+       "value": 4
+      },
+      {
+       "name": "offset",
+       "type": "int",
+       "value": 2100
+      },
+      {
+       "name": "dir",
+       "type": "int",
+       "value": 180
+      }
+     ]
+    },
+    {
+     "id": 40,
+     "name": "flameJet8",
+     "type": "hazard",
+     "x": 320,
+     "y": 112,
+     "width": 48,
+     "height": 16,
+     "rotation": 0,
+     "visible": true,
+     "properties": [
+      {
+       "name": "kind",
+       "type": "string",
+       "value": "flameJet"
+      },
+      {
+       "name": "room",
+       "type": "int",
+       "value": 4
+      },
+      {
+       "name": "offset",
+       "type": "int",
+       "value": 1700
+      },
+      {
+       "name": "dir",
+       "type": "int",
+       "value": 180
+      }
+     ]
+    },
+    {
+     "id": 41,
+     "name": "pendulum9",
+     "type": "hazard",
+     "x": 80,
+     "y": 560,
+     "width": 80,
+     "height": 48,
+     "rotation": 0,
+     "visible": true,
+     "properties": [
+      {
+       "name": "kind",
+       "type": "string",
+       "value": "pendulum"
+      },
+      {
+       "name": "room",
+       "type": "int",
+       "value": 5
+      },
+      {
+       "name": "offset",
+       "type": "int",
+       "value": 500
+      },
+      {
+       "name": "pivotX",
+       "type": "int",
+       "value": 120
+      },
+      {
+       "name": "pivotY",
+       "type": "int",
+       "value": 600
+      },
+      {
+       "name": "length",
+       "type": "int",
+       "value": 30
+      },
+      {
+       "name": "base",
+       "type": "int",
+       "value": 270
+      },
+      {
+       "name": "amp",
+       "type": "int",
+       "value": 60
+      },
+      {
+       "name": "period",
+       "type": "int",
+       "value": 2600
+      }
+     ]
+    },
+    {
+     "id": 42,
+     "name": "pendulum10",
+     "type": "hazard",
+     "x": 272,
+     "y": 560,
+     "width": 80,
+     "height": 48,
+     "rotation": 0,
+     "visible": true,
+     "properties": [
+      {
+       "name": "kind",
+       "type": "string",
+       "value": "pendulum"
+      },
+      {
+       "name": "room",
+       "type": "int",
+       "value": 5
+      },
+      {
+       "name": "offset",
+       "type": "int",
+       "value": 1600
+      },
+      {
+       "name": "pivotX",
+       "type": "int",
+       "value": 312
+      },
+      {
+       "name": "pivotY",
+       "type": "int",
+       "value": 600
+      },
+      {
+       "name": "length",
+       "type": "int",
+       "value": 30
+      },
+      {
+       "name": "base",
+       "type": "int",
+       "value": 270
+      },
+      {
+       "name": "amp",
+       "type": "int",
+       "value": 60
+      },
+      {
+       "name": "period",
+       "type": "int",
+       "value": 2600
+      }
+     ]
+    },
+    {
+     "id": 43,
+     "name": "arrowWall11",
+     "type": "hazard",
+     "x": 320,
+     "y": 464,
+     "width": 16,
+     "height": 16,
+     "rotation": 0,
+     "visible": true,
+     "properties": [
+      {
+       "name": "kind",
+       "type": "string",
+       "value": "arrowWall"
+      },
+      {
+       "name": "room",
+       "type": "int",
+       "value": 5
+      },
+      {
+       "name": "offset",
+       "type": "int",
+       "value": 400
+      },
+      {
+       "name": "emitX",
+       "type": "int",
+       "value": 56
+      },
+      {
+       "name": "dir",
+       "type": "int",
+       "value": 0
+      },
+      {
+       "name": "stripY",
+       "type": "int",
+       "value": 432
+      },
+      {
+       "name": "stripH",
+       "type": "int",
+       "value": 64
+      }
+     ]
+    },
+    {
+     "id": 44,
+     "name": "arrowWall12",
+     "type": "hazard",
+     "x": 96,
+     "y": 480,
+     "width": 16,
+     "height": 16,
+     "rotation": 0,
+     "visible": true,
+     "properties": [
+      {
+       "name": "kind",
+       "type": "string",
+       "value": "arrowWall"
+      },
+      {
+       "name": "room",
+       "type": "int",
+       "value": 5
+      },
+      {
+       "name": "offset",
+       "type": "int",
+       "value": 1300
+      },
+      {
+       "name": "emitX",
+       "type": "int",
+       "value": 376
+      },
+      {
+       "name": "dir",
+       "type": "int",
+       "value": 180
+      },
+      {
+       "name": "stripY",
+       "type": "int",
+       "value": 432
+      },
+      {
+       "name": "stripH",
+       "type": "int",
+       "value": 64
+      }
+     ]
+    },
+    {
+     "id": 45,
+     "name": "flameJet13",
+     "type": "hazard",
+     "x": 64,
+     "y": 432,
+     "width": 48,
+     "height": 16,
+     "rotation": 0,
+     "visible": true,
+     "properties": [
+      {
+       "name": "kind",
+       "type": "string",
+       "value": "flameJet"
+      },
+      {
+       "name": "room",
+       "type": "int",
+       "value": 5
+      },
+      {
+       "name": "offset",
+       "type": "int",
+       "value": 1000
+      },
+      {
+       "name": "dir",
+       "type": "int",
+       "value": 0
+      }
+     ]
+    },
+    {
+     "id": 46,
+     "name": "flameJet14",
+     "type": "hazard",
+     "x": 320,
+     "y": 624,
+     "width": 48,
+     "height": 16,
+     "rotation": 0,
+     "visible": true,
+     "properties": [
+      {
+       "name": "kind",
+       "type": "string",
+       "value": "flameJet"
+      },
+      {
+       "name": "room",
+       "type": "int",
+       "value": 5
+      },
+      {
+       "name": "offset",
+       "type": "int",
+       "value": 3100
+      },
+      {
+       "name": "dir",
+       "type": "int",
+       "value": 180
+      }
+     ]
+    },
+    {
+     "id": 47,
+     "name": "pendulum15",
+     "type": "hazard",
+     "x": 496,
+     "y": 560,
+     "width": 48,
+     "height": 80,
+     "rotation": 0,
+     "visible": true,
+     "properties": [
+      {
+       "name": "kind",
+       "type": "string",
+       "value": "pendulum"
+      },
+      {
+       "name": "room",
+       "type": "int",
+       "value": 6
+      },
+      {
+       "name": "offset",
+       "type": "int",
+       "value": 2100
+      },
+      {
+       "name": "pivotX",
+       "type": "int",
+       "value": 504
+      },
+      {
+       "name": "pivotY",
+       "type": "int",
+       "value": 600
+      },
+      {
+       "name": "length",
+       "type": "int",
+       "value": 30
+      },
+      {
+       "name": "base",
+       "type": "int",
+       "value": 0
+      },
+      {
+       "name": "amp",
+       "type": "int",
+       "value": 60
+      },
+      {
+       "name": "period",
+       "type": "int",
+       "value": 2600
+      }
+     ]
+    },
+    {
+     "id": 48,
+     "name": "pendulum16",
+     "type": "hazard",
+     "x": 496,
+     "y": 432,
+     "width": 48,
+     "height": 80,
+     "rotation": 0,
+     "visible": true,
+     "properties": [
+      {
+       "name": "kind",
+       "type": "string",
+       "value": "pendulum"
+      },
+      {
+       "name": "room",
+       "type": "int",
+       "value": 6
+      },
+      {
+       "name": "offset",
+       "type": "int",
+       "value": 300
+      },
+      {
+       "name": "pivotX",
+       "type": "int",
+       "value": 504
+      },
+      {
+       "name": "pivotY",
+       "type": "int",
+       "value": 472
+      },
+      {
+       "name": "length",
+       "type": "int",
+       "value": 30
+      },
+      {
+       "name": "base",
+       "type": "int",
+       "value": 0
+      },
+      {
+       "name": "amp",
+       "type": "int",
+       "value": 60
+      },
+      {
+       "name": "period",
+       "type": "int",
+       "value": 2600
+      }
+     ]
+    },
+    {
+     "id": 49,
+     "name": "arrowWall17",
+     "type": "hazard",
+     "x": 560,
+     "y": 576,
+     "width": 16,
+     "height": 16,
+     "rotation": 0,
+     "visible": true,
+     "properties": [
+      {
+       "name": "kind",
+       "type": "string",
+       "value": "arrowWall"
+      },
+      {
+       "name": "room",
+       "type": "int",
+       "value": 6
+      },
+      {
+       "name": "offset",
+       "type": "int",
+       "value": 400
+      },
+      {
+       "name": "emitX",
+       "type": "int",
+       "value": 792
+      },
+      {
+       "name": "dir",
+       "type": "int",
+       "value": 180
+      },
+      {
+       "name": "stripY",
+       "type": "int",
+       "value": 576
+      },
+      {
+       "name": "stripH",
+       "type": "int",
+       "value": 64
+      }
+     ]
+    },
+    {
+     "id": 50,
+     "name": "arrowWall18",
+     "type": "hazard",
+     "x": 720,
+     "y": 608,
+     "width": 16,
+     "height": 16,
+     "rotation": 0,
+     "visible": true,
+     "properties": [
+      {
+       "name": "kind",
+       "type": "string",
+       "value": "arrowWall"
+      },
+      {
+       "name": "room",
+       "type": "int",
+       "value": 6
+      },
+      {
+       "name": "offset",
+       "type": "int",
+       "value": 1100
+      },
+      {
+       "name": "emitX",
+       "type": "int",
+       "value": 472
+      },
+      {
+       "name": "dir",
+       "type": "int",
+       "value": 0
+      },
+      {
+       "name": "stripY",
+       "type": "int",
+       "value": 576
+      },
+      {
+       "name": "stripH",
+       "type": "int",
+       "value": 64
+      }
+     ]
+    },
+    {
+     "id": 51,
+     "name": "arrowWall19",
+     "type": "hazard",
+     "x": 720,
+     "y": 576,
+     "width": 16,
+     "height": 16,
+     "rotation": 0,
+     "visible": true,
+     "properties": [
+      {
+       "name": "kind",
+       "type": "string",
+       "value": "arrowWall"
+      },
+      {
+       "name": "room",
+       "type": "int",
+       "value": 6
+      },
+      {
+       "name": "offset",
+       "type": "int",
+       "value": 1100
+      },
+      {
+       "name": "emitX",
+       "type": "int",
+       "value": 472
+      },
+      {
+       "name": "dir",
+       "type": "int",
+       "value": 0
+      },
+      {
+       "name": "stripY",
+       "type": "int",
+       "value": 576
+      },
+      {
+       "name": "stripH",
+       "type": "int",
+       "value": 64
+      }
+     ]
+    },
+    {
+     "id": 52,
+     "name": "flameJet20",
+     "type": "hazard",
+     "x": 752,
+     "y": 416,
+     "width": 16,
+     "height": 48,
+     "rotation": 0,
+     "visible": true,
+     "properties": [
+      {
+       "name": "kind",
+       "type": "string",
+       "value": "flameJet"
+      },
+      {
+       "name": "room",
+       "type": "int",
+       "value": 6
+      },
+      {
+       "name": "offset",
+       "type": "int",
+       "value": 3500
+      },
+      {
+       "name": "dir",
+       "type": "int",
+       "value": 90
+      }
+     ]
+    },
+    {
+     "id": 53,
+     "name": "flameJet21",
+     "type": "hazard",
+     "x": 688,
+     "y": 608,
+     "width": 16,
+     "height": 48,
+     "rotation": 0,
+     "visible": true,
+     "properties": [
+      {
+       "name": "kind",
+       "type": "string",
+       "value": "flameJet"
+      },
+      {
+       "name": "room",
+       "type": "int",
+       "value": 6
+      },
+      {
+       "name": "offset",
+       "type": "int",
+       "value": 1300
+      },
+      {
+       "name": "dir",
+       "type": "int",
+       "value": 270
+      }
+     ]
+    },
+    {
+     "id": 54,
+     "name": "flameJet22",
+     "type": "hazard",
+     "x": 720,
+     "y": 416,
+     "width": 16,
+     "height": 48,
+     "rotation": 0,
+     "visible": true,
+     "properties": [
+      {
+       "name": "kind",
+       "type": "string",
+       "value": "flameJet"
+      },
+      {
+       "name": "room",
+       "type": "int",
+       "value": 6
+      },
+      {
+       "name": "offset",
+       "type": "int",
+       "value": 2800
+      },
+      {
+       "name": "dir",
+       "type": "int",
+       "value": 90
+      }
+     ]
+    },
+    {
+     "id": 55,
+     "name": "flameJet23",
+     "type": "hazard",
+     "x": 1376,
+     "y": 416,
+     "width": 16,
+     "height": 48,
+     "rotation": 0,
+     "visible": true,
+     "properties": [
+      {
+       "name": "kind",
+       "type": "string",
+       "value": "flameJet"
+      },
+      {
+       "name": "room",
+       "type": "int",
+       "value": 7
+      },
+      {
+       "name": "offset",
+       "type": "int",
+       "value": 3200
+      },
+      {
+       "name": "dir",
+       "type": "int",
+       "value": 90
+      }
+     ]
+    },
+    {
+     "id": 56,
+     "name": "flameJet24",
+     "type": "hazard",
+     "x": 1120,
+     "y": 416,
+     "width": 16,
+     "height": 48,
+     "rotation": 0,
+     "visible": true,
+     "properties": [
+      {
+       "name": "kind",
+       "type": "string",
+       "value": "flameJet"
+      },
+      {
+       "name": "room",
+       "type": "int",
+       "value": 7
+      },
+      {
+       "name": "offset",
+       "type": "int",
+       "value": 3400
+      },
+      {
+       "name": "dir",
+       "type": "int",
+       "value": 90
+      }
+     ]
+    },
+    {
+     "id": 57,
      "name": "bossArena",
      "type": "bossArena",
      "x": 896,
@@ -832,7 +1909,7 @@
      ]
     },
     {
-     "id": 34,
+     "id": 58,
      "name": "throne1",
      "type": "throne",
      "x": 984,
@@ -845,7 +1922,7 @@
      "properties": []
     },
     {
-     "id": 35,
+     "id": 59,
      "name": "throne2",
      "type": "throne",
      "x": 1256,
@@ -858,7 +1935,7 @@
      "properties": []
     },
     {
-     "id": 36,
+     "id": 60,
      "name": "throne3",
      "type": "throne",
      "x": 1528,
@@ -871,7 +1948,7 @@
      "properties": []
     },
     {
-     "id": 37,
+     "id": 61,
      "name": "exit",
      "type": "exit",
      "x": 928,

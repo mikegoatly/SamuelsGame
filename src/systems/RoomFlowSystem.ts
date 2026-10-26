@@ -1,12 +1,14 @@
 import Phaser from 'phaser';
 import { getEnemy } from '../content/enemies';
 import type { LevelConfig } from '../content/levels';
+import { curveOf, infoOf } from '../content/levels/curve';
 import type { Player } from '../entities/Player';
 import { insetRect, rectCenter, rectContains } from '../logic/geometry';
-import { findRoomAt, roomWaves } from '../logic/roomFlow';
-import { pickRectSpawn } from '../logic/spawnPoints';
+import { findRoomAt } from '../logic/roomFlow';
+import { pickRoleSpawn } from '../logic/spawnPoints';
 import type { LevelObjects, RoomSpec } from '../logic/tiledObjects';
-import { pickWeighted } from '../logic/weighted';
+import { planWave, wavesInRoom } from '../logic/waveMix';
+import { ClearWatch } from './ClearWatch';
 import type { DoorLayer } from './DoorLayer';
 import type { EnemyFactory } from './EnemyFactory';
 import type { GameEvents } from './GameEvents';
@@ -37,12 +39,12 @@ export class RoomFlowSystem implements LevelDirector {
   private readonly cleared = new Set<number>();
   private current?: RoomSpec;
   private wave = 0;
-  private remaining = 0;
+  private readonly watch: ClearWatch;
   private bossStarted = false;
   private stopped = false;
 
   constructor(private readonly o: RoomFlowOptions) {
-    o.events.on('enemy-died', () => this.onEnemyDied());
+    this.watch = new ClearWatch(o.scene, () => o.factory.living(), o.events, () => this.onWaveCleared(), () => this.onStatuesStir());
     o.events.on('boss-died', () => this.onBossDied());
   }
 
@@ -56,6 +58,7 @@ export class RoomFlowSystem implements LevelDirector {
 
   stop(): void {
     this.stopped = true;
+    this.watch.stop();
     this.o.scene.events.off(Phaser.Scenes.Events.UPDATE, this.update, this);
   }
 
@@ -85,20 +88,23 @@ export class RoomFlowSystem implements LevelDirector {
     const room = this.current;
     if (!room || this.stopped) return;
     this.wave = wave;
-    const levels = roomWaves(room)[wave - 1] ?? [];
-    this.remaining = levels.length;
-    for (const level of levels) {
-      const def = getEnemy(pickWeighted(this.o.level.enemyPool, Math.random)?.enemyId ?? '');
-      const { x, y } = pickRectSpawn(room.rect, this.o.player, MIN_SPAWN_DISTANCE, Math.random, this.o.isBlocked, SPAWN_INSET);
-      this.o.factory.spawn(def, level, x, y);
+    const spawns = planWave(this.o.level.enemyPool, curveOf(this.o.level), { order: room.order, wave, levels: [room.minLevel, room.maxLevel] }, infoOf, Math.random);
+    for (const spawn of spawns) {
+      const { x, y } = pickRoleSpawn(room.rect, this.o.player, spawn.role, Math.random, this.o.isBlocked, SPAWN_INSET, MIN_SPAWN_DISTANCE);
+      this.o.factory.spawnGroup(getEnemy(spawn.enemyId), spawn.level, x, y, spawn.affix);
     }
+    if (spawns.some((s) => s.affix)) playSfx(this.o.scene, 'eliteSpawn');
+    this.watch.arm();
   }
 
-  private onEnemyDied(): void {
+  private onStatuesStir(): void {
+    floatText(this.o.scene, this.o.player.x, this.o.player.y - 20, 'The statues stir...', '#c8cce0', 12, 16, 1200);
+  }
+
+  private onWaveCleared(): void {
     const room = this.current;
-    if (!room || this.bossStarted) return;
-    if (--this.remaining > 0) return;
-    if (this.wave < room.waves) {
+    if (!room || this.bossStarted || this.stopped) return;
+    if (this.wave < wavesInRoom(curveOf(this.o.level), room.order)) {
       this.o.scene.time.delayedCall(NEXT_WAVE_DELAY_MS, () => this.startWave(this.wave + 1));
       return;
     }

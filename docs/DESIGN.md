@@ -3,6 +3,14 @@
 Top-down twin-stick action game in the spirit of *Relic Hunters*. Goal: defeat the ultimate boss.
 Runs in browser (desktop + tablet). Phaser 3 + TypeScript + Vite.
 
+## Monsters, elites and room curves (v2 Phase 4)
+
+- Behaviours live one per file in `src/entities/behaviours/*.ts`; `Enemy` only dispatches (`def.custom` picks the module) and keeps health, hits, knockback and loot. Pure rules are in `src/logic` (`fuse`, `orbitDive`, `archer`+`cover`, `pack`, `graveyard`, `shark`, `trail`, `turret`, `whirl`, `support`, `reflect`, `bomb`, `clear`, `beam`).
+- Packs: an `EnemyDef.pack` is spawned by `EnemyFactory.spawnGroup` (rats scatter, twins are linked, hounds follow the master). Room clear counts every living monster (`ClearWatch`): split halves, raised dead and pack members all count; dormant gargoyles and fleeing hounds do not, and when only dormant statues remain they are woken.
+- Elites (`logic/elites`, `entities/behaviours/mods.ts`): one affix, never on bosses or packs; the ward bar (`logic/ward`) is shared with the Mummy Priest's shield.
+- Curves (`LevelConfig.curve`, `logic/waveMix`): waves per room, wave size = slots from `size` (a tank or swarm costs 2), the room's `intro` monster is in every wave of its room and later monsters wait for their room. Tanks spawn near the player, shooters far (`pickRoleSpawn`). Slots roughly double the old flat waves (ruins 68, desert/palace about 115 slots). The arena keeps endless waves with the same planner.
+- Extra sprites: `tools/add_monster_frames.py` writes `public/assets/extra/monsters-extra.png` (`Tex.monsters`, `MonsterFrame`). Dev builds expose `window.__spawn(id, level, dx, dy, affix)`.
+
 ## 1. Core loop
 
 1. Enter level → fight monster waves/rooms → collect drops → gain XP → level up → weapons scale.
@@ -199,6 +207,12 @@ tests/                    Vitest specs for logic/
 - HUD: bottom-centre skill bar with a cooldown sweep and the Input Prompts glyph (`content/inputGlyphs.ts`) of the device used last (`systems/inputDevice.ts`).
 - `LoadoutScene` (Level select -> Loadout -> Game) and `SkillSwapScene` (modal through `CardPresenter`, default focus is Keep in bag) use `MenuList`, so mouse, touch, keyboard and gamepad all work.
 - Save v6 (`skills.owned`, `loadout`), migration in `parseSave` (powers, equipped weapon, rewards of cleared levels via `LegacySkillRewards`). Scrolls: `logic/skillScroll.ts`, chance per loot table (`scrollChance`, bosses 3%, default 0.5%).
+
+## Hazards (v2 phase 4)
+
+- Data: `MapTheme.hazards` (`HazardPlan`: per kind, a count per combat room; rubble/wind/sandstorm use the number as intensity) and `bossHazard`. `logic/hazard/placement.ts` places them from a separate random stream (`seed ^ 0x5bd1e995`) so rooms, cover, quicksand and spikes never move. Footprints stay inside the room, off the 3-wide corridor lanes plus a tile of margin (pendulums only the lane itself), off cover and each other, and never seal a pocket (tested by flood fill with all footprints as walls). Objects are `hazard` objects with `kind`, `room`, `offset` and integer params; `parseLevelObjects` returns them as `active`.
+- Pure timing/geometry in `logic/hazard/`: `cycle` (phaseAt), `crack`, `rubble`, `vents` (gas, flame), `wind`, `sandstorm`, `pendulum`, `arrows`, `victims` (cooldowns, damage fractions), `plan`, `placement`.
+- Runtime: `systems/hazards/HazardDirector` builds one class per object (all draw with Graphics plus small particle emitters, no new art), wakes a room's hazards on `room-started` (boss arena on `boss-started`), calms them on `room-cleared`/`boss-died` (fire pits stay lit), and halts all on player death, `feel.isLocked` or shutdown. Timing runs on the GameClock. Player damage is `takeDamage(..., 'hazard')` as a fraction of max HP; enemies take `takeHit`/`takeDot` as a fraction of max HP, bosses excluded. Wind uses `Player.windPush` and `Enemy.nudge`; pits eject with `Player.blinkTo`. Fog respects the reduce-flash setting (`feel.reduced` caps it). Sfx reuse existing audio files under new ids.
 
 ## Heroes (v2 phase 3)
 

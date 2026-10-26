@@ -1,4 +1,5 @@
 import type { Point, Rect } from './geometry';
+import { isActiveKind, type ActiveHazardKind } from './hazard/kinds';
 
 interface TiledObject {
   type?: string;
@@ -40,12 +41,22 @@ export interface HazardSpec {
   offsetMs?: number;
 }
 
+/** A timed or room-wide hazard run by the HazardDirector; `room` is the room order that wakes it. */
+export interface ActiveHazardSpec {
+  kind: ActiveHazardKind;
+  room: number;
+  offsetMs: number;
+  rect: Rect;
+  params: Record<string, number>;
+}
+
 export interface LevelObjects {
   playerStart: Point;
   rooms: RoomSpec[];
   doors: DoorSpec[];
   bossArena: BossArenaSpec | null;
   hazards: HazardSpec[];
+  active: ActiveHazardSpec[];
   thrones: Point[];
   exit: Point | null;
 }
@@ -72,6 +83,15 @@ function toRoom(object: TiledObject): RoomSpec {
   };
 }
 
+const RESERVED = new Set(['kind', 'room', 'offset']);
+
+function toActiveHazard(object: TiledObject): ActiveHazardSpec[] {
+  const props = propsOf(object);
+  if (!isActiveKind(props.kind)) return [];
+  const params = Object.fromEntries(Object.entries(props).filter(([name, value]) => !RESERVED.has(name) && typeof value === 'number'));
+  return [{ kind: props.kind, room: whole(props.room, 0), offsetMs: whole(props.offset, 0), rect: rectOf(object), params: params as Record<string, number> }];
+}
+
 /** Typed view of the `objects` layer of a Tiled map; tolerant of missing properties, strict about the player start. */
 export function parseLevelObjects(map: TiledMapLike): LevelObjects {
   const objects = map.layers.find((layer) => layer.name === 'objects')?.objects ?? [];
@@ -90,6 +110,7 @@ export function parseLevelObjects(map: TiledMapLike): LevelObjects {
       if (props.kind === 'quicksand') return [{ kind: 'quicksand', rect: rectOf(o) }];
       return props.kind === 'spikes' ? [{ kind: 'spikes', rect: rectOf(o), offsetMs: whole(props.offset, 0) }] : [];
     }),
+    active: ofType('hazard').flatMap(toActiveHazard),
     thrones: ofType('throne').map(pointOf),
     exit: exit ? pointOf(exit) : null,
   };

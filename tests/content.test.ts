@@ -77,8 +77,8 @@ describe('desert content', () => {
     expect(desert.bossMusic).toBe(ruins.bossMusic);
   });
 
-  it('draws from the four desert enemies', () => {
-    expect(desert.enemyPool.map((e) => e.enemyId).sort()).toEqual(['bandit', 'mummy', 'scorpion', 'vulture']);
+  it('draws from the four original desert enemies plus the five new monsters', () => {
+    expect(desert.enemyPool.map((e) => e.enemyId).sort()).toEqual(['bandit', 'cactusTurret', 'dustDevil', 'fireImp', 'mummy', 'mummyPriest', 'sandShark', 'scorpion', 'vulture']);
   });
 
   it('warns players below level 4 and nobody at level 4 or above', () => {

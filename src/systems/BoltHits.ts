@@ -13,6 +13,7 @@ export function registerBoltHits(scene: Phaser.Scene, pool: Phaser.Physics.Arcad
     const bolt = boltObj as Projectile;
     const enemy = enemyObj as Enemy;
     if (!bolt.active || !enemy.alive || !enemy.targetable) return;
+    if (enemy.interceptBolt(bolt)) return;
     const outcome = bolt.hits.register(enemy);
     if (outcome === 'ignore') return;
     const base = bolt.weapon.baseDamage * bolt.damageScale;

@@ -65,3 +65,33 @@ describe('parseLevelObjects', () => {
     for (const door of parsed.doors) expect(orders.has(door.room)).toBe(true);
   });
 });
+
+describe('active hazards in Tiled objects', () => {
+  const parsed = parseLevelObjects(
+    aTiledMap(
+      aTiledObject('playerStart', 0, 0),
+      aTiledObject('hazard', 32, 48, { kind: 'pendulum', room: 3, offset: 700, pivotX: 40, length: 30 }, { w: 64, h: 48 }),
+      aTiledObject('hazard', 0, 0, { kind: 'firePit' }, { w: 32, h: 32 }),
+      aTiledObject('hazard', 0, 0, { kind: 'lava', room: 1 }, { w: 16, h: 16 }),
+    ),
+  );
+
+  it('reads kind, room, offset and the remaining integer params', () => {
+    expect(parsed.active).toEqual([
+      { kind: 'pendulum', room: 3, offsetMs: 700, rect: { x: 32, y: 48, w: 64, h: 48 }, params: { pivotX: 40, length: 30 } },
+      { kind: 'firePit', room: 0, offsetMs: 0, rect: { x: 0, y: 0, w: 32, h: 32 }, params: {} },
+    ]);
+  });
+
+  it('keeps them out of the quicksand and spike list', () => {
+    expect(parsed.hazards).toEqual([]);
+  });
+
+  it('finds the planned hazards in every committed map', () => {
+    for (const id of ['ruins', 'desert', 'palace']) {
+      const map = parseLevelObjects(JSON.parse(readFileSync(`public/assets/maps/${id}.tmj`, 'utf8')));
+      expect(map.active.length, id).toBeGreaterThan(5);
+      expect(map.active.every((h) => h.room >= 1), id).toBe(true);
+    }
+  });
+});

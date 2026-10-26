@@ -1,4 +1,5 @@
 import type { LevelRange } from '../../logic/waves';
+import type { LevelCurve } from '../../logic/waveMix';
 
 export type Environment = 'ruins' | 'desert' | 'palace' | 'arena' | 'unknown';
 
@@ -9,6 +10,8 @@ export interface LevelConfig {
   recommendedLevel: number;
   monsterLevelRange: LevelRange;
   enemyPool: { enemyId: string; weight: number }[];
+  /** Room intensity: waves, wave size, which new monster each room features and elite odds. */
+  curve?: LevelCurve;
   bossId?: string;
   bossLevel?: number;
   rewardWeaponId?: string;

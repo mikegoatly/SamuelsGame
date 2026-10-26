@@ -1,7 +1,15 @@
 import Phaser from 'phaser';
 import { getEnemy, type EnemyDef } from '../content/enemies';
 import { Boss } from '../entities/Boss';
-import { Enemy, type EnemyContext } from '../entities/Enemy';
+import { Enemy, type EnemyContext, type EnemyExtras } from '../entities/Enemy';
+import { assignHound } from '../entities/behaviours/hounds';
+import { linkTwins } from '../entities/behaviours/twin';
+import type { EnemyWorld } from '../entities/behaviours/types';
+import type { Affix } from '../logic/elites';
+import { Graveyard } from '../logic/graveyard';
+import { findClearSpot, packCount, scatterAround } from '../logic/pack';
+import { bodyClear } from '../logic/lineOfSight';
+import { blockedByRects } from '../logic/spawnAvoid';
 import { insetRect, rectContains, type Point, type Rect } from '../logic/geometry';
 import { pickEmergePoint, pickRectSpawn, pickThrone } from '../logic/spawnPoints';
 
@@ -11,6 +19,11 @@ const MINION_RADIUS = 36;
 const MINION_INSET = 24;
 const EMERGE_OFFSET = 18;
 const TELEPORT_MIN_DISTANCE = 120;
+const CORPSE_LIFETIME_MS = 14_000;
+const PACK_RADIUS = 26;
+const TWIN_GAP = 16;
+const CLEAR_RADIUS = 16;
+const BODY_RADIUS = 6;
 
 export interface BossArea {
   rect: Rect;
@@ -21,14 +34,52 @@ export interface BossArea {
 
 /** Creates enemies into the shared physics group with a fade-in during which they cannot hurt the player. */
 export class EnemyFactory {
+  /** What monsters can ask of the level (living monsters, spawning, the graveyard). */
+  readonly world: EnemyWorld;
+  private readonly context: EnemyContext;
+  private readonly blocked: (x: number, y: number) => boolean;
+
   constructor(
     private readonly scene: Phaser.Scene,
     private readonly group: Phaser.Physics.Arcade.Group,
-    private readonly context: EnemyContext,
-  ) {}
+    context: EnemyContext,
+    bolts?: Phaser.Physics.Arcade.Group,
+    avoid: readonly Rect[] = [],
+  ) {
+    this.blocked = blockedByRects(avoid, context.isBlocked ?? (() => false));
+    this.world = {
+      all: () => this.living(),
+      spawn: (id, lvl, x, y, options) => this.spawn(getEnemy(id), lvl, x, y, options),
+      graveyard: new Graveyard(CORPSE_LIFETIME_MS),
+      clearSpot: (p) => findClearSpot(p, CLEAR_RADIUS, Math.random, (x, y) => bodyClear({ x, y }, BODY_RADIUS, this.blocked)),
+      bolts,
+    };
+    this.context = { ...context, world: this.world };
+  }
 
-  spawn(def: EnemyDef, level: number, x: number, y: number): Enemy {
-    return this.fadeIn(new Enemy(this.scene, x, y, def, level, this.context), FADE_IN_MS);
+  living(): Enemy[] {
+    return (this.group.getChildren() as Enemy[]).filter((e) => e.alive);
+  }
+
+  spawn(def: EnemyDef, level: number, x: number, y: number, extras?: EnemyExtras): Enemy {
+    return this.fadeIn(new Enemy(this.scene, x, y, def, level, this.context, extras), FADE_IN_MS);
+  }
+
+  /** Spawns a def as a whole encounter: single monsters as themselves, packs as their members around the point (a houndmaster brings his hounds). */
+  spawnGroup(def: EnemyDef, level: number, x: number, y: number, affix?: Affix): Enemy[] {
+    const { pack } = def;
+    if (!pack) return [this.spawn(def, level, x, y, { affix })];
+    const member = getEnemy(pack.member);
+    const memberLevel = Math.max(1, level - (pack.levelDrop ?? 0));
+    const count = packCount(pack.count, Math.random);
+    const spots = member.custom === 'twin'
+      ? [{ x: x - TWIN_GAP, y }, { x: x + TWIN_GAP, y }]
+      : scatterAround({ x, y }, count, PACK_RADIUS, Math.random, this.blocked);
+    const leader = pack.leader ? this.spawn(def, level, x, y, { affix }) : undefined;
+    const members = spots.map((spot, i) => this.spawn(member, memberLevel, spot.x, spot.y, i === 0 && !leader ? { affix } : undefined));
+    if (leader) for (const hound of members) assignHound(leader, hound);
+    if (member.custom === 'twin' && members.length === 2) linkTwins(members[0]!, members[1]!);
+    return leader ? [leader, ...members] : members;
   }
 
   spawnBoss(def: EnemyDef, level: number, x: number, y: number, area: BossArea): Boss {

@@ -80,3 +80,19 @@ export function celebrate(scene: Phaser.Scene, x: number, y: number, tint = CELE
   emit(stars, x, y, tint, 14);
   CELEBRATE_TINTS.forEach((color, i) => scene.time.delayedCall(i * 70, () => stars.active && emit(stars, x, y, color, 5)));
 }
+
+const SPARK_TINT = 0xffc060;
+
+/** Stone chips and grey dust where rubble lands or a floor gives way. */
+export function debrisBurst(scene: Phaser.Scene, x: number, y: number, tint = 0x9a9488): void {
+  const dust = shared(scene, 'debris-dust', Tex.smoke, 9, { speed: { min: 20, max: 70 }, lifespan: 520, scale: { start: 0.06, end: 0.2 }, alpha: { start: 0.6, end: 0 } });
+  const chips = shared(scene, 'debris-chips', Tex.star, 9, { speed: { min: 40, max: 120 }, lifespan: 380, scale: { start: 0.04, end: 0 }, gravityY: 160, rotate: { min: 0, max: 360 } });
+  emit(dust, x, y, tint, 8);
+  emit(chips, x, y, 0xb8b0a0, 7);
+}
+
+/** A few embers popping off a flame source. */
+export function emberBurst(scene: Phaser.Scene, x: number, y: number, count = 4): void {
+  const embers = shared(scene, 'embers', Tex.star, 9, { speed: { min: 15, max: 55 }, lifespan: 520, scale: { start: 0.035, end: 0 }, gravityY: -30, blendMode: Phaser.BlendModes.ADD });
+  emit(embers, x, y, SPARK_TINT, count);
+}

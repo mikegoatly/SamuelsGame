@@ -6,6 +6,7 @@ import { Pickup } from '../entities/Pickup';
 import type { Player } from '../entities/Player';
 import { skillIds } from '../content/skills';
 import { GEM_LABEL, noGems, type Gems } from '../logic/gems';
+import { eliteBonus } from '../logic/elites';
 import { rollDrops, rollGemBurst } from '../logic/loot';
 import { rollSkillScroll, SCROLL_CHANCE } from '../logic/skillScroll';
 import { GoldBonus, potionHeal } from '../logic/passives';
@@ -47,18 +48,19 @@ export class LootSystem {
     this.gold = new GoldBonus(player.effects.goldMultiplier);
     this.group = scene.physics.add.group({ allowGravity: false });
     scene.physics.add.overlap(player, this.group, (_, pickup) => (pickup as Pickup).tryCollect());
-    events.on('enemy-died', (_level, x, y, tableId) => this.dropFrom(tableId, x, y));
+    events.on('enemy-died', (_level, x, y, tableId, _boss, _ally, elite) => this.dropFrom(tableId, x, y, elite));
   }
 
   get totalCoins(): number {
     return this.save.data.coins + this.run.coins;
   }
 
-  dropFrom(tableId: string, x: number, y: number): void {
+  dropFrom(tableId: string, x: number, y: number, elite = false): void {
     const table = lootTables[tableId];
     if (!table) return;
     const burst = table.gemBurst ? rollGemBurst(table.gemBurst, this.rng) : [];
-    for (const itemId of [...rollDrops(table, this.rng, this.player.effects.luck), ...burst]) this.spawn(itemId, x, y);
+    const bonus = elite ? eliteBonus(table, this.rng, this.player.effects.luck) : [];
+    for (const itemId of [...rollDrops(table, this.rng, this.player.effects.luck), ...burst, ...bonus]) this.spawn(itemId, x, y);
     const owned = [...this.save.data.skills.owned.map((skill) => skill.id), ...this.scrollsOnGround()];
     const scroll = rollSkillScroll((table.scrollChance ?? SCROLL_CHANCE.normal) * (1 + this.player.effects.luck), skillIds, owned, this.rng);
     if (scroll) this.spawn(`scroll_${scroll}`, x, y);

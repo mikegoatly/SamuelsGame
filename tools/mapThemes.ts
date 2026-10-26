@@ -1,4 +1,5 @@
 import { Frame } from '../src/content/assetKeys';
+import type { BossHazard, HazardPlan } from '../src/logic/hazard/plan';
 import { DESERT_PRESET, PALACE_PRESET, RUINS_PRESET, type LayoutPreset } from '../src/logic/layoutPresets';
 
 export interface Encounter {
@@ -23,6 +24,10 @@ export interface MapTheme {
   quicksandPerRoom: number;
   /** Mirrored pairs of timed spike traps per combat room (default none). */
   spikePairsPerRoom?: number;
+  /** Escalating hazards per combat room (see `HazardPlan`); the quicksand and spikes above stay separate. */
+  hazards?: HazardPlan;
+  /** The one hazard the boss arena uses. */
+  bossHazard?: BossHazard;
   /** Adds `throne` objects to the boss arena (boss teleport destinations). */
   thrones?: boolean;
 }
@@ -48,6 +53,8 @@ export const RUINS_THEME: MapTheme = {
     { waves: 3, minLevel: 4, maxLevel: 4 },
   ],
   quicksandPerRoom: 0,
+  hazards: { crackedFloor: [0, 1, 1, 2, 2], rubble: [0, 0, 1, 1, 2], gasVent: [0, 0, 0, 1, 2] },
+  bossHazard: { kind: 'rubble', count: 2 },
 };
 
 export const DESERT_THEME: MapTheme = {
@@ -73,6 +80,8 @@ export const DESERT_THEME: MapTheme = {
     { waves: 3, minLevel: 9, maxLevel: 9 },
   ],
   quicksandPerRoom: 1,
+  hazards: { firePit: [0, 1, 2, 2, 3, 3], wind: [0, 0, 1, 1, 2, 2], sandstorm: [0, 0, 0, 0, 1, 1] },
+  bossHazard: { kind: 'wind', count: 1 },
 };
 
 export const PALACE_THEME: MapTheme = {
@@ -95,6 +104,8 @@ export const PALACE_THEME: MapTheme = {
   ],
   quicksandPerRoom: 0,
   spikePairsPerRoom: 1,
+  hazards: { arrowWall: [0, 1, 1, 2, 2, 3], pendulum: [0, 0, 1, 1, 2, 2], flameJet: [0, 0, 0, 2, 2, 3] },
+  bossHazard: { kind: 'flameJet', count: 2 },
   thrones: true,
 };
 

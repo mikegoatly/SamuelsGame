@@ -23,6 +23,7 @@ import { HeroSystem } from '../systems/HeroSystem';
 import { HeroUnlocks } from '../systems/HeroUnlocks';
 import { EnemyFactory } from '../systems/EnemyFactory';
 import { GameEvents } from '../systems/GameEvents';
+import { HazardDirector } from '../systems/hazards/HazardDirector';
 import { floatText } from '../systems/floatText';
 import { InputController } from '../systems/InputController';
 import type { LevelDirector } from '../systems/LevelDirector';
@@ -39,6 +40,8 @@ import { SkillAcquisition } from '../systems/SkillAcquisition';
 import { SkillSystem } from '../systems/SkillSystem';
 import { SpawnSystem } from '../systems/SpawnSystem';
 import { SpikeSystem } from '../systems/SpikeSystem';
+import { exposeSpawner } from '../systems/debugSpawn';
+import { blockedByRects, spawnAvoidRects } from '../logic/spawnAvoid';
 import { buildLevelMap, type LevelMap } from './RoomBuilder';
 
 export interface GameSceneData {
@@ -105,8 +108,10 @@ export class GameScene extends Phaser.Scene {
     const enemies = (this.enemies = this.physics.add.group({ allowGravity: false }));
     const lookups = [walls, ...map.solid].map((layer) => (x: number, y: number) => layer.getTileAtWorldXY(x, y));
     const isSolid = (x: number, y: number): boolean => solidAt(walls, lookups, x, y);
-    const factory = new EnemyFactory(this, enemies, { target: player, events, shots, clock: this.clock, isBlocked: isSolid });
-    const director = this.createDirector(map, player, factory, events);
+    const avoid = map.world ? spawnAvoidRects(map.world) : [];
+    const factory = new EnemyFactory(this, enemies, { target: player, events, shots, clock: this.clock, isBlocked: isSolid }, projectiles, avoid);
+    exposeSpawner(factory, player);
+    const director = this.createDirector(map, player, factory, events, blockedByRects(avoid, isSolid));
     const skills = new SkillSystem({ scene: this, player, enemies, shots, clock: this.clock, isSolid, save: saveSystem, events });
     new HeroSystem({ scene: this, player, enemies, shots, clock: this.clock, isSolid }, events);
     this.unlocks = new HeroUnlocks(this, player, events, saveSystem, player.hero.id, this.level.id, this.level.bossId, (ids) => this.announceHeroes(ids));
@@ -115,6 +120,7 @@ export class GameScene extends Phaser.Scene {
 
     new MeleeSystem({ scene: this, player, enemies, shots, projectiles, isSolid });
     if (map.spikes.length > 0) new SpikeSystem(this, player, this.clock, map.spikes);
+    if (map.world && map.world.active.length > 0) new HazardDirector({ scene: this, player, enemies, clock: this.clock, isSolid }, map.world, events);
 
     this.addColliders(map, player, enemies, projectiles, shots);
     registerBoltHits(this, projectiles, enemies, player);
@@ -226,9 +232,9 @@ export class GameScene extends Phaser.Scene {
     );
   }
 
-  private createDirector(map: LevelMap, player: Player, factory: EnemyFactory, events: GameEvents): LevelDirector {
+  private createDirector(map: LevelMap, player: Player, factory: EnemyFactory, events: GameEvents, isBlocked: (x: number, y: number) => boolean): LevelDirector {
     const { world, doors, walls } = map;
-    if (!world || !doors) return new SpawnSystem(this, player, factory, events, this.level);
+    if (!world || !doors) return new SpawnSystem(this, player, factory, events, this.level, isBlocked);
     return new RoomFlowSystem({
       scene: this,
       player,
@@ -237,7 +243,7 @@ export class GameScene extends Phaser.Scene {
       level: this.level,
       world,
       doors,
-      isBlocked: (x, y) => solidAt(walls, [(px, py) => walls.getTileAtWorldXY(px, py)], x, y),
+      isBlocked: blockedByRects(spawnAvoidRects(world), (x, y) => solidAt(walls, [(px, py) => walls.getTileAtWorldXY(px, py)], x, y)),
     });
   }
 
@@ -254,8 +260,9 @@ export class GameScene extends Phaser.Scene {
       this.physics.add.collider(projectiles, layer, (bolt) => (bolt as Projectile).kill());
       this.physics.add.collider(shots.group, layer, (bolt) => (bolt as EnemyProjectile).kill());
     }
-    this.physics.add.collider(enemies, enemies);
-    this.physics.add.collider(player, enemies, (_, enemy) => (enemy as Enemy).tryContact(player));
+    const solidBody = (object: unknown): boolean => (object as Enemy).phased !== true;
+    this.physics.add.collider(enemies, enemies, undefined, (a, b) => solidBody(a) && solidBody(b));
+    this.physics.add.collider(player, enemies, (_, enemy) => (enemy as Enemy).tryContact(player), (_, enemy) => solidBody(enemy));
   }
 
   private startMusic(events: GameEvents): MusicPlayer {

@@ -10,6 +10,11 @@ export interface Direction {
   y: number;
 }
 
+/** `count` unit vectors evenly round the full circle, the first at `offset` radians. */
+export function ringDirections(count: number, offset = 0): Direction[] {
+  return Array.from({ length: count }, (_, i) => ({ x: Math.cos(offset + (i * Math.PI * 2) / count), y: Math.sin(offset + (i * Math.PI * 2) / count) }));
+}
+
 /** `count` unit vectors fanned evenly across `arc` radians, centred on (dx, dy), or on `fallback` when that has no length. */
 export function spreadDirections(dx: number, dy: number, count: number, arc: number, fallback: Direction = { x: 1, y: 0 }): Direction[] {
   const aimless = Math.hypot(dx, dy) < 1e-6;

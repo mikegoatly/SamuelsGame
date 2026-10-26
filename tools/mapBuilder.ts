@@ -1,6 +1,7 @@
 import { SHEET_COLS, TILE_SIZE } from '../src/content/assetKeys';
 import { floorMask, generateLayout, placeHazards, placeSpikeTraps, throneTiles, type DungeonLayout, type LayoutRoom } from '../src/logic/dungeonLayout';
 import type { Rect } from '../src/logic/geometry';
+import { placeActiveHazards, type PlacedHazard } from '../src/logic/hazard/placement';
 import { SPIKE_CYCLE } from '../src/logic/spikes';
 import { mulberry32, randInt } from '../src/logic/rng';
 import type { MapTheme } from './mapThemes';
@@ -85,7 +86,7 @@ const rectPx = (r: Rect): Pick<TiledObject, 'x' | 'y' | 'width' | 'height'> => (
 const ints = (props: Record<string, number | string>): Prop[] =>
   Object.entries(props).map(([name, value]) => ({ name, type: typeof value === 'number' ? 'int' : 'string', value }));
 
-function buildObjects(layout: DungeonLayout, hazards: Rect[], spikes: Rect[], theme: MapTheme): TiledObject[] {
+function buildObjects(layout: DungeonLayout, hazards: Rect[], spikes: Rect[], active: PlacedHazard[], theme: MapTheme): TiledObject[] {
   let nextId = 1;
   const make = (name: string, type: string, area: Pick<TiledObject, 'x' | 'y' | 'width' | 'height'>, props: Record<string, number | string> = {}, point = false): TiledObject => ({
     id: nextId++,
@@ -111,6 +112,7 @@ function buildObjects(layout: DungeonLayout, hazards: Rect[], spikes: Rect[], th
     ...layout.doors.filter((d) => d.room > 0).map((d, i) => make(`door${i + 1}`, 'door', rectPx(d.rect), { room: d.room })),
     ...hazards.map((r, i) => make(`quicksand${i + 1}`, 'hazard', rectPx(r), { kind: 'quicksand' })),
     ...spikes.map((r, i) => make(`spikes${i + 1}`, 'hazard', rectPx(r), { kind: 'spikes', offset: (i % 2 === 0 ? i * 640 : (i - 1) * 640) % SPIKE_PERIOD })),
+    ...active.map((h, i) => make(`${h.kind}${i + 1}`, 'hazard', rectPx(h.rect), { kind: h.kind, room: h.room, ...h.params })),
     make('bossArena', 'bossArena', rectPx(boss.rect), { order: boss.index }),
     ...(theme.thrones ? throneTiles(boss).map((t, i) => make(`throne${i + 1}`, 'throne', { x: px(t.x) + TILE_SIZE / 2, y: px(t.y) + TILE_SIZE / 2, width: 0, height: 0 }, {}, true)) : []),
     make('exit', 'exit', { x: px(boss.rect.x + 2), y: px(boss.cy) + TILE_SIZE / 2, width: 0, height: 0 }, {}, true),
@@ -121,7 +123,10 @@ function tileLayer(id: number, name: string, layout: DungeonLayout, data: number
   return { id, name, type: 'tilelayer', x: 0, y: 0, width: layout.cols, height: layout.rows, opacity: 1, visible: true, data: data.flat() };
 }
 
-export function buildTmj(theme: MapTheme) {
+/** Separate random stream, so adding or tuning hazards never moves the rooms, cover or quicksand. */
+const HAZARD_SEED_MIX = 0x5bd1e995;
+
+export function buildWorld(theme: MapTheme) {
   const rng = mulberry32(theme.seed);
   const layout = generateLayout(rng, theme.preset);
   const floor = floorMask(layout);
@@ -129,7 +134,13 @@ export function buildTmj(theme: MapTheme) {
   const walls = paintWalls(layout, floor, rng, theme);
   const hazards = placeHazards(layout, rng, theme.quicksandPerRoom);
   const spikes = placeSpikeTraps(layout, rng, theme.spikePairsPerRoom ?? 0, hazards);
-  const objects = buildObjects(layout, hazards, spikes, theme);
+  const active = placeActiveHazards(layout, mulberry32(theme.seed ^ HAZARD_SEED_MIX), theme.hazards ?? {}, [...hazards, ...spikes], theme.bossHazard);
+  return { layout, ground, walls, quicksand: hazards, spikes, active };
+}
+
+export function buildTmj(theme: MapTheme) {
+  const { layout, ground, walls, quicksand, spikes, active } = buildWorld(theme);
+  const objects = buildObjects(layout, quicksand, spikes, active, theme);
   return {
     compressionlevel: -1,
     type: 'map',

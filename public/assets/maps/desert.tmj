@@ -11,7 +11,7 @@
  "tilewidth": 16,
  "tileheight": 16,
  "nextlayerid": 4,
- "nextobjectid": 28,
+ "nextobjectid": 46,
  "tilesets": [
   {
    "firstgid": 1,
@@ -629,6 +629,570 @@
     },
     {
      "id": 26,
+     "name": "firePit1",
+     "type": "hazard",
+     "x": 896,
+     "y": 96,
+     "width": 48,
+     "height": 32,
+     "rotation": 0,
+     "visible": true,
+     "properties": [
+      {
+       "name": "kind",
+       "type": "string",
+       "value": "firePit"
+      },
+      {
+       "name": "room",
+       "type": "int",
+       "value": 2
+      },
+      {
+       "name": "offset",
+       "type": "int",
+       "value": 3400
+      }
+     ]
+    },
+    {
+     "id": 27,
+     "name": "firePit2",
+     "type": "hazard",
+     "x": 1552,
+     "y": 112,
+     "width": 32,
+     "height": 32,
+     "rotation": 0,
+     "visible": true,
+     "properties": [
+      {
+       "name": "kind",
+       "type": "string",
+       "value": "firePit"
+      },
+      {
+       "name": "room",
+       "type": "int",
+       "value": 3
+      },
+      {
+       "name": "offset",
+       "type": "int",
+       "value": 1200
+      }
+     ]
+    },
+    {
+     "id": 28,
+     "name": "firePit3",
+     "type": "hazard",
+     "x": 1376,
+     "y": 112,
+     "width": 32,
+     "height": 32,
+     "rotation": 0,
+     "visible": true,
+     "properties": [
+      {
+       "name": "kind",
+       "type": "string",
+       "value": "firePit"
+      },
+      {
+       "name": "room",
+       "type": "int",
+       "value": 3
+      },
+      {
+       "name": "offset",
+       "type": "int",
+       "value": 1500
+      }
+     ]
+    },
+    {
+     "id": 29,
+     "name": "wind4",
+     "type": "hazard",
+     "x": 1360,
+     "y": 64,
+     "width": 224,
+     "height": 224,
+     "rotation": 0,
+     "visible": true,
+     "properties": [
+      {
+       "name": "kind",
+       "type": "string",
+       "value": "wind"
+      },
+      {
+       "name": "room",
+       "type": "int",
+       "value": 3
+      },
+      {
+       "name": "offset",
+       "type": "int",
+       "value": 3500
+      },
+      {
+       "name": "level",
+       "type": "int",
+       "value": 1
+      },
+      {
+       "name": "dir",
+       "type": "int",
+       "value": 180
+      }
+     ]
+    },
+    {
+     "id": 30,
+     "name": "firePit5",
+     "type": "hazard",
+     "x": 1744,
+     "y": 96,
+     "width": 32,
+     "height": 32,
+     "rotation": 0,
+     "visible": true,
+     "properties": [
+      {
+       "name": "kind",
+       "type": "string",
+       "value": "firePit"
+      },
+      {
+       "name": "room",
+       "type": "int",
+       "value": 4
+      },
+      {
+       "name": "offset",
+       "type": "int",
+       "value": 3700
+      }
+     ]
+    },
+    {
+     "id": 31,
+     "name": "firePit6",
+     "type": "hazard",
+     "x": 1952,
+     "y": 224,
+     "width": 32,
+     "height": 32,
+     "rotation": 0,
+     "visible": true,
+     "properties": [
+      {
+       "name": "kind",
+       "type": "string",
+       "value": "firePit"
+      },
+      {
+       "name": "room",
+       "type": "int",
+       "value": 4
+      },
+      {
+       "name": "offset",
+       "type": "int",
+       "value": 1200
+      }
+     ]
+    },
+    {
+     "id": 32,
+     "name": "wind7",
+     "type": "hazard",
+     "x": 1744,
+     "y": 96,
+     "width": 272,
+     "height": 176,
+     "rotation": 0,
+     "visible": true,
+     "properties": [
+      {
+       "name": "kind",
+       "type": "string",
+       "value": "wind"
+      },
+      {
+       "name": "room",
+       "type": "int",
+       "value": 4
+      },
+      {
+       "name": "offset",
+       "type": "int",
+       "value": 1600
+      },
+      {
+       "name": "level",
+       "type": "int",
+       "value": 1
+      },
+      {
+       "name": "dir",
+       "type": "int",
+       "value": 90
+      }
+     ]
+    },
+    {
+     "id": 33,
+     "name": "firePit8",
+     "type": "hazard",
+     "x": 1776,
+     "y": 448,
+     "width": 32,
+     "height": 48,
+     "rotation": 0,
+     "visible": true,
+     "properties": [
+      {
+       "name": "kind",
+       "type": "string",
+       "value": "firePit"
+      },
+      {
+       "name": "room",
+       "type": "int",
+       "value": 5
+      },
+      {
+       "name": "offset",
+       "type": "int",
+       "value": 1200
+      }
+     ]
+    },
+    {
+     "id": 34,
+     "name": "firePit9",
+     "type": "hazard",
+     "x": 1936,
+     "y": 592,
+     "width": 32,
+     "height": 32,
+     "rotation": 0,
+     "visible": true,
+     "properties": [
+      {
+       "name": "kind",
+       "type": "string",
+       "value": "firePit"
+      },
+      {
+       "name": "room",
+       "type": "int",
+       "value": 5
+      },
+      {
+       "name": "offset",
+       "type": "int",
+       "value": 700
+      }
+     ]
+    },
+    {
+     "id": 35,
+     "name": "firePit10",
+     "type": "hazard",
+     "x": 1744,
+     "y": 608,
+     "width": 32,
+     "height": 32,
+     "rotation": 0,
+     "visible": true,
+     "properties": [
+      {
+       "name": "kind",
+       "type": "string",
+       "value": "firePit"
+      },
+      {
+       "name": "room",
+       "type": "int",
+       "value": 5
+      },
+      {
+       "name": "offset",
+       "type": "int",
+       "value": 2800
+      }
+     ]
+    },
+    {
+     "id": 36,
+     "name": "wind11",
+     "type": "hazard",
+     "x": 1728,
+     "y": 448,
+     "width": 288,
+     "height": 192,
+     "rotation": 0,
+     "visible": true,
+     "properties": [
+      {
+       "name": "kind",
+       "type": "string",
+       "value": "wind"
+      },
+      {
+       "name": "room",
+       "type": "int",
+       "value": 5
+      },
+      {
+       "name": "offset",
+       "type": "int",
+       "value": 3000
+      },
+      {
+       "name": "level",
+       "type": "int",
+       "value": 2
+      },
+      {
+       "name": "dir",
+       "type": "int",
+       "value": 0
+      }
+     ]
+    },
+    {
+     "id": 37,
+     "name": "sandstorm12",
+     "type": "hazard",
+     "x": 1712,
+     "y": 432,
+     "width": 320,
+     "height": 224,
+     "rotation": 0,
+     "visible": true,
+     "properties": [
+      {
+       "name": "kind",
+       "type": "string",
+       "value": "sandstorm"
+      },
+      {
+       "name": "room",
+       "type": "int",
+       "value": 5
+      },
+      {
+       "name": "offset",
+       "type": "int",
+       "value": 3500
+      },
+      {
+       "name": "level",
+       "type": "int",
+       "value": 1
+      }
+     ]
+    },
+    {
+     "id": 38,
+     "name": "firePit13",
+     "type": "hazard",
+     "x": 1344,
+     "y": 576,
+     "width": 48,
+     "height": 32,
+     "rotation": 0,
+     "visible": true,
+     "properties": [
+      {
+       "name": "kind",
+       "type": "string",
+       "value": "firePit"
+      },
+      {
+       "name": "room",
+       "type": "int",
+       "value": 6
+      },
+      {
+       "name": "offset",
+       "type": "int",
+       "value": 500
+      }
+     ]
+    },
+    {
+     "id": 39,
+     "name": "firePit14",
+     "type": "hazard",
+     "x": 1520,
+     "y": 432,
+     "width": 32,
+     "height": 48,
+     "rotation": 0,
+     "visible": true,
+     "properties": [
+      {
+       "name": "kind",
+       "type": "string",
+       "value": "firePit"
+      },
+      {
+       "name": "room",
+       "type": "int",
+       "value": 6
+      },
+      {
+       "name": "offset",
+       "type": "int",
+       "value": 2100
+      }
+     ]
+    },
+    {
+     "id": 40,
+     "name": "firePit15",
+     "type": "hazard",
+     "x": 1536,
+     "y": 576,
+     "width": 48,
+     "height": 32,
+     "rotation": 0,
+     "visible": true,
+     "properties": [
+      {
+       "name": "kind",
+       "type": "string",
+       "value": "firePit"
+      },
+      {
+       "name": "room",
+       "type": "int",
+       "value": 6
+      },
+      {
+       "name": "offset",
+       "type": "int",
+       "value": 700
+      }
+     ]
+    },
+    {
+     "id": 41,
+     "name": "wind16",
+     "type": "hazard",
+     "x": 1328,
+     "y": 432,
+     "width": 256,
+     "height": 192,
+     "rotation": 0,
+     "visible": true,
+     "properties": [
+      {
+       "name": "kind",
+       "type": "string",
+       "value": "wind"
+      },
+      {
+       "name": "room",
+       "type": "int",
+       "value": 6
+      },
+      {
+       "name": "offset",
+       "type": "int",
+       "value": 3100
+      },
+      {
+       "name": "level",
+       "type": "int",
+       "value": 2
+      },
+      {
+       "name": "dir",
+       "type": "int",
+       "value": 270
+      }
+     ]
+    },
+    {
+     "id": 42,
+     "name": "sandstorm17",
+     "type": "hazard",
+     "x": 1312,
+     "y": 416,
+     "width": 288,
+     "height": 224,
+     "rotation": 0,
+     "visible": true,
+     "properties": [
+      {
+       "name": "kind",
+       "type": "string",
+       "value": "sandstorm"
+      },
+      {
+       "name": "room",
+       "type": "int",
+       "value": 6
+      },
+      {
+       "name": "offset",
+       "type": "int",
+       "value": 1400
+      },
+      {
+       "name": "level",
+       "type": "int",
+       "value": 1
+      }
+     ]
+    },
+    {
+     "id": 43,
+     "name": "wind18",
+     "type": "hazard",
+     "x": 496,
+     "y": 416,
+     "width": 672,
+     "height": 224,
+     "rotation": 0,
+     "visible": true,
+     "properties": [
+      {
+       "name": "kind",
+       "type": "string",
+       "value": "wind"
+      },
+      {
+       "name": "room",
+       "type": "int",
+       "value": 7
+      },
+      {
+       "name": "offset",
+       "type": "int",
+       "value": 1800
+      },
+      {
+       "name": "level",
+       "type": "int",
+       "value": 1
+      },
+      {
+       "name": "dir",
+       "type": "int",
+       "value": 270
+      }
+     ]
+    },
+    {
+     "id": 44,
      "name": "bossArena",
      "type": "bossArena",
      "x": 480,
@@ -646,7 +1210,7 @@
      ]
     },
     {
-     "id": 27,
+     "id": 45,
      "name": "exit",
      "type": "exit",
      "x": 512,

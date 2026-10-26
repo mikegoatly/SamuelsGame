@@ -8,7 +8,7 @@ export interface GameEventMap {
   'level-up': [level: number];
   'hp-changed': [hp: number, maxHp: number];
   'wave-started': [wave: number];
-  'enemy-died': [level: number, x: number, y: number, lootTableId: string, boss: boolean, byAlly: boolean];
+  'enemy-died': [level: number, x: number, y: number, lootTableId: string, boss: boolean, byAlly: boolean, elite: boolean];
   'coins-changed': [total: number];
   'gems-changed': [gems: Gems];
   'room-started': [order: number, total: number];
