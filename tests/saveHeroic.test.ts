@@ -6,6 +6,7 @@ import {
   HEROIC_CLEAR_GEMS,
   levelMode,
   parseSave,
+  SAVE_VERSION,
   setLevelMode,
   wearAccessory,
   type SaveData,
@@ -15,10 +16,10 @@ import { aSave } from './builders';
 const heroicSave = (overrides: Partial<SaveData> = {}): SaveData => aSave({ levels: { ...defaultSave().levels, cleared: ['ruins', 'desert'] }, ...overrides });
 const parse = (raw: object): SaveData => parseSave(JSON.stringify(raw));
 
-describe('migration to version 9', () => {
+describe('migration to heroic fields (version 9)', () => {
   it.each([1, 5, 8])('a v%i save keeps its data and gains empty heroic fields', (version) => {
     const migrated = parse({ version, coins: 9, levels: { cleared: ['ruins'], bestTimes: { ruins: 5 } } });
-    expect(migrated.version).toBe(9);
+    expect(migrated.version).toBe(SAVE_VERSION);
     expect(migrated.coins).toBe(9);
     expect(migrated.levels).toEqual({ cleared: ['ruins'], bestTimes: { ruins: 5 }, heroic: { cleared: [], bestTimes: {} }, mode: {} });
     expect(migrated.accessories).toEqual({ owned: [], worn: {} });

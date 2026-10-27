@@ -1,6 +1,6 @@
 # Proposal: Heroic levels, crowns and Heroic Survival
 
-Status: **H1 built 2026-10-27; H2 next**
+Status: **H1 + H2 built 2026-10-27**
 
 ## Problem
 Monster levels are fixed per level (ruins 1–4, desert 5–9, palace 10–12, ultimate 16–20, arena 1–4) while the hero
@@ -45,3 +45,10 @@ Made during H1 review (coordinator):
 - Heroic is only offered for levels with rooms (`offersHeroic`); the old arena never gets it.
 - First-clear gems: 3 of each colour (`HEROIC_CLEAR_GEMS`).
 - `save.ts` reads `src/content/accessories.ts` (pure data) to validate accessory ids.
+
+Made during H2 (coordinator):
+- Stages every 45 s; tuned so the reference hero survives ~5.5–7.5 min (hero 40 / 20) with a gentle first 90 s; every run ends by 15 min.
+- `SURVIVAL_PERF_CAP` = 40 alive: no frame drops measured up to 220 alive on desktop, so 40 leaves headroom for tablets/phones.
+- Early stages leave out groups bigger than the alive cap (a swarm would otherwise stall the waves).
+- Quitting from pause records the time survived; level-up/item cards pause the run; XP/gold from kills are kept.
+- Music: the boss track.

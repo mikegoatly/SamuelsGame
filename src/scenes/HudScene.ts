@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { ControlFrame, Frame, Tex } from '../content/assetKeys';
 import { items } from '../content/items';
+import { formatTime } from '../logic/format';
 import { GEM_COLOURS, gemItemId, type Gems } from '../logic/gems';
 import { getWeapon } from '../content/weapons';
 import type { Player } from '../entities/Player';
@@ -28,6 +29,8 @@ export interface HudData {
   skills: SkillSystem;
   roomTotal?: number;
   heroic?: boolean;
+  /** Set for Heroic Survival: the saved best time (0 when none yet); swaps Room/Wave for a timer. */
+  survivalBestMs?: number;
   bossName?: string;
 }
 
@@ -37,6 +40,8 @@ const FULLSCREEN_SIZE = 28;
 const FULLSCREEN_MARGIN = 8;
 const PAUSE_Y = 58;
 const WAVE_BAR = { width: 90, height: 6, y: 25 };
+const SURVIVAL_BAR_Y = 56;
+const TIMER_SIZE = 32;
 
 export class HudScene extends Phaser.Scene {
   private bars!: Phaser.GameObjects.Graphics;
@@ -44,6 +49,11 @@ export class HudScene extends Phaser.Scene {
   private levelText!: Phaser.GameObjects.Text;
   private waveText!: Phaser.GameObjects.Text;
   private heroicText?: Phaser.GameObjects.Text;
+  private timerText?: Phaser.GameObjects.Text;
+  private bestText?: Phaser.GameObjects.Text;
+  private bestMs = 0;
+  private beatBest = false;
+  private barY = WAVE_BAR.y;
   private muteText!: Phaser.GameObjects.Text;
   private waveBar!: Phaser.GameObjects.Graphics;
   private director!: LevelDirector;
@@ -69,6 +79,12 @@ export class HudScene extends Phaser.Scene {
   }
 
   create(data: HudData): void {
+    // Phaser reuses this scene instance, so per-run state from a previous run (survival timer, bar position) must not carry over.
+    this.timerText = this.bestText = this.heroicText = undefined;
+    this.bestMs = 0;
+    this.beatBest = false;
+    this.barY = WAVE_BAR.y;
+    this.boss = null;
     const { events, progression, player, director, loot, skills, roomTotal, heroic, bossName } = data;
     this.skillBar = new SkillBar(this, skills);
     this.potionSlot = new PotionSlot(this);
@@ -80,6 +96,7 @@ export class HudScene extends Phaser.Scene {
     this.waveText = this.makeText(0, 4, '#d8d8e8', 16).setOrigin(1, 0);
     this.waveBar = this.add.graphics();
     this.director = director;
+    if (data.survivalBestMs !== undefined) this.createSurvivalTimer(data.survivalBestMs);
     if (heroic) this.heroicText = this.makeText(0, 34, '#ffd84a', 16).setOrigin(1, 0).setText('Heroic');
     this.bossBar = this.add.graphics();
     this.bossName = this.makeText(0, 4, '#ffd0a0', 12).setOrigin(0.5, 0).setVisible(false);
@@ -145,6 +162,7 @@ export class HudScene extends Phaser.Scene {
     this.vignette.update(delta, this.hp.value / this.hp.max, saveSystem.data.settings.reduceShake);
     this.touchView.update();
     this.drawWaveBar();
+    this.showSurvivalTime();
     this.skillBar.update();
     this.potionSlot.update();
   }
@@ -162,6 +180,8 @@ export class HudScene extends Phaser.Scene {
     this.fullscreenButton.setPosition(this.scale.width - FULLSCREEN_MARGIN - half, FULLSCREEN_MARGIN + half);
     this.waveText.setX(this.fullscreenButton.x - half - 6);
     this.heroicText?.setX(this.waveText.x);
+    this.timerText?.setX(this.waveText.x);
+    this.bestText?.setX(this.waveText.x);
     this.pauseButton.setPosition(this.fullscreenButton.x, PAUSE_Y);
     this.muteText.setY(this.scale.height - 6);
     this.weaponIcon.setPosition(BAR_X + 8, this.scale.height - 30);
@@ -171,12 +191,34 @@ export class HudScene extends Phaser.Scene {
     this.drawBossBar();
   }
 
+  /** Heroic Survival: a big m:ss timer and the best time replace Room/Wave. */
+  private createSurvivalTimer(bestMs: number): void {
+    this.bestMs = bestMs;
+    this.waveText.setVisible(false);
+    this.barY = SURVIVAL_BAR_Y;
+    this.timerText = this.makeText(0, 2, '#ffe066', TIMER_SIZE).setOrigin(1, 0).setText('0:00');
+    this.bestText = this.makeText(0, 36, '#b0b0c8', 16).setOrigin(1, 0).setText(bestMs > 0 ? `Best ${formatTime(bestMs)}` : 'First try!');
+  }
+
+  private showSurvivalTime(): void {
+    const elapsed = this.director.elapsedMs;
+    if (!this.timerText || elapsed === undefined) return;
+    const text = formatTime(elapsed);
+    if (text !== this.timerText.text) this.timerText.setText(text);
+    const record = this.bestMs > 0 && elapsed > this.bestMs;
+    if (record !== this.beatBest) {
+      this.beatBest = record;
+      this.timerText.setColor(record ? '#7dffb0' : '#ffe066');
+    }
+  }
+
   /** Countdown to the next wave, right-aligned under the room/wave text; hidden when none is pending. */
   private drawWaveBar(): void {
     const progress = this.director.nextWaveProgress;
     this.waveBar.clear();
     if (progress === undefined) return;
-    const { width, height, y } = WAVE_BAR;
+    const { width, height } = WAVE_BAR;
+    const y = this.barY;
     const x = this.waveText.x - width;
     this.waveBar.fillStyle(0x14121c, 0.85).fillRect(x - 1, y - 1, width + 2, height + 2);
     this.waveBar.fillStyle(0xffb04a, 1).fillRect(x, y, Math.round(width * Phaser.Math.Clamp(progress, 0, 1)), height);

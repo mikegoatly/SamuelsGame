@@ -17,7 +17,8 @@ import { CardPresenter } from '../systems/CardPresenter';
 import { RewardPickup } from '../entities/RewardPickup';
 import { rectCenter } from '../logic/geometry';
 import { solidAt } from '../logic/solidity';
-import { addCoins, applyLevelClear, heroicFirstClearReward, weaponLevel, withProgress } from '../logic/save';
+import { addCoins, applyLevelClear, heroicFirstClearReward, recordSurvival, weaponLevel, withProgress } from '../logic/save';
+import { SURVIVAL_REQUIRED } from '../logic/survival';
 import { withRevive } from '../logic/campPurchases';
 import { feel } from '../systems/feel';
 import { GameClock } from '../systems/GameClock';
@@ -42,6 +43,8 @@ import { SkillAcquisition } from '../systems/SkillAcquisition';
 import { SkillSystem } from '../systems/SkillSystem';
 import { SpawnSystem } from '../systems/SpawnSystem';
 import { SpikeSystem } from '../systems/SpikeSystem';
+import { SurvivalDirector } from '../systems/SurvivalDirector';
+import { exposePerfOverlay } from '../systems/PerfOverlay';
 import { exposeSpawner } from '../systems/debugSpawn';
 import { blockedByRects, spawnAvoidRects } from '../logic/spawnAvoid';
 import { buildLevelMap, type LevelMap } from './RoomBuilder';
@@ -80,6 +83,8 @@ export class GameScene extends Phaser.Scene {
   private unlocks!: HeroUnlocks;
   private runMap: RunMap = { seed: 0, classic: true };
   private heroic = false;
+  private survival = false;
+  private director?: LevelDirector;
 
   constructor() {
     super('Game');
@@ -89,6 +94,7 @@ export class GameScene extends Phaser.Scene {
     this.ending = false;
     this.kills = 0;
     this.level = getLevel(data.levelId ?? 'arena');
+    this.survival = this.level.survival === true;
     this.heroic = data.heroic === true && this.level.mapKey !== undefined;
     this.run = newRun();
     this.clock = new GameClock(this);
@@ -136,7 +142,8 @@ export class GameScene extends Phaser.Scene {
     const avoid = map.world ? spawnAvoidRects(map.world) : [];
     const factory = new EnemyFactory(this, enemies, { target: player, events, shots, clock: this.clock, isBlocked: isSolid }, projectiles, avoid);
     exposeSpawner(factory, player);
-    const director = this.createDirector(map, player, factory, events, blockedByRects(avoid, isSolid));
+    exposePerfOverlay(this, factory, projectiles, shots);
+    const director = (this.director = this.createDirector(map, player, factory, events, blockedByRects(avoid, isSolid)));
     const skills = new SkillSystem({ scene: this, player, enemies, shots, clock: this.clock, isSolid, save: saveSystem, events });
     new HeroSystem({ scene: this, player, enemies, shots, clock: this.clock, isSolid }, events);
     this.unlocks = new HeroUnlocks(this, player, events, saveSystem, player.hero.id, this.level.id, this.level.bossId, (ids) => this.announceHeroes(ids));
@@ -182,7 +189,7 @@ export class GameScene extends Phaser.Scene {
     camera.startFollow(player, true, 0.15, 0.15);
     camera.fadeIn(250);
 
-    this.scene.launch('Hud', { events, progression, player, director, loot, skills, roomTotal: map.world?.rooms.length, heroic: this.heroic, bossName: this.level.bossId ? getEnemy(this.level.bossId).name : undefined });
+    this.scene.launch('Hud', { events, progression, player, director, loot, skills, roomTotal: map.world?.rooms.length, heroic: this.heroic, survivalBestMs: this.survival ? save.survival.bestMs : undefined, bossName: this.level.bossId ? getEnemy(this.level.bossId).name : undefined });
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       removeRunMap(this, this.level);
       director.stop();
@@ -218,6 +225,7 @@ export class GameScene extends Phaser.Scene {
   quitToLevelSelect(): void {
     this.unlocks.finish(false, 0);
     this.bankRun();
+    if (this.director?.elapsedMs !== undefined) this.recordSurvivalRun(this.director);
     this.scene.stop('Pause');
     this.scene.start('LevelSelect');
   }
@@ -272,6 +280,7 @@ export class GameScene extends Phaser.Scene {
 
   private createDirector(map: LevelMap, player: Player, factory: EnemyFactory, events: GameEvents, isBlocked: (x: number, y: number) => boolean): LevelDirector {
     const { world, doors, walls } = map;
+    if (this.survival) return new SurvivalDirector(this, player, factory, SURVIVAL_REQUIRED.map((id) => getLevel(id).enemyPool), this.progression.level, isBlocked);
     if (!world || !doors) return new SpawnSystem(this, player, factory, events, this.level, isBlocked);
     return new RoomFlowSystem({
       scene: this,
@@ -389,6 +398,7 @@ export class GameScene extends Phaser.Scene {
     const lostCoins = this.run.coins;
     this.run.coins = 0;
     this.persistProgress();
+    const survival = this.recordSurvivalRun(director);
     const camera = this.cameras.main;
     this.physics.pause();
     camera.fadeOut(900, 20, 18, 28);
@@ -400,7 +410,16 @@ export class GameScene extends Phaser.Scene {
         level: this.progression.level,
         progress: director.progressLabel(),
         lostCoins,
+        survival: survival && { ...survival, kills: this.kills },
       }),
     );
+  }
+
+  /** Survival only: saves the time survived if it beats the best. */
+  private recordSurvivalRun(director: LevelDirector): { timeMs: number; bestMs: number; newBest: boolean } | undefined {
+    if (!this.survival || director.elapsedMs === undefined) return undefined;
+    const result = recordSurvival(saveSystem.data, director.elapsedMs, director.wave);
+    if (result.newBest) saveSystem.update(() => result.save);
+    return { timeMs: Math.floor(director.elapsedMs), bestMs: result.save.survival.bestMs, newBest: result.newBest };
   }
 }

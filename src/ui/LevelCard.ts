@@ -18,6 +18,8 @@ export interface LevelCardState {
   heroicAvailable?: boolean;
   mode?: LevelMode;
   heroicCleared?: boolean;
+  /** Heroic Survival card: its three text lines replace the usual environment / monsters / status rows. */
+  survivalLines?: readonly string[];
 }
 
 const ENVIRONMENT_COLOR: Record<Environment, number> = {
@@ -110,6 +112,12 @@ export class LevelCard implements MenuItem {
     if (level.comingSoon) {
       this.line(left, top + rows[1]!, level.tagline ?? '', size, '#d8c8f0');
       this.line(left, top + rows[3]!, 'Coming soon', size, '#9a9ab8');
+      return;
+    }
+    const lines = state.survivalLines;
+    if (lines) {
+      const color = state.unlocked ? ['#c8c8e0', '#ffd84a', '#ffe066'] : ['#c8c8e0', '#ffd0a0', '#9a9ab8'];
+      lines.forEach((text, i) => this.line(left, top + rows[i + 1]!, text, size, color[i]!));
       return;
     }
     this.line(left, top + rows[1]!, `${level.environment}, recommended Lv ${level.recommendedLevel}`, size, '#c8c8e0').setAlpha(alpha);

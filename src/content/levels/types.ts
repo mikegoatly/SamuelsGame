@@ -21,6 +21,8 @@ export interface LevelConfig {
   mapKey?: string;
   music?: string;
   bossMusic?: string;
+  /** Endless Heroic Survival arena: unlocked by Heroic clears and run by the survival director, never a level clear. */
+  survival?: boolean;
   /** Teaser levels are listed but cannot be entered. */
   comingSoon?: boolean;
   /** Card subtitle for teaser levels. */

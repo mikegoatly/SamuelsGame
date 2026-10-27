@@ -1,5 +1,5 @@
 import { getEnemy, type EnemyDef } from '../src/content/enemies';
-import { curveOf, infoOf } from '../src/content/levels/curve';
+import { curveOf, infoOf, DEFAULT_CURVE } from '../src/content/levels/curve';
 import type { LevelConfig } from '../src/content/levels';
 import { items } from '../src/content/items';
 import { lootTables } from '../src/content/lootTables';
@@ -12,6 +12,8 @@ import { REFLECT_COOLDOWN_MS } from '../src/logic/reflect';
 import { mulberry32 } from '../src/logic/rng';
 import { planWave, wavesInRoom, type LevelCurve, type WaveSpawn } from '../src/logic/waveMix';
 import { MARKER_MS } from '../src/logic/spawnMarker';
+import { expectedGroupSize } from '../src/logic/groupSize';
+import { planSurvivalWave, survivalStage, type SurvivalSource } from '../src/logic/survival';
 import { stragglerOf } from '../src/logic/straggler';
 import { timingOf, WaveScheduler } from '../src/logic/waveSchedule';
 import { xpReward } from '../src/logic/xp';
@@ -300,4 +302,83 @@ export function heroicVariant(level: LevelConfig, encounters: readonly Encounter
       return { ...e, minLevel, maxLevel };
     }),
   };
+}
+
+const groupOf = (id: string): number => {
+  const { pack } = getEnemy(id);
+  return expectedGroupSize(pack, pack ? getEnemy(pack.member).custom === 'twin' : false);
+};
+
+/** Share of potion drops the survival hero actually collects while being swarmed. */
+const SURVIVAL_PICKUP = 0.7;
+const SURVIVAL_MAX_S = 30 * 60;
+
+export interface SurvivalEstimate {
+  /** Seconds until the reference player dies; Infinity if they outlast the model's limit. */
+  seconds: number;
+  stage: number;
+  kills: number;
+  endLevel: number;
+}
+
+/** Heroic Survival played out on the real director: the oldest monster is killed first, every living one hurts, drops heal, xp raises the hero. Dies when health runs out. */
+export function estimateSurvival(startLevel: number, ref: Reference, source: SurvivalSource, seed: number): SurvivalEstimate {
+  const weapon = getWeapon(ref);
+  const shotsPerSecond = 1000 / weapon.fireRateMs;
+  const rng = mulberry32(seed * 7919 + 13);
+  const timing = { ...survivalStage(0, startLevel, source).timing };
+  let progress = { level: startLevel, xp: 0 };
+  let hp = playerMaxHp(startLevel);
+  let stage = survivalStage(0, startLevel, source);
+  const scheduler = new WaveScheduler({
+    order: 1,
+    totalWaves: Infinity,
+    timing,
+    arena: true,
+    plan: () => planSurvivalWave(stage, infoOf, rng, groupOf),
+    straggler: () => stragglerOf(stage.pool, DEFAULT_CURVE, 1, stage.levels, infoOf, rng),
+    sizeOf: (spawn) => expand([{ ...spawn, role: 'any' }]).length,
+    rng: mulberry32(seed + 1),
+  });
+  const alive: Foe[] = [];
+  const pending: { arriveAt: number; foes: Foe[] }[] = [];
+  let kills = 0;
+  let target: Foe | undefined;
+  let work = 0;
+  let clock = 0;
+  const counted = (): number => alive.length + pending.reduce((sum, p) => sum + p.foes.length, 0);
+  while (clock < SURVIVAL_MAX_S) {
+    stage = survivalStage(clock * 1000, startLevel, source);
+    Object.assign(timing, stage.timing);
+    for (const event of scheduler.tick({ dtMs: STEP_S * 1000, alive: counted() })) {
+      if (event.kind !== 'spawn') continue;
+      const arriveAt = clock + MARKER_MS / 1000;
+      const foes = expand([{ ...event.spawn, role: 'any' }]).map((shot): Foe => {
+        const dps = damageToEnemy(weapon.baseDamage, progress.level, shot.level) * shotsPerSecond * ref.accuracy * ref.skillBoost * (shot.def.shield ? (1 + (1 - shot.def.shield.reduction)) / 2 : 1);
+        return { shot, arrivedAt: arriveAt, killSeconds: (enemyMaxHp(shot.def.baseHp, shot.level) * (shot.elite ? 1.3 : 1)) / Math.max(1, dps) };
+      });
+      pending.push({ arriveAt, foes });
+    }
+    while (pending.length > 0 && pending[0]!.arriveAt <= clock) alive.push(...pending.shift()!.foes);
+    clock += STEP_S;
+    let incoming = 0;
+    for (const foe of alive) incoming += threatOf(foe.shot, progress.level, ref, shotsPerSecond).perSecond;
+    hp -= incoming * STEP_S * (1 - ref.dodge);
+    if (hp <= 0) return { seconds: clock, stage: stage.index, kills, endLevel: progress.level };
+    target ??= alive[0];
+    if (!target) continue;
+    work += STEP_S;
+    if (work < target.killSeconds) continue;
+    hp -= threatOf(target.shot, progress.level, ref, shotsPerSecond).onDeath * (1 - ref.dodge);
+    const table = lootTables[target.shot.def.lootTableId];
+    const heal = table ? expectedLoot(table, coinValue, target.shot.elite, healValue).heal : 0;
+    const before = progress.level;
+    progress = addXp(progress, xpReward(target.shot.level, progress.level)).progress;
+    hp = Math.min(playerMaxHp(progress.level), hp + heal * SURVIVAL_PICKUP + (playerMaxHp(progress.level) - playerMaxHp(before)));
+    kills++;
+    alive.splice(alive.indexOf(target), 1);
+    target = undefined;
+    work = 0;
+  }
+  return { seconds: Infinity, stage: stage.index, kills, endLevel: progress.level };
 }

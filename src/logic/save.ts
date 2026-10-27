@@ -8,8 +8,8 @@ import { getAccessory, crownFor, type AccessorySlot } from '../content/accessori
 import { isHeroicUnlocked, type LevelMode } from './heroic';
 import { emptySlots, equipInSlot, firstEmptySlot, sanitizeSlots, type Loadout } from './loadout';
 
-/** v9: `levels.heroic`, `levels.mode`, `accessories`. v8: `heroes` + `stats`. v7: `gems` replace `charms`; `potions`, `revive`, `shop`, `weapons.levels` added. v6: `skills` + `loadout` replace `powers` and `weapons.equipped`. v5: `seen` + `itemCards`; v4: volumes + reduceShake; v2: `settings`. Older saves load through the same tolerant parse. */
-export const SAVE_VERSION = 9;
+/** v10: `survival`. v9: `levels.heroic`, `levels.mode`, `accessories`. v8: `heroes` + `stats`. v7: `gems` replace `charms`; `potions`, `revive`, `shop`, `weapons.levels` added. v6: `skills` + `loadout` replace `powers` and `weapons.equipped`. v5: `seen` + `itemCards`; v4: volumes + reduceShake; v2: `settings`. Older saves load through the same tolerant parse. */
+export const SAVE_VERSION = 10;
 /** Gems a level's first Heroic clear pays: one full 3-to-4 item upgrade of every colour. */
 export const HEROIC_CLEAR_GEMS: Gems = { red: 3, green: 3, blue: 3 };
 /** First version that stores `gems` instead of `charms`. */
@@ -58,6 +58,8 @@ export interface SaveData {
   loadout: Loadout;
   levels: { cleared: string[]; bestTimes?: Record<string, number>; heroic: { cleared: string[]; bestTimes: Record<string, number> }; /** Remembered Normal/Heroic choice per level. */ mode: Record<string, LevelMode> };
   accessories: { owned: string[]; worn: Partial<Record<AccessorySlot, string>> };
+  /** Heroic Survival best: longest run in ms, and the wave it reached. */
+  survival: { bestMs: number; bestWave?: number };
   /** Hero roster: who is unlocked and who plays next. */
   heroes: { unlocked: string[]; selected: string };
   /** Lifetime totals the hero unlock rules read. */
@@ -82,6 +84,7 @@ export function defaultSave(): SaveData {
     loadout: { weapon: STARTING_WEAPON, slots: emptySlots() },
     levels: { cleared: [], heroic: { cleared: [], bestTimes: {} }, mode: {} },
     accessories: { owned: [], worn: {} },
+    survival: { bestMs: 0 },
     heroes: { unlocked: [WIZARD], selected: WIZARD },
     stats: { totalKills: 0, goldPeak: 0, bossKillsByHero: {} },
     settings: defaultSettings(),
@@ -169,6 +172,13 @@ function parseAccessories(value: unknown): SaveData['accessories'] {
   return { owned, worn };
 }
 
+function parseSurvival(value: unknown): SaveData['survival'] {
+  const raw = isRecord(value) ? value : {};
+  const bestMs = wholeNumber(raw.bestMs, 0);
+  const bestWave = wholeNumber(raw.bestWave, 0);
+  return bestMs > 0 && bestWave > 0 ? { bestMs, bestWave } : { bestMs };
+}
+
 function parseWeaponLevels(value: unknown, owned: readonly string[]): Record<string, number> {
   const levels: Record<string, number> = {};
   if (!isRecord(value)) return levels;
@@ -210,6 +220,7 @@ export function parseSave(json: string | null | undefined, legacyRewards: Legacy
     Object.assign(save.levels, parseHeroicLevels(raw.levels));
   }
   save.accessories = parseAccessories(raw.accessories);
+  save.survival = parseSurvival(raw.survival);
   Object.assign(save, parseHeroes(raw, isKnownHero));
   if (isRecord(raw.settings)) {
     const fallback = defaultSettings();
@@ -362,4 +373,12 @@ export function applyLevelClear(save: SaveData, clear: LevelClear): SaveData {
   }
   const settled = { ...next, levels, shop: { rotation: next.shop.rotation + 1 } };
   return clear.heroic ? applyHeroicClear(settled, clear.levelId, clear.timeMs) : settled;
+}
+
+/** Records a finished Heroic Survival run; only a longer run replaces the best. Never touches level clears. */
+export function recordSurvival(save: SaveData, ms: number, wave?: number): { save: SaveData; newBest: boolean } {
+  const time = Math.floor(ms);
+  if (!(time > save.survival.bestMs)) return { save, newBest: false };
+  const bestWave = wave !== undefined && wave > 0 ? { bestWave: Math.floor(wave) } : {};
+  return { save: { ...save, survival: { bestMs: time, ...bestWave } }, newBest: true };
 }

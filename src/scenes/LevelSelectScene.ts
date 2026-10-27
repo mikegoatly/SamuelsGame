@@ -3,6 +3,8 @@ import { Music } from '../content/assetKeys';
 import { getLevel, levels } from '../content/levels';
 import { offersHeroic } from '../logic/heroicSwitch';
 import { isLevelUnlocked, visibleLevels } from '../logic/levelRules';
+import { SURVIVAL_REQUIRED } from '../logic/survival';
+import { survivalCardLines } from '../logic/survivalCard';
 import { musicOf } from '../systems/MusicPlayer';
 import { CHARMS_NOTICE, levelMode, setLevelMode } from '../logic/save';
 import { revealNextHero } from './heroReveal';
@@ -55,13 +57,14 @@ export class LevelSelectScene extends MenuScene {
       const x = cx + (i % COLUMNS === 0 ? -1 : 1) * (cardWidth / 2 + GAP / 2);
       const y = top + Math.floor(i / COLUMNS) * (cardHeight + GAP);
       const state = {
-        unlocked: isLevelUnlocked(level, levelSave.cleared),
+        unlocked: isLevelUnlocked(level, levelSave.cleared, levelSave.heroic.cleared),
         cleared: levelSave.cleared.includes(level.id),
         playerLevel: progress.level,
         requirementName: level.unlockedBy ? getLevel(level.unlockedBy).name : undefined,
         heroicAvailable: offersHeroic(level, levelSave.cleared),
         mode: levelMode(saveSystem.data, level.id),
         heroicCleared: levelSave.heroic.cleared.includes(level.id),
+        survivalLines: level.survival ? survivalCardLines(SURVIVAL_REQUIRED.map((id) => ({ id, name: getLevel(id).name })), levelSave.heroic.cleared, saveSystem.data.survival.bestMs).lines : undefined,
       };
       return new LevelCard(
         this,
