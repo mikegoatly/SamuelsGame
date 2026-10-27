@@ -7,7 +7,7 @@ import { upgradeCost } from '../src/logic/upgrades';
 import { TIER_MULTIPLIER } from '../src/content/upgradeInfo';
 import { totalGems, type Gems } from '../src/logic/gems';
 import { DESERT_THEME, PALACE_THEME, RUINS_THEME } from '../src/logic/map/mapThemes';
-import { estimateLevel, estimateRoom, REFERENCE, type LevelEstimate } from './balanceModel';
+import { estimateLevel, estimateRoom, gearedReference, heroicVariant, REFERENCE, type LevelEstimate } from './balanceModel';
 
 const CASES = [
   { level: ruins, theme: RUINS_THEME },
@@ -149,5 +149,47 @@ describe('balance model: economy over one clear of each level', () => {
     expect(onePass * 3).toBeGreaterThan(level5.gold * 1.5);
     expect(gems(journey).red).toBeGreaterThanOrEqual(level5.gems);
     expect(totalGems(gems(journey))).toBeLessThan(level5.gems * 5);
+  });
+});
+
+describe('balance model: Heroic levels', () => {
+  const HEROIC_CASES = CASES.flatMap(({ level, theme }) => [15, 25, 40].map((hero) => ({ level, theme, hero })));
+  const runs = HEROIC_CASES.map(({ level, theme, hero }) => {
+    const variant = heroicVariant(level, theme.encounters, hero);
+    const ref = gearedReference(hero);
+    return { name: `${level.id} @ hero ${hero}`, hero, ref, run: estimateLevel(variant.level, variant.encounters, hero, ref, theme), boss: variant.level.bossLevel! };
+  });
+
+  it.each(runs.map((r) => [r.name, r] as const))('%s: no room is crushing or trivial and the level has real teeth', (_, { run }) => {
+    const rooms = pcts(run);
+    for (const pct of rooms) {
+      expect(pct).toBeLessThan(65);
+      expect(pct).toBeGreaterThan(2.5);
+    }
+    expect(mean(rooms)).toBeGreaterThan(8);
+    expect(rooms[rooms.length - 1]).toBeGreaterThan(14);
+  });
+
+  it.each(runs.map((r) => [r.name, r] as const))('%s: the boss is beatable in a reasonable fight and the run is a few minutes', (_, { run }) => {
+    expect(run.bossSeconds).toBeGreaterThan(5);
+    expect(run.bossSeconds).toBeLessThan(120);
+    expect(run.runSeconds / 60).toBeGreaterThan(1.5);
+    expect(run.runSeconds / 60).toBeLessThan(8);
+  });
+
+  it('later levels still cost more than earlier ones at the same hero level', () => {
+    for (const hero of [15, 25, 40]) {
+      const [r, d, p] = ['ruins', 'desert', 'palace'].map((id) => mean(pcts(runs.find((x) => x.name === `${id} @ hero ${hero}`)!.run)));
+      expect(d).toBeGreaterThan(r!);
+      expect(p).toBeGreaterThan(d!);
+    }
+  });
+});
+
+describe('balance model: Heroic curve', () => {
+  it.each(CASES.flatMap(({ level, theme }) => [15, 25, 40].map((hero) => [`${level.id} @ hero ${hero}`, level, theme, hero] as const)))('%s: no room jumps more than 20 points over the one before', (_, level, theme, hero) => {
+    const variant = heroicVariant(level, theme.encounters, hero);
+    const rooms = pcts(estimateLevel(variant.level, variant.encounters, hero, gearedReference(hero), theme));
+    for (let i = 1; i < rooms.length; i++) expect(rooms[i]! - rooms[i - 1]!, `room ${i + 1}`).toBeLessThanOrEqual(20);
   });
 });

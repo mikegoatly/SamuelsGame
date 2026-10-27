@@ -5,6 +5,8 @@ import { getHero } from '../content/heroes';
 import { getLevel, type LevelConfig } from '../content/levels';
 import { getEnemy } from '../content/enemies';
 import { rewardsOf } from '../content/rewards';
+import { newRewards } from '../logic/heroicSwitch';
+import { getAccessory } from '../content/accessories';
 import { getWeapon, weaponAtLevel } from '../content/weapons';
 import { EnemyProjectiles, type EnemyProjectile } from '../entities/EnemyProjectile';
 import type { Enemy } from '../entities/Enemy';
@@ -15,7 +17,7 @@ import { CardPresenter } from '../systems/CardPresenter';
 import { RewardPickup } from '../entities/RewardPickup';
 import { rectCenter } from '../logic/geometry';
 import { solidAt } from '../logic/solidity';
-import { addCoins, applyLevelClear, weaponLevel, withProgress } from '../logic/save';
+import { addCoins, applyLevelClear, heroicFirstClearReward, weaponLevel, withProgress } from '../logic/save';
 import { withRevive } from '../logic/campPurchases';
 import { feel } from '../systems/feel';
 import { GameClock } from '../systems/GameClock';
@@ -52,6 +54,8 @@ export interface GameSceneData {
   levelId: string;
   /** Set when retrying: the same map as the run being retried. */
   runMap?: RunMap;
+  /** Heroic run: monsters match the hero's level, fixed at the start. */
+  heroic?: boolean;
 }
 
 const devSeed = (): number | undefined => (import.meta.env.DEV ? parseSeed(new URLSearchParams(window.location.search).get('seed')) : undefined);
@@ -75,6 +79,7 @@ export class GameScene extends Phaser.Scene {
   private enemies!: Phaser.Physics.Arcade.Group;
   private unlocks!: HeroUnlocks;
   private runMap: RunMap = { seed: 0, classic: true };
+  private heroic = false;
 
   constructor() {
     super('Game');
@@ -84,6 +89,7 @@ export class GameScene extends Phaser.Scene {
     this.ending = false;
     this.kills = 0;
     this.level = getLevel(data.levelId ?? 'arena');
+    this.heroic = data.heroic === true && this.level.mapKey !== undefined;
     this.run = newRun();
     this.clock = new GameClock(this);
     feel.bind(this, this.clock);
@@ -119,6 +125,8 @@ export class GameScene extends Phaser.Scene {
       getHero(save.heroes.selected),
     );
     this.player = player;
+    const worn = save.accessories.worn.head;
+    player.wearHead(worn ? getAccessory(worn)?.frame : undefined);
     player.reviver = () => this.useRevive();
     new PotionSystem(this, player, saveSystem);
     player.slowZones = map.slowZones;
@@ -174,7 +182,7 @@ export class GameScene extends Phaser.Scene {
     camera.startFollow(player, true, 0.15, 0.15);
     camera.fadeIn(250);
 
-    this.scene.launch('Hud', { events, progression, player, director, loot, skills, roomTotal: map.world?.rooms.length, bossName: this.level.bossId ? getEnemy(this.level.bossId).name : undefined });
+    this.scene.launch('Hud', { events, progression, player, director, loot, skills, roomTotal: map.world?.rooms.length, heroic: this.heroic, bossName: this.level.bossId ? getEnemy(this.level.bossId).name : undefined });
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       removeRunMap(this, this.level);
       director.stop();
@@ -224,8 +232,14 @@ export class GameScene extends Phaser.Scene {
     this.physics.pause();
     const timeMs = Math.round(this.clock.now - this.startedAt);
     const coins = this.run.coins;
+    const heroic = this.heroic;
+    const owned = saveSystem.data;
+    const rewards = newRewards(rewardsOf(this.level), owned.weapons.owned, owned.skills.owned.map((s) => s.id));
+    const crownWorn = owned.accessories.worn.head === undefined;
+    const heroicReward = heroic ? heroicFirstClearReward(saveSystem.data, this.level.id) : undefined;
     saveSystem.update((save) =>
       applyLevelClear(withProgress(save, this.progression.progress), {
+        heroic,
         levelId: this.level.id,
         rewardWeaponId: this.level.rewardWeaponId,
         rewardSkillIds: this.level.rewardSkillIds,
@@ -246,8 +260,12 @@ export class GameScene extends Phaser.Scene {
         gems: this.run.gems,
         xp: this.progression.gainedXp,
         level: this.progression.level,
-        rewards: rewardsOf(this.level),
+        rewards,
         seed: this.runMap.classic ? undefined : this.runMap.seed,
+        heroic,
+        heroicReward,
+        crownWorn,
+        levelName: this.level.name,
       }),
     );
   }
@@ -264,6 +282,7 @@ export class GameScene extends Phaser.Scene {
       world,
       doors,
       isBlocked: blockedByRects(spawnAvoidRects(world), (x, y) => solidAt(walls, [(px, py) => walls.getTileAtWorldXY(px, py)], x, y)),
+      heroicLevel: this.heroic ? this.progression.level : undefined,
     });
   }
 
@@ -377,6 +396,7 @@ export class GameScene extends Phaser.Scene {
       this.scene.start('GameOver', {
         levelId: this.level.id,
         runMap: this.runMap,
+        heroic: this.heroic,
         level: this.progression.level,
         progress: director.progressLabel(),
         lostCoins,

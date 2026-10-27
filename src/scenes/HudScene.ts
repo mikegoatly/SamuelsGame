@@ -27,6 +27,7 @@ export interface HudData {
   loot: LootSystem;
   skills: SkillSystem;
   roomTotal?: number;
+  heroic?: boolean;
   bossName?: string;
 }
 
@@ -42,6 +43,7 @@ export class HudScene extends Phaser.Scene {
   private hpText!: Phaser.GameObjects.Text;
   private levelText!: Phaser.GameObjects.Text;
   private waveText!: Phaser.GameObjects.Text;
+  private heroicText?: Phaser.GameObjects.Text;
   private muteText!: Phaser.GameObjects.Text;
   private waveBar!: Phaser.GameObjects.Graphics;
   private director!: LevelDirector;
@@ -67,7 +69,7 @@ export class HudScene extends Phaser.Scene {
   }
 
   create(data: HudData): void {
-    const { events, progression, player, director, loot, skills, roomTotal, bossName } = data;
+    const { events, progression, player, director, loot, skills, roomTotal, heroic, bossName } = data;
     this.skillBar = new SkillBar(this, skills);
     this.potionSlot = new PotionSlot(this);
     this.vignette = new DamageVignette(this);
@@ -78,6 +80,7 @@ export class HudScene extends Phaser.Scene {
     this.waveText = this.makeText(0, 4, '#d8d8e8', 16).setOrigin(1, 0);
     this.waveBar = this.add.graphics();
     this.director = director;
+    if (heroic) this.heroicText = this.makeText(0, 34, '#ffd84a', 16).setOrigin(1, 0).setText('Heroic');
     this.bossBar = this.add.graphics();
     this.bossName = this.makeText(0, 4, '#ffd0a0', 12).setOrigin(0.5, 0).setVisible(false);
     this.muteText = this.makeText(BAR_X, 0, '#b0b0c8', 10).setOrigin(0, 1).setText('Sound off (M)').setVisible(saveSystem.data.settings.muted);
@@ -158,6 +161,7 @@ export class HudScene extends Phaser.Scene {
     const half = FULLSCREEN_SIZE / 2;
     this.fullscreenButton.setPosition(this.scale.width - FULLSCREEN_MARGIN - half, FULLSCREEN_MARGIN + half);
     this.waveText.setX(this.fullscreenButton.x - half - 6);
+    this.heroicText?.setX(this.waveText.x);
     this.pauseButton.setPosition(this.fullscreenButton.x, PAUSE_Y);
     this.muteText.setY(this.scale.height - 6);
     this.weaponIcon.setPosition(BAR_X + 8, this.scale.height - 30);

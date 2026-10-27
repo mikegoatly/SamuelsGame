@@ -7,6 +7,7 @@ import { MenuScene } from '../ui/MenuScene';
 export interface GameOverData {
   levelId: string;
   runMap?: RunMap;
+  heroic?: boolean;
   level: number;
   progress: string;
   lostCoins: number;
@@ -26,12 +27,12 @@ export class GameOverScene extends MenuScene {
   protected build(): void {
     const { width, height } = this.scale;
     const cx = width / 2;
-    const { levelId, runMap, level, progress, lostCoins } = this.result;
+    const { levelId, runMap, heroic, level, progress, lostCoins } = this.result;
     this.cameras.main.fadeIn(300);
     menuText(this, cx, height * 0.2, 'You fell', 48, '#ff6b6b');
     menuText(this, cx, height * 0.2 + 44, `Level ${level} - ${progress}`, 16, '#ffffff');
     menuText(this, cx, height * 0.2 + 64, lostCoins > 0 ? `Lost ${lostCoins} gold from this run` : 'Your level and gems are kept', 16, '#b0b0c8');
-    const retry = new MenuButton(this, cx, height * 0.6, 200, 34, 'Retry', () => this.inputReady() && this.scene.start('Game', { levelId, runMap }));
+    const retry = new MenuButton(this, cx, height * 0.6, 200, 34, 'Retry', () => this.inputReady() && this.scene.start('Game', { levelId, runMap, heroic }));
     const select = new MenuButton(this, cx, height * 0.6 + 44, 200, 34, 'Level select', () => this.inputReady() && this.scene.start('LevelSelect'));
     this.menu = new MenuList(this, [retry, select], { onBack: () => this.scene.start('LevelSelect') });
   }

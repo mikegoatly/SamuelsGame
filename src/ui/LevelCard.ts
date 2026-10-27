@@ -1,5 +1,9 @@
 import Phaser from 'phaser';
+import { crownFor } from '../content/accessories';
+import { Tex } from '../content/assetKeys';
 import type { Environment, LevelConfig } from '../content/levels';
+import { otherMode } from '../logic/accessoryWear';
+import { heroicRoomRange, type LevelMode } from '../logic/heroic';
 import { isUnderLevelled } from '../logic/levelRules';
 import { menuText } from './menuText';
 import type { MenuItem } from './MenuList';
@@ -10,6 +14,10 @@ export interface LevelCardState {
   playerLevel: number;
   /** Name of the level that must be cleared first, for locked cards. */
   requirementName?: string;
+  /** The Normal/Heroic switch is shown (level unlocked and cleared on Normal). */
+  heroicAvailable?: boolean;
+  mode?: LevelMode;
+  heroicCleared?: boolean;
 }
 
 const ENVIRONMENT_COLOR: Record<Environment, number> = {
@@ -20,22 +28,78 @@ const ENVIRONMENT_COLOR: Record<Environment, number> = {
   unknown: 0xe0a040,
 };
 
+const HEROIC_GOLD = 0xffd84a;
+const HEROIC_CSS = '#ffd84a';
+const CHIP = { width: 92, height: 28 };
+
 export class LevelCard implements MenuItem {
   readonly area: Phaser.GameObjects.Rectangle;
-  private readonly accent: number;
+  private readonly chip?: Phaser.GameObjects.Rectangle;
+  /** Only defined when the card offers Heroic, so MenuList's toggle key does nothing elsewhere. */
+  readonly toggle?: () => void;
+  private parts: Phaser.GameObjects.GameObject[] = [];
+  private mode: LevelMode;
+  private focused = false;
 
   constructor(
     private readonly scene: Phaser.Scene,
-    x: number,
-    y: number,
-    width: number,
-    height: number,
+    private readonly x: number,
+    private readonly y: number,
+    private readonly width: number,
+    private readonly height: number,
     private readonly level: LevelConfig,
     private readonly state: LevelCardState,
-    private readonly onSelect: () => void,
+    private readonly onSelect: (mode: LevelMode) => void,
+    private readonly onMode: (mode: LevelMode) => void = () => undefined,
   ) {
-    this.accent = ENVIRONMENT_COLOR[level.environment];
-    this.area = scene.add.rectangle(x, y, width, height, 0x211d33).setStrokeStyle(2, this.accent);
+    this.mode = state.heroicAvailable ? state.mode ?? 'normal' : 'normal';
+    this.area = scene.add.rectangle(x, y, width, height, 0x211d33);
+    if (state.heroicAvailable && !level.comingSoon) {
+      this.chip = scene.add.rectangle(x + width / 2 - CHIP.width / 2 - 6, y - height / 2 + CHIP.height / 2 + 5, CHIP.width, CHIP.height, 0x2a2540);
+      this.toggle = () => this.switchMode();
+      this.chip.setInteractive({ useHandCursor: true }).on('pointerup', () => this.switchMode());
+    }
+    this.render();
+  }
+
+  get hasSwitch(): boolean {
+    return this.chip !== undefined;
+  }
+
+  get heroic(): boolean {
+    return this.mode === 'heroic';
+  }
+
+  /** Switches between Normal and Heroic (only when the level offers it). */
+  private switchMode(): void {
+    this.mode = otherMode(this.mode);
+    this.onMode(this.mode);
+    this.render();
+  }
+
+  setFocused(focused: boolean): void {
+    this.focused = focused;
+    this.paintFrame();
+  }
+
+  activate(): void {
+    if (this.state.unlocked) {
+      this.onSelect(this.mode);
+      return;
+    }
+    this.scene.tweens.add({ targets: this.area, x: this.area.x + 4, duration: 50, yoyo: true, repeat: 2 });
+  }
+
+  private paintFrame(): void {
+    const accent = this.heroic ? HEROIC_GOLD : ENVIRONMENT_COLOR[this.level.environment];
+    this.area.setFillStyle(this.focused ? 0x3a3166 : this.heroic ? 0x2c2530 : 0x211d33).setStrokeStyle(this.focused ? 3 : 2, this.focused ? 0xffffff : accent);
+  }
+
+  private render(): void {
+    this.parts.forEach((part) => part.destroy());
+    this.parts = [];
+    this.paintFrame();
+    const { level, state, x, y, width, height } = this;
     const left = x - width / 2 + 10;
     const alpha = state.unlocked ? 1 : 0.45;
     const top = y - height / 2;
@@ -49,28 +113,34 @@ export class LevelCard implements MenuItem {
       return;
     }
     this.line(left, top + rows[1]!, `${level.environment}, recommended Lv ${level.recommendedLevel}`, size, '#c8c8e0').setAlpha(alpha);
-    this.line(left, top + rows[2]!, `Monsters Lv ${level.monsterLevelRange[0]}-${level.monsterLevelRange[1]}`, size, '#9a9ab8').setAlpha(alpha);
+    this.monsters(left, top + rows[2]!, size, alpha);
     this.status(left, top + rows[3]!, size);
+    this.drawChip();
   }
 
-  setFocused(focused: boolean): void {
-    this.area.setFillStyle(focused ? 0x3a3166 : 0x211d33).setStrokeStyle(focused ? 3 : 2, focused ? 0xffffff : this.accent);
+  private monsters(x: number, y: number, size: number, alpha: number): void {
+    const [low, high] = this.heroic ? heroicRoomRange(this.level.monsterLevelRange, this.level.monsterLevelRange, this.state.playerLevel) : this.level.monsterLevelRange;
+    this.line(x, y, `Monsters Lv ${low}-${high}`, size, this.heroic ? HEROIC_CSS : '#9a9ab8').setAlpha(alpha);
   }
 
-  activate(): void {
-    if (this.state.unlocked) {
-      this.onSelect();
-      return;
-    }
-    this.scene.tweens.add({ targets: this.area, x: this.area.x + 4, duration: 50, yoyo: true, repeat: 2 });
+  private drawChip(): void {
+    const { chip } = this;
+    if (!chip) return;
+    chip.setFillStyle(this.heroic ? 0x5a4a1a : 0x2a2540).setStrokeStyle(2, this.heroic ? HEROIC_GOLD : 0x7878a0);
+    const label = menuText(this.scene, chip.x, chip.y, this.heroic ? 'HEROIC' : 'Normal', 16, this.heroic ? HEROIC_CSS : '#d8d8e8');
+    this.parts.push(label);
+    const crown = this.state.heroicCleared ? crownFor(this.level.id) : undefined;
+    if (crown) this.parts.push(this.scene.add.image(this.x + this.width / 2 - 20, this.y + this.height / 2 - 20, Tex.accessories, crown.frame).setScale(2));
   }
 
   private status(x: number, y: number, size: number): void {
     const { state, level } = this;
     if (!state.unlocked) {
       this.line(x, y, `Locked: clear ${state.requirementName ?? 'previous'}`, size, '#9a9ab8');
-    } else if (isUnderLevelled(state.playerLevel, level.recommendedLevel)) {
+    } else if (isUnderLevelled(state.playerLevel, level.recommendedLevel) && !this.heroic) {
       this.line(x, y, `Under-levelled!${state.cleared ? '  (cleared)' : ''}`, size, '#ff5a5a');
+    } else if (this.heroic) {
+      this.line(x, y, state.heroicCleared ? 'HEROIC CLEARED' : 'Heroic: matches your level', size, state.heroicCleared ? '#7dffb0' : HEROIC_CSS);
     } else if (state.cleared) {
       this.line(x, y, 'CLEARED', size, '#7dffb0');
     } else {
@@ -79,6 +149,8 @@ export class LevelCard implements MenuItem {
   }
 
   private line(x: number, y: number, value: string, size: number, color: string): Phaser.GameObjects.Text {
-    return menuText(this.scene, x, y, value, size, color).setOrigin(0, 0.5);
+    const text = menuText(this.scene, x, y, value, size, color).setOrigin(0, 0.5);
+    this.parts.push(text);
+    return text;
   }
 }

@@ -4,10 +4,14 @@ import { CHARM_TO_GEM, GEM_COLOURS, LEGACY_CARD_IDS, noGems, totalGems, type Gem
 
 import type { CardMode } from './itemCards';
 import { WIZARD, type AccountStats } from './unlocks';
+import { getAccessory, crownFor, type AccessorySlot } from '../content/accessories';
+import { isHeroicUnlocked, type LevelMode } from './heroic';
 import { emptySlots, equipInSlot, firstEmptySlot, sanitizeSlots, type Loadout } from './loadout';
 
-/** v8: `heroes` + `stats`. v7: `gems` replace `charms`; `potions`, `revive`, `shop`, `weapons.levels` added. v6: `skills` + `loadout` replace `powers` and `weapons.equipped`. v5: `seen` + `itemCards`; v4: volumes + reduceShake; v2: `settings`. Older saves load through the same tolerant parse. */
-export const SAVE_VERSION = 8;
+/** v9: `levels.heroic`, `levels.mode`, `accessories`. v8: `heroes` + `stats`. v7: `gems` replace `charms`; `potions`, `revive`, `shop`, `weapons.levels` added. v6: `skills` + `loadout` replace `powers` and `weapons.equipped`. v5: `seen` + `itemCards`; v4: volumes + reduceShake; v2: `settings`. Older saves load through the same tolerant parse. */
+export const SAVE_VERSION = 9;
+/** Gems a level's first Heroic clear pays: one full 3-to-4 item upgrade of every colour. */
+export const HEROIC_CLEAR_GEMS: Gems = { red: 3, green: 3, blue: 3 };
 /** First version that stores `gems` instead of `charms`. */
 const GEMS_VERSION = 7;
 /** First version whose skills and loadout need no conversion from powers. */
@@ -52,7 +56,8 @@ export interface SaveData {
   skills: { owned: OwnedSkill[] };
   /** Basic weapon and the three skill slots chosen on the loadout screen. */
   loadout: Loadout;
-  levels: { cleared: string[]; bestTimes?: Record<string, number> };
+  levels: { cleared: string[]; bestTimes?: Record<string, number>; heroic: { cleared: string[]; bestTimes: Record<string, number> }; /** Remembered Normal/Heroic choice per level. */ mode: Record<string, LevelMode> };
+  accessories: { owned: string[]; worn: Partial<Record<AccessorySlot, string>> };
   /** Hero roster: who is unlocked and who plays next. */
   heroes: { unlocked: string[]; selected: string };
   /** Lifetime totals the hero unlock rules read. */
@@ -75,7 +80,8 @@ export function defaultSave(): SaveData {
     pendingNotices: [],
     skills: { owned: [] },
     loadout: { weapon: STARTING_WEAPON, slots: emptySlots() },
-    levels: { cleared: [] },
+    levels: { cleared: [], heroic: { cleared: [], bestTimes: {} }, mode: {} },
+    accessories: { owned: [], worn: {} },
     heroes: { unlocked: [WIZARD], selected: WIZARD },
     stats: { totalKills: 0, goldPeak: 0, bossKillsByHero: {} },
     settings: defaultSettings(),
@@ -136,6 +142,33 @@ function parseHeroes(raw: Record<string, unknown>, isKnown: (id: string) => bool
   };
 }
 
+function parseTimes(value: unknown): Record<string, number> {
+  const times: Record<string, number> = {};
+  if (!isRecord(value)) return times;
+  for (const [id, time] of Object.entries(value)) if (typeof time === 'number' && Number.isFinite(time) && time > 0) times[id] = time;
+  return times;
+}
+
+function parseHeroicLevels(levels: Record<string, unknown>): Pick<SaveData['levels'], 'heroic' | 'mode'> {
+  const heroic = isRecord(levels.heroic) ? levels.heroic : {};
+  const mode: Record<string, LevelMode> = {};
+  if (isRecord(levels.mode)) for (const [id, value] of Object.entries(levels.mode)) if (value === 'heroic' || value === 'normal') mode[id] = value;
+  return { heroic: { cleared: strings(heroic.cleared), bestTimes: parseTimes(heroic.bestTimes) }, mode };
+}
+
+function parseAccessories(value: unknown): SaveData['accessories'] {
+  const raw = isRecord(value) ? value : {};
+  const owned = strings(raw.owned).filter((id) => getAccessory(id) !== undefined);
+  const worn: SaveData['accessories']['worn'] = {};
+  if (isRecord(raw.worn)) {
+    for (const [slot, id] of Object.entries(raw.worn)) {
+      const item = typeof id === 'string' ? getAccessory(id) : undefined;
+      if (item && item.slot === slot && owned.includes(item.id)) worn[item.slot] = item.id;
+    }
+  }
+  return { owned, worn };
+}
+
 function parseWeaponLevels(value: unknown, owned: readonly string[]): Record<string, number> {
   const levels: Record<string, number> = {};
   if (!isRecord(value)) return levels;
@@ -173,14 +206,10 @@ export function parseSave(json: string | null | undefined, legacyRewards: Legacy
   }
   if (isRecord(raw.levels)) {
     save.levels.cleared = strings(raw.levels.cleared);
-    if (isRecord(raw.levels.bestTimes)) {
-      const times: Record<string, number> = {};
-      for (const [id, value] of Object.entries(raw.levels.bestTimes)) {
-        if (typeof value === 'number' && Number.isFinite(value) && value > 0) times[id] = value;
-      }
-      save.levels.bestTimes = times;
-    }
+    if (isRecord(raw.levels.bestTimes)) save.levels.bestTimes = parseTimes(raw.levels.bestTimes);
+    Object.assign(save.levels, parseHeroicLevels(raw.levels));
   }
+  save.accessories = parseAccessories(raw.accessories);
   Object.assign(save, parseHeroes(raw, isKnownHero));
   if (isRecord(raw.settings)) {
     const fallback = defaultSettings();
@@ -270,12 +299,55 @@ export const setLoadout = (save: SaveData, loadout: Loadout): SaveData => ({
 export const equipSkillInSlot = (save: SaveData, slot: number, skillId: string): SaveData =>
   skillLevel(save, skillId) > 0 ? { ...save, loadout: { ...save.loadout, slots: equipInSlot(save.loadout.slots, slot, skillId) } } : save;
 
+export const levelMode = (save: SaveData, levelId: string): LevelMode =>
+  save.levels.mode[levelId] === 'heroic' && isHeroicUnlocked(levelId, save.levels.cleared) ? 'heroic' : 'normal';
+
+export const setLevelMode = (save: SaveData, levelId: string, mode: LevelMode): SaveData =>
+  mode === 'heroic' && !isHeroicUnlocked(levelId, save.levels.cleared) ? save : { ...save, levels: { ...save.levels, mode: { ...save.levels.mode, [levelId]: mode } } };
+
+/** Wears an owned accessory in its own slot, or takes the slot's item off with undefined; anything else is ignored. */
+export function wearAccessory(save: SaveData, slot: AccessorySlot, id: string | undefined): SaveData {
+  const worn = { ...save.accessories.worn };
+  if (id === undefined) delete worn[slot];
+  else if (save.accessories.owned.includes(id) && getAccessory(id)?.slot === slot) worn[slot] = id;
+  else return save;
+  return { ...save, accessories: { ...save.accessories, worn } };
+}
+
+/** What a Heroic clear of this level would award right now; undefined once it has been cleared on Heroic. */
+export function heroicFirstClearReward(save: SaveData, levelId: string): { gems: Gems; crownId?: string } | undefined {
+  if (save.levels.heroic.cleared.includes(levelId)) return undefined;
+  const crown = crownFor(levelId);
+  return { gems: { ...HEROIC_CLEAR_GEMS }, ...(crown ? { crownId: crown.id } : {}) };
+}
+
+function applyHeroicClear(save: SaveData, levelId: string, timeMs: number | undefined): SaveData {
+  const reward = heroicFirstClearReward(save, levelId);
+  let next = save;
+  if (reward) {
+    for (const colour of GEM_COLOURS) next = addGem(next, colour, reward.gems[colour]);
+    if (reward.crownId) {
+      const owned = next.accessories.owned.includes(reward.crownId) ? next.accessories.owned : [...next.accessories.owned, reward.crownId];
+      next = { ...next, accessories: { owned, worn: next.accessories.worn } };
+      if (next.accessories.worn.head === undefined) next = wearAccessory(next, 'head', reward.crownId);
+    }
+  }
+  const best = next.levels.heroic.bestTimes[levelId];
+  const faster = timeMs !== undefined && timeMs > 0 && (best === undefined || timeMs < best);
+  return {
+    ...next,
+    levels: { ...next.levels, heroic: { cleared: next.levels.heroic.cleared.includes(levelId) ? next.levels.heroic.cleared : [...next.levels.heroic.cleared, levelId], bestTimes: faster ? { ...next.levels.heroic.bestTimes, [levelId]: timeMs } : next.levels.heroic.bestTimes } },
+  };
+}
+
 export interface LevelClear {
   levelId: string;
   rewardWeaponId?: string;
   rewardSkillIds?: readonly string[];
   timeMs?: number;
   runCoins?: number;
+  /** Cleared on the Heroic version: records Heroic progress instead of the normal best time. */
+  heroic?: boolean;
 }
 
 export function applyLevelClear(save: SaveData, clear: LevelClear): SaveData {
@@ -285,8 +357,9 @@ export function applyLevelClear(save: SaveData, clear: LevelClear): SaveData {
   const cleared = next.levels.cleared.includes(clear.levelId) ? next.levels.cleared : [...next.levels.cleared, clear.levelId];
   const levels: SaveData['levels'] = { ...next.levels, cleared };
   const best = next.levels.bestTimes?.[clear.levelId];
-  if (clear.timeMs !== undefined && clear.timeMs > 0 && (best === undefined || clear.timeMs < best)) {
+  if (!clear.heroic && clear.timeMs !== undefined && clear.timeMs > 0 && (best === undefined || clear.timeMs < best)) {
     levels.bestTimes = { ...next.levels.bestTimes, [clear.levelId]: clear.timeMs };
   }
-  return { ...next, levels, shop: { rotation: next.shop.rotation + 1 } };
+  const settled = { ...next, levels, shop: { rotation: next.shop.rotation + 1 } };
+  return clear.heroic ? applyHeroicClear(settled, clear.levelId, clear.timeMs) : settled;
 }

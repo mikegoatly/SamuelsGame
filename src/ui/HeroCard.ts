@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { Tex } from '../content/assetKeys';
 import { ratingPips, type HeroDef } from '../content/heroes';
+import { headOffset } from '../logic/accessoryWear';
 import { gameText } from './gameText';
 import type { MenuItem } from './MenuList';
 
@@ -34,6 +35,7 @@ export class HeroCard implements MenuItem {
     readonly unlocked: boolean,
     private readonly onSelect: (hero: HeroDef) => void,
     private readonly onFocus: (hero: HeroDef) => void,
+    crownFrame?: number,
   ) {
     this.accent = unlocked ? Phaser.Display.Color.HexStringToColor(hero.color).color : LOCKED_STROKE;
     this.area = scene.add.rectangle(x, y, width, height, IDLE_FILL).setStrokeStyle(2, this.accent);
@@ -43,6 +45,10 @@ export class HeroCard implements MenuItem {
     const sprite = scene.add.image(left + 30, top + height - 30, Tex.tiles, hero.frame).setScale(3);
     if (!unlocked) sprite.setTint(SILHOUETTE);
     else if (hero.tint !== null) sprite.setTint(hero.tint);
+    if (unlocked && crownFrame !== undefined) {
+      const offset = headOffset(hero.id, false);
+      scene.add.image(sprite.x + offset.x * 3, sprite.y + offset.y * 3, Tex.accessories, crownFrame).setScale(3);
+    }
     if (unlocked) this.drawStats(left + 62, top + 29);
     else gameText(scene, left + 62, top + height - 30, 'Locked', 16, { color: '#7878a0' }).setOrigin(0, 0.5);
   }

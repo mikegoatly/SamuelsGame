@@ -19,6 +19,8 @@ export const Tex = {
   weaponsExtra: 'weapons-extra',
   /** Hand-drawn monster frames (public/assets/extra/monsters-extra.png), 16px tiles, 12 per row. */
   monsters: 'monsters-extra',
+  /** Hand-drawn wearable crowns (tools/add_accessory_frames.py), 16px frames, one per column. */
+  accessories: 'accessories-extra',
 } as const;
 
 /** Particle sprites the skill icons are built from (PreloadScene tints them), by skill id. */

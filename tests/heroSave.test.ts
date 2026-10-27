@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { bankRun, heroNoticeId, pendingHeroReveals, selectHero, unlockHeroes, type HeroKit } from '../src/logic/heroSave';
-import { defaultSave, dismissNotice, grantWeapon, parseSave, serialize, skillLevel } from '../src/logic/save';
+import { defaultSave, SAVE_VERSION, dismissNotice, grantWeapon, parseSave, serialize, skillLevel } from '../src/logic/save';
 import { aRunRecord, aSave } from './builders';
 
 const known = (id: string): boolean => ['wizard', 'knight', 'dwarf', 'secret'].includes(id);
@@ -51,7 +51,7 @@ describe('migration to version 8', () => {
 
   it('adds the wizard, selected, and keeps everything else', () => {
     const save = parseSave(JSON.stringify(v7));
-    expect(save.version).toBe(8);
+    expect(save.version).toBe(SAVE_VERSION);
     expect(save.heroes).toEqual({ unlocked: ['wizard'], selected: 'wizard' });
     expect(save.gems).toEqual({ red: 2, green: 0, blue: 1 });
     expect(save.progress).toEqual({ level: 4, xp: 3 });

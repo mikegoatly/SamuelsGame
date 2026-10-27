@@ -10,6 +10,7 @@ import { frontalDamage, passiveEffects, Strikes, type PassiveEffects, type Strik
 import { PLAYER_IFRAMES_MS, PlayerTimers } from '../logic/playerTimers';
 import { reviveHp, REVIVE_IFRAMES_MS } from '../logic/potions';
 import { computePlayerStats, type PlayerStats } from '../logic/stats';
+import { headOffset } from '../logic/accessoryWear';
 import type { DamageSource } from '../logic/unlocks';
 import { dustPuff, muzzleFlash } from '../systems/fx';
 import { feel } from '../systems/feel';
@@ -64,6 +65,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   readonly effects: PassiveEffects;
 
   private readonly strikes: Strikes;
+  private head?: Phaser.GameObjects.Image;
   private readonly wand: Phaser.GameObjects.Image;
   /** Second dagger of a dual weapon, mirrored across the aim line. */
   private readonly offhand?: Phaser.GameObjects.Image;
@@ -195,6 +197,18 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this.timers.grantInvulnerability(this.clock.now, iframesMs);
   }
 
+  /** Puts a head accessory (frame of the accessories sheet) on the hero, or takes it off. */
+  wearHead(frame: number | undefined): void {
+    this.head?.destroy();
+    this.head = frame === undefined ? undefined : this.scene.add.image(this.x, this.y, Tex.accessories, frame).setDepth(12);
+    this.placeHead(1);
+  }
+
+  private placeHead(alpha: number): void {
+    const offset = headOffset(this.hero.id, this.flipX);
+    this.head?.setPosition(this.x + offset.x, this.y + offset.y).setFlipX(this.flipX).setAlpha(alpha);
+  }
+
   private showWeapon(): void {
     this.wand.setFrame(this.weapon.frame);
     if (this.weapon.tint === null) this.wand.clearTint();
@@ -232,6 +246,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this.setTint(0xff5050).setAlpha(1);
     this.wand.setVisible(false);
     this.offhand?.setVisible(false);
+    this.head?.setVisible(false);
     this.events.emit('player-died');
   }
 
@@ -315,6 +330,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     const alpha = this.isDashing || this.timers.granted(time) ? 0.5 : hurt && Math.floor(time / 70) % 2 === 0 ? 0.35 : 1;
     this.setFlipX(this.aimDirection.x < 0);
     this.setAlpha(alpha);
+    this.placeHead(alpha);
     const aim = this.aimDirection.angle();
     const spread = this.offhand ? DUAL_SPREAD : 0;
     const angle = this.weaponAngle(time) + spread;
@@ -345,6 +361,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this.scene?.events.off(Phaser.Scenes.Events.PAUSE, this.onScenePause);
     this.wand.destroy();
     this.offhand?.destroy();
+    this.head?.destroy();
     super.destroy(fromScene);
   }
 }

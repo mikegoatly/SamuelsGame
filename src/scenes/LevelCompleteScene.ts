@@ -2,8 +2,10 @@ import { Tex } from '../content/assetKeys';
 import type { Reward } from '../content/rewards';
 import { noGems, type Gems } from '../logic/gems';
 import { formatTime } from '../logic/format';
+import Phaser from 'phaser';
 import { playSfx } from '../systems/sfx';
 import { revealNextHero } from './heroReveal';
+import { heroicRewardCard, type HeroicReward } from './heroicRewardCard';
 import { MenuButton } from '../ui/MenuButton';
 import { MenuList } from '../ui/MenuList';
 import { menuText } from '../ui/menuText';
@@ -21,6 +23,12 @@ export interface LevelCompleteData {
   rewards?: Reward[];
   /** Random map runs only. */
   seed?: number;
+  heroic?: boolean;
+  /** Set on the first Heroic clear of a level. */
+  heroicReward?: HeroicReward;
+  /** The crown went straight onto the hero (the Head slot was empty). */
+  crownWorn?: boolean;
+  levelName?: string;
 }
 
 const INPUT_DELAY_MS = 700;
@@ -41,15 +49,23 @@ export class LevelCompleteScene extends MenuScene {
   override create(): void {
     super.create();
     playSfx(this, 'victory');
-    revealNextHero(this, FADE_IN_MS + 300);
+    const { heroicReward, levelName = '', crownWorn } = this.result;
+    if (!heroicReward) return revealNextHero(this, FADE_IN_MS + 300);
+    this.time.delayedCall(FADE_IN_MS + 300, () => {
+      this.events.once(Phaser.Scenes.Events.RESUME, () => revealNextHero(this));
+      this.scene.launch('Notice', { ...heroicRewardCard(heroicReward, levelName, crownWorn), under: 'LevelComplete', noticeId: 'heroicReward' });
+      this.scene.bringToTop('Notice');
+      this.scene.pause();
+    });
   }
 
   protected build(): void {
     const { width, height } = this.scale;
     const cx = width / 2;
-    const { title, timeMs, kills, coins, gems, xp, level, rewards = [], seed } = this.result;
+    const { title, timeMs, kills, coins, gems, xp, level, rewards = [], seed, heroic } = this.result;
     this.cameras.main.fadeIn(400);
     menuText(this, cx, height * 0.16, title, 32, '#ffe066');
+    if (heroic) menuText(this, cx, height * 0.16 - 26, 'HEROIC', 16, '#ffd84a');
     const rows: [string, string][] = [
       ['Time', formatTime(timeMs)],
       ['Monsters defeated', String(kills)],

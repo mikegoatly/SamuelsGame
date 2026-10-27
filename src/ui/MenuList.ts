@@ -10,6 +10,8 @@ export interface MenuItem {
   activate(pointerX?: number): void;
   /** Left/right while focused (sliders). Items without it let the arrows move focus instead. */
   adjust?(direction: 1 | -1): void;
+  /** Tab / H / pad Y or X: a secondary switch that must not steal the arrows from grid navigation (e.g. Normal/Heroic). */
+  toggle?(): void;
 }
 
 export interface MenuListOptions {
@@ -21,6 +23,8 @@ export interface MenuListOptions {
 
 const BUTTON_A = 0;
 const BUTTON_B = 1;
+const BUTTON_X = 2;
+const BUTTON_Y = 3;
 const BUTTON_START = 9;
 
 const KEY_DIRECTIONS: Record<string, Direction> = {
@@ -38,13 +42,14 @@ interface PadSnapshot {
   direction: Direction | null;
   confirm: boolean;
   back: boolean;
+  toggle: boolean;
 }
 
 /** Focus navigation shared by every menu: mouse/touch tap, keyboard, and gamepad (D-pad/stick + A). */
 export class MenuList {
   focusIndex: number;
   private pressed = -1;
-  private pad: PadSnapshot = { direction: null, confirm: false, back: false };
+  private pad: PadSnapshot = { direction: null, confirm: false, back: false, toggle: false };
   private readonly columns: number;
   private readonly onKey = (event: KeyboardEvent): void => this.handleKey(event);
 
@@ -74,6 +79,7 @@ export class MenuList {
     if (now.direction && now.direction !== before.direction) this.move(now.direction);
     if (now.confirm && !before.confirm) this.confirm();
     if (now.back && !before.back) this.back();
+    if (now.toggle && !before.toggle) this.toggle();
   }
 
   destroy(): void {
@@ -105,6 +111,10 @@ export class MenuList {
       if (!event.repeat) this.confirm();
     }
     else if (event.code === 'Escape' || event.code === 'Backspace') this.back();
+    else if (event.code === 'Tab' || event.code === 'KeyH') {
+      event.preventDefault();
+      if (!event.repeat) this.toggle();
+    }
   }
 
   private confirm(pointerX?: number): void {
@@ -112,6 +122,13 @@ export class MenuList {
     if (!item) return;
     playSfx(this.scene, 'uiConfirm');
     item.activate(pointerX);
+  }
+
+  private toggle(): void {
+    const item = this.items[this.focusIndex];
+    if (!item?.toggle) return;
+    playSfx(this.scene, 'uiMove');
+    item.toggle();
   }
 
   private back(): void {
@@ -134,12 +151,13 @@ export class MenuList {
 
   private readPad(): PadSnapshot {
     const pad = this.scene.input.gamepad?.gamepads.find((p) => p?.connected);
-    if (!pad) return { direction: null, confirm: false, back: false };
+    if (!pad) return { direction: null, confirm: false, back: false, toggle: false };
     const dpad: Direction | null = pad.up ? 'up' : pad.down ? 'down' : pad.left ? 'left' : pad.right ? 'right' : null;
     return {
       direction: dpad ?? stickDirection(pad.leftStick.x, pad.leftStick.y),
       confirm: pad.buttons[BUTTON_A]?.pressed ?? false,
       back: (pad.buttons[BUTTON_B]?.pressed ?? false) || (pad.buttons[BUTTON_START]?.pressed ?? false),
+      toggle: (pad.buttons[BUTTON_Y]?.pressed ?? false) || (pad.buttons[BUTTON_X]?.pressed ?? false),
     };
   }
 }

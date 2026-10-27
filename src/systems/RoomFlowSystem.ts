@@ -4,6 +4,7 @@ import type { LevelConfig } from '../content/levels';
 import { curveOf, infoOf } from '../content/levels/curve';
 import type { Player } from '../entities/Player';
 import { insetRect, rectCenter, rectContains } from '../logic/geometry';
+import { heroicBossLevel, heroicRoomRange, normalBossLevel } from '../logic/heroic';
 import { findRoomAt } from '../logic/roomFlow';
 import type { LevelObjects, RoomSpec } from '../logic/tiledObjects';
 import { stragglerOf } from '../logic/straggler';
@@ -34,6 +35,8 @@ export interface RoomFlowOptions {
   world: LevelObjects;
   doors: DoorLayer;
   isBlocked: (x: number, y: number) => boolean;
+  /** Heroic run: monster levels follow this fixed hero level. */
+  heroicLevel?: number;
 }
 
 /** Relic-Hunters style flow: stepping into a room seals its doors and spawns waves; clearing it opens them again. */
@@ -107,7 +110,9 @@ export class RoomFlowSystem implements LevelDirector {
   private schedulerFor(room: RoomSpec): WaveScheduler {
     const { level } = this.o;
     const curve = curveOf(level);
-    const levels = [room.minLevel, room.maxLevel] as const;
+    const { heroicLevel } = this.o;
+    const normal = [room.minLevel, room.maxLevel] as const;
+    const levels = heroicLevel === undefined ? normal : heroicRoomRange(normal, level.monsterLevelRange, heroicLevel);
     return new WaveScheduler({
       order: room.order,
       totalWaves: wavesInRoom(curve, room.order),
@@ -150,8 +155,10 @@ export class RoomFlowSystem implements LevelDirector {
     this.o.events.emit('boss-started');
     const centre = rectCenter(arena.rect);
     const spawnX = arena.rect.x + arena.rect.w * 0.3;
+    const normalBoss = normalBossLevel(this.o.level);
+    const bossLevel = this.o.heroicLevel === undefined ? normalBoss : heroicBossLevel(normalBoss, this.o.heroicLevel);
     this.o.scene.time.delayedCall(BOSS_SPAWN_DELAY_MS, () => {
-      if (!this.stopped) this.o.factory.spawnBoss(bossDef, this.o.level.bossLevel ?? 5, spawnX, centre.y, { rect: arena.rect, thrones: this.o.world.thrones, isBlocked: this.o.isBlocked });
+      if (!this.stopped) this.o.factory.spawnBoss(bossDef, bossLevel, spawnX, centre.y, { rect: arena.rect, thrones: this.o.world.thrones, isBlocked: this.o.isBlocked });
     });
   }
 

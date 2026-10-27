@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { getAccessory } from '../content/accessories';
 import { getHero, heroList, type HeroDef } from '../content/heroes';
 import { getLevel } from '../content/levels';
 import { getWeapon } from '../content/weapons';
@@ -13,6 +14,7 @@ import { MenuScene } from '../ui/MenuScene';
 
 export interface HeroSelectData {
   levelId: string;
+  heroic?: boolean;
 }
 
 const COLUMNS = 4;
@@ -25,6 +27,7 @@ const BUTTON_HEIGHT = 26;
 /** Between level select and the loadout: pick who plays. Locked heroes show a silhouette and a hint. Enter on a hero selects it and moves on to Continue; Skip keeps the last hero. */
 export class HeroSelectScene extends MenuScene {
   private levelId = 'arena';
+  private heroic = false;
   private selected = 'wizard';
   private cards: HeroCard[] = [];
   private detail?: Phaser.GameObjects.Container;
@@ -36,6 +39,7 @@ export class HeroSelectScene extends MenuScene {
 
   init(data: Partial<HeroSelectData>): void {
     this.levelId = data.levelId ?? 'arena';
+    this.heroic = data.heroic === true;
     this.selected = saveSystem.data.heroes.selected;
   }
 
@@ -48,10 +52,12 @@ export class HeroSelectScene extends MenuScene {
     const cardWidth = Math.min(150, Math.floor((width - 24 - (COLUMNS - 1) * GAP) / COLUMNS));
     const gridWidth = COLUMNS * cardWidth + (COLUMNS - 1) * GAP;
     const left = cx - gridWidth / 2;
+    const worn = saveSystem.data.accessories.worn.head;
+    const crownFrame = worn ? getAccessory(worn)?.frame : undefined;
     this.cards = heroList.map((hero, i) => {
       const x = left + (i % COLUMNS) * (cardWidth + GAP) + cardWidth / 2;
       const y = TOP + Math.floor(i / COLUMNS) * (CARD_HEIGHT + GAP) + CARD_HEIGHT / 2;
-      return new HeroCard(this, x, y, cardWidth, CARD_HEIGHT, hero, unlocked.includes(hero.id), (picked) => this.pick(picked), (focused) => this.showDetail(focused));
+      return new HeroCard(this, x, y, cardWidth, CARD_HEIGHT, hero, unlocked.includes(hero.id), (picked) => this.pick(picked), (focused) => this.showDetail(focused), crownFrame);
     });
     this.cards.forEach((card) => card.setSelected(card.hero.id === this.selected));
 
@@ -67,7 +73,7 @@ export class HeroSelectScene extends MenuScene {
     const next = new MenuButton(this, at(0), buttonY, buttonWidth, BUTTON_HEIGHT, 'Continue', () => this.begin(true));
     const skip = new MenuButton(this, at(1), buttonY, buttonWidth, BUTTON_HEIGHT, 'Skip (last hero)', () => this.begin(false));
     const back = new MenuButton(this, at(2), buttonY, buttonWidth, BUTTON_HEIGHT, 'Back', () => this.goBack());
-    menuText(this, cx, buttonY + BUTTON_HEIGHT / 2 + 12, getLevel(this.levelId).name, 16, '#9a9ab8');
+    menuText(this, cx, buttonY + BUTTON_HEIGHT / 2 + 12, `${getLevel(this.levelId).name}${this.heroic ? ' (Heroic)' : ''}`, 16, this.heroic ? '#ffd84a' : '#9a9ab8');
 
     const initialFocus = Math.max(0, heroList.findIndex((hero) => hero.id === this.selected));
     this.menu = new MenuList(this, [...this.cards, next, skip, back], { columns: COLUMNS, initialFocus, onBack: () => this.goBack() });
@@ -104,7 +110,7 @@ export class HeroSelectScene extends MenuScene {
   private begin(saveChoice: boolean): void {
     if (!this.inputReady(250)) return;
     if (saveChoice) saveSystem.update((save) => selectHero(save, this.selected));
-    this.scene.start('Loadout', { levelId: this.levelId });
+    this.scene.start('Loadout', { levelId: this.levelId, heroic: this.heroic });
   }
 
   private goBack(): void {

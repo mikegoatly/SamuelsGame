@@ -3,7 +3,8 @@ import { curveOf, infoOf } from '../src/content/levels/curve';
 import type { LevelConfig } from '../src/content/levels';
 import { items } from '../src/content/items';
 import { lootTables } from '../src/content/lootTables';
-import { getWeapon } from '../src/content/weapons';
+import { getWeapon as baseWeapon, weaponAtLevel } from '../src/content/weapons';
+import { normalBossLevel, heroicBossLevel, heroicLevelRange, heroicRoomRange } from '../src/logic/heroic';
 import { damageToEnemy, damageToPlayer, enemyMaxHp, playerMaxHp } from '../src/logic/combat';
 import { addLoot, expectedLoot, noLoot, type LootValue } from '../src/logic/lootValue';
 import { addXp } from '../src/logic/progression';
@@ -26,7 +27,11 @@ export interface Reference {
   skillBoost: number;
   /** Share of incoming hits avoided; a bot that only aims has 0. */
   dodge: number;
+  /** Weapon upgrade level; 1 when missing. */
+  weaponLevel?: number;
 }
+
+const getWeapon = (ref: Reference) => weaponAtLevel(baseWeapon(ref.weaponId), ref.weaponLevel ?? 1);
 
 export const REFERENCE: Reference = { weaponId: 'brokenWand', accuracy: 0.6, skillBoost: 1.25, dodge: 0.5 };
 
@@ -173,7 +178,7 @@ function threatOf({ def, level }: MonsterShot, playerLevel: number, ref: Referen
  * reference player kills the oldest monster first. Each monster hurts from its arrival until it dies, so overlap (and the cap) shows up as damage.
  */
 function roomFight(level: LevelConfig, curve: LevelCurve, order: number, encounter: Encounter, playerLevel: number, ref: Reference, seed: number) {
-  const weapon = getWeapon(ref.weaponId);
+  const weapon = getWeapon(ref);
   const shotsPerSecond = 1000 / weapon.fireRateMs;
   const rng = mulberry32(order * 7919 + seed * 104729);
   const scheduler = new WaveScheduler({
@@ -251,7 +256,7 @@ export function estimateRoom(level: LevelConfig, order: number, encounter: Encou
 
 /** The reference player against the boss: all their basic attacks and skills, at their accuracy. */
 function bossFightSeconds(level: LevelConfig, playerLevel: number, ref: Reference): number {
-  const weapon = getWeapon(ref.weaponId);
+  const weapon = getWeapon(ref);
   const boss = getEnemy(level.bossId!);
   const bossLevel = level.bossLevel ?? 1;
   const dps = damageToEnemy(weapon.baseDamage, playerLevel, bossLevel) * (1000 / weapon.fireRateMs) * ref.accuracy * ref.skillBoost;
@@ -277,4 +282,22 @@ export function estimateLevel(level: LevelConfig, encounters: readonly Encounter
   const fights = rooms.reduce((sum, r) => sum + r.seconds, 0);
   const bossSeconds = boss ? bossFightSeconds(level, rooms[rooms.length - 1]!.playerLevel, ref) : 0;
   return { rooms, endLevel: progress.level, bossXp, totalSeconds: fights, bossSeconds, runSeconds: START_S + fights + TRANSIT_S * rooms.length + bossSeconds, loot };
+}
+
+/**
+ * Gear a hero of that level plausibly owns (upgrades are paid with gems and gold earned along the way): the reference weapon at upgrade level 3 by hero 15,
+ * 4 by 25 and 5 (max) from 40. Only the weapon is modelled; its damage and rate scale exactly as in game.
+ */
+export const gearedReference = (heroLevel: number): Reference => ({ ...REFERENCE, weaponLevel: heroLevel >= 40 ? 5 : heroLevel >= 25 ? 4 : heroLevel >= 15 ? 3 : 1 });
+
+/** The level as its Heroic version plays for a hero of `heroLevel`: shifted encounters, boss and monster range. */
+export function heroicVariant(level: LevelConfig, encounters: readonly Encounter[], heroLevel: number): { level: LevelConfig; encounters: Encounter[] } {
+  const range = level.monsterLevelRange;
+  return {
+    level: { ...level, monsterLevelRange: heroicLevelRange(range, heroLevel), bossLevel: heroicBossLevel(normalBossLevel(level), heroLevel) },
+    encounters: encounters.map((e) => {
+      const [minLevel, maxLevel] = heroicRoomRange([e.minLevel, e.maxLevel], range, heroLevel);
+      return { ...e, minLevel, maxLevel };
+    }),
+  };
 }

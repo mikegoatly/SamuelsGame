@@ -24,6 +24,7 @@ export class ChoiceRow implements MenuItem {
   readonly area: Phaser.GameObjects.Rectangle;
   private readonly glyph: Phaser.GameObjects.Image;
   private readonly icon: Phaser.GameObjects.Image;
+  private readonly iconY: number;
   private readonly label: Phaser.GameObjects.Text;
   private readonly detail: Phaser.GameObjects.Text;
 
@@ -40,6 +41,7 @@ export class ChoiceRow implements MenuItem {
     this.area = scene.add.rectangle(x, y, width, height, IDLE_FILL).setStrokeStyle(2, IDLE_STROKE);
     const left = x - width / 2;
     this.glyph = scene.add.image(left + 14, y, Tex.prompts, 0);
+    this.iconY = y;
     this.icon = scene.add.image(left + 40, y, Tex.tiles, 0);
     this.label = gameText(scene, left + 60, y, '', 16).setOrigin(0, 0.5);
     this.detail = gameText(scene, x + width / 2 - 8, y, '', 16).setOrigin(1, 0.5);
@@ -53,7 +55,9 @@ export class ChoiceRow implements MenuItem {
     this.icon.setVisible(view.icon !== undefined);
     if (view.icon) {
       this.icon.setTexture(view.icon.texture, view.icon.frame);
-      this.icon.setDisplaySize(view.icon.texture === Tex.tiles ? 24 : 28, view.icon.texture === Tex.tiles ? 24 : 28);
+      const crown = view.icon.texture === Tex.accessories;
+      const size = crown ? 32 : view.icon.texture === Tex.tiles ? 24 : 28;
+      this.icon.setDisplaySize(size, size).setY(this.iconY + (crown ? 8 : 0));
       if (view.icon.tint === null || view.icon.tint === undefined) this.icon.clearTint();
       else this.icon.setTint(view.icon.tint);
     }

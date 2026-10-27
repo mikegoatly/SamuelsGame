@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { getAccessory } from '../content/accessories';
 import { Tex } from '../content/assetKeys';
 import { Prompt } from '../content/inputGlyphs';
 import { getHero } from '../content/heroes';
@@ -7,7 +8,8 @@ import { cooldownText } from '../content/cards';
 import { getSkill, knownSkillIds } from '../content/skills';
 import { getWeapon, knownWeapons, weaponAtLevel } from '../content/weapons';
 import { cycleSlotSkill, SLOT_COUNT, type Slots } from '../logic/loadout';
-import { setLoadout, skillLevel, weaponLevel } from '../logic/save';
+import { cycleWorn } from '../logic/accessoryWear';
+import { setLoadout, skillLevel, weaponLevel, wearAccessory } from '../logic/save';
 import { nextWeapon } from '../logic/weaponCycle';
 import { saveSystem } from '../systems/SaveSystem';
 import { ChoiceRow, type ChoiceView } from '../ui/ChoiceRow';
@@ -19,6 +21,7 @@ import { MenuScene } from '../ui/MenuScene';
 
 export interface LoadoutData {
   levelId: string;
+  heroic?: boolean;
 }
 
 const ROW_HEIGHT = 34;
@@ -31,6 +34,7 @@ const NO_SKILLS_HINT = 'Skills come from boss rewards and rare scrolls dropped b
 /** Between level select and the level: pick the basic weapon and what goes in the three skill slots. Start saves the choice, Skip plays with the last saved one. */
 export class LoadoutScene extends MenuScene {
   private levelId = 'arena';
+  private heroic = false;
   private weapon = '';
   private slots: Slots = [];
   private info?: Phaser.GameObjects.Container;
@@ -42,6 +46,7 @@ export class LoadoutScene extends MenuScene {
 
   init(data: Partial<LoadoutData>): void {
     this.levelId = data.levelId ?? 'arena';
+    this.heroic = data.heroic === true;
     const { loadout, weapons } = saveSystem.data;
     this.weapon = knownWeapons(weapons.owned).includes(loadout.weapon) ? loadout.weapon : knownWeapons(weapons.owned)[0] ?? loadout.weapon;
     this.slots = loadout.slots.map((id) => (id && getSkill(id) ? id : null));
@@ -51,7 +56,7 @@ export class LoadoutScene extends MenuScene {
     const { width } = this.scale;
     const cx = width / 2;
     menuText(this, cx, 20, 'Loadout', 24, '#b48cff');
-    menuText(this, cx, 42, getLevel(this.levelId).name, 16, '#d8d8e8');
+    menuText(this, cx, 42, `${getLevel(this.levelId).name}${this.heroic ? ' (Heroic)' : ''}`, 16, this.heroic ? '#ffd84a' : '#d8d8e8');
     const hero = getHero(saveSystem.data.heroes.selected);
     const heroIcon = this.add.image(26, 28, Tex.tiles, hero.frame).setScale(2);
     if (hero.tint !== null) heroIcon.setTint(hero.tint);
@@ -60,17 +65,19 @@ export class LoadoutScene extends MenuScene {
     const leftWidth = Math.min(300, Math.floor(width * 0.48));
     const left = Math.max(12, Math.floor((width - leftWidth - 16 - Math.min(300, width * 0.46)) / 2));
     const rowX = left + leftWidth / 2;
-    const rows = [this.weaponRow(rowX, TOP + ROW_HEIGHT / 2, leftWidth), ...Array.from({ length: SLOT_COUNT }, (_, slot) => this.slotRow(slot, rowX, TOP + (slot + 1) * (ROW_HEIGHT + ROW_GAP) + ROW_HEIGHT / 2, leftWidth))];
+    const rows = [this.weaponRow(rowX, TOP + ROW_HEIGHT / 2, leftWidth), ...Array.from({ length: SLOT_COUNT }, (_, slot) => this.slotRow(slot, rowX, TOP + (slot + 1) * (ROW_HEIGHT + ROW_GAP) + ROW_HEIGHT / 2, leftWidth)), this.headRow(rowX, TOP + (SLOT_COUNT + 1) * (ROW_HEIGHT + ROW_GAP) + ROW_HEIGHT / 2, leftWidth)];
 
-    const buttonsTop = TOP + 4 * (ROW_HEIGHT + ROW_GAP) + 6;
-    const buttonY = (i: number): number => buttonsTop + BUTTON_HEIGHT / 2 + i * (BUTTON_HEIGHT + 4);
+    const rowCount = SLOT_COUNT + 2;
+    const buttonsTop = TOP + rowCount * (ROW_HEIGHT + ROW_GAP) + 2;
+    const buttonY = (i: number): number => buttonsTop + BUTTON_HEIGHT / 2 + i * (BUTTON_HEIGHT + 3);
     const start = new MenuButton(this, rowX, buttonY(0), leftWidth, BUTTON_HEIGHT, 'Start', () => this.begin(true));
     const skip = new MenuButton(this, rowX, buttonY(1), leftWidth, BUTTON_HEIGHT, 'Skip (last loadout)', () => this.begin(false));
     const back = new MenuButton(this, rowX, buttonY(2), leftWidth, BUTTON_HEIGHT, 'Back', () => this.goBack());
 
     const panelX = left + leftWidth + 16;
     const panelWidth = Math.min(300, Math.floor(width * 0.46));
-    this.add.rectangle(panelX + panelWidth / 2, TOP + 80, panelWidth, 4 * (ROW_HEIGHT + ROW_GAP) - ROW_GAP + 8, 0x201c33).setStrokeStyle(2, 0x4a4468);
+    const panelHeight = rowCount * (ROW_HEIGHT + ROW_GAP) - ROW_GAP + 8;
+    this.add.rectangle(panelX + panelWidth / 2, TOP - 4 + panelHeight / 2, panelWidth, panelHeight, 0x201c33).setStrokeStyle(2, 0x4a4468);
     this.info = this.add.container(panelX + 10, TOP + 8);
     this.wrap = panelWidth - 20;
     this.menu = new MenuList(this, [...rows, start, skip, back], { onBack: () => this.goBack() });
@@ -101,6 +108,22 @@ export class LoadoutScene extends MenuScene {
     }, () => this.showInfo(slot + 1));
   }
 
+  private headRow(x: number, y: number, width: number): ChoiceRow {
+    const owned = (): string[] => saveSystem.data.accessories.owned.filter((id) => getAccessory(id)?.slot === 'head');
+    const view = (): ChoiceView => {
+      const crown = this.worn() ? getAccessory(this.worn()!) : undefined;
+      if (!crown) return { label: owned().length > 0 ? 'Head: none' : 'No crowns yet', detail: '', color: '#7878a0' };
+      return { label: crown.name, detail: 'Head', icon: { texture: Tex.accessories, frame: crown.frame }, color: '#ffd84a' };
+    };
+    const slot = SLOT_COUNT + 1;
+    return new ChoiceRow(this, x, y, width, ROW_HEIGHT, view, (direction) => {
+      saveSystem.update((save) => wearAccessory(save, 'head', cycleWorn(owned(), this.worn(), direction)));
+      this.showInfo(slot);
+    }, () => this.showInfo(slot));
+  }
+
+  private worn = (): string | undefined => saveSystem.data.accessories.worn.head;
+
   /** Details for the focused row in the right-hand panel. */
   private showInfo(index: number): void {
     const { info } = this;
@@ -120,6 +143,13 @@ export class LoadoutScene extends MenuScene {
       text(110, knownWeapons(saveSystem.data.weapons.owned).length > 1 ? 'Left/Right or tap to change' : 'Win more weapons from bosses', '#9a9ab8');
       return;
     }
+    if (index === SLOT_COUNT + 1) {
+      const crown = this.worn() ? getAccessory(this.worn()!) : undefined;
+      if (crown) info.add(this.add.image(14, 14, Tex.accessories, crown.frame).setScale(2));
+      text(36, crown ? crown.name : 'Head slot', '#ffd84a');
+      text(58, saveSystem.data.accessories.owned.length > 0 ? 'Left/Right or tap to change' : 'Clear a level on Heroic to win its crown.', '#9a9ab8');
+      return;
+    }
     const skill = this.slots[index - 1] ? getSkill(this.slots[index - 1]!) : undefined;
     if (!skill) {
       text(0, `Skill slot ${index}`, '#ffe066');
@@ -136,10 +166,10 @@ export class LoadoutScene extends MenuScene {
   private begin(saveChoice: boolean): void {
     if (!this.inputReady(250)) return;
     if (saveChoice) saveSystem.update((save) => setLoadout(save, { weapon: this.weapon, slots: this.slots }));
-    this.scene.start('Game', { levelId: this.levelId });
+    this.scene.start('Game', { levelId: this.levelId, heroic: this.heroic });
   }
 
   private goBack(): void {
-    this.scene.start('HeroSelect', { levelId: this.levelId });
+    this.scene.start('HeroSelect', { levelId: this.levelId, heroic: this.heroic });
   }
 }

@@ -49,8 +49,7 @@ describe('volume settings in the save', () => {
 
   it('migrates a v3 save that only had muted', () => {
     const migrated = parseSave(JSON.stringify({ version: 3, coins: 5, settings: { muted: true } }));
-    expect(SAVE_VERSION).toBe(8);
-    expect(migrated.version).toBe(8);
+    expect(migrated.version).toBe(SAVE_VERSION);
     expect(migrated.coins).toBe(5);
     expect(migrated.settings).toEqual({ muted: true, musicVolume: 70, sfxVolume: 100, reduceShake: false, itemCards: 'first' });
   });

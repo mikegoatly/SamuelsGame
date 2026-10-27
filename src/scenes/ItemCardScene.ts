@@ -9,7 +9,7 @@ import type { GameScene } from './GameScene';
 
 const INPUT_DELAY_MS = 500;
 const PANEL_WIDTH = 360;
-const PANEL_HEIGHT = 250;
+const PANEL_HEIGHT = 264;
 const EMPTY: CardData = { title: '', subtitle: '', color: '#ffffff', frame: 0, tint: null, lines: [] };
 
 /** Modal over the paused game: icon, name, plain-language effect; any key, click, tap or pad button continues. */
@@ -41,7 +41,8 @@ export class ItemCardScene extends MenuScene {
     this.add.rectangle(cx, cy, PANEL_WIDTH, PANEL_HEIGHT, 0x2a2540).setStrokeStyle(4, hex);
     const top = cy - PANEL_HEIGHT / 2;
     menuText(this, cx, top + 18, subtitle, 16, color);
-    const icon = iconKey ? this.add.image(cx, top + 62, iconKey).setScale(2) : this.add.image(cx, top + 62, Tex.tiles, frame).setScale(3);
+    const crown = iconKey === Tex.accessories;
+    const icon = iconKey ? this.add.image(cx, top + (crown ? 78 : 62), iconKey, crown ? frame : undefined).setScale(crown ? 4 : 2) : this.add.image(cx, top + 62, Tex.tiles, frame).setScale(3);
     if (tint !== null && !iconKey) icon.setTint(tint);
     menuText(this, cx, top + 106, title, 32, color);
     let y = top + 134;
@@ -52,7 +53,7 @@ export class ItemCardScene extends MenuScene {
         .setAlign('center');
       y += text.height + 8;
     });
-    const prompt = menuText(this, cx, top + PANEL_HEIGHT - 16, lastInputDevice() === 'touch' ? 'Tap to continue' : 'Press any button to continue', 16, '#ffe066');
+    const prompt = menuText(this, cx, top + PANEL_HEIGHT - 26, lastInputDevice() === 'touch' ? 'Tap to continue' : 'Press any button to continue', 16, '#ffe066');
     this.tweens.add({ targets: prompt, alpha: 0.3, duration: 700, yoyo: true, repeat: -1 });
   }
 

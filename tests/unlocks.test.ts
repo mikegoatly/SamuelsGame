@@ -110,3 +110,10 @@ describe('recordBossKill', () => {
     expect(recordBossKill({}, 'knight', 'sandRat')).toEqual({ knight: ['sandRat'] });
   });
 });
+
+describe('heroic runs', () => {
+  it('a Heroic run carries the base level id, so it earns level-based heroes exactly like a normal clear', () => {
+    expect(unlockedBy({ levelId: 'ruins', skillAttempts: 0 })).toEqual(['knight']);
+    expect(unlockedBy({ levelId: 'desert', timeMs: 100_000 })).toEqual(['rogue']);
+  });
+});

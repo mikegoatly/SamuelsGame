@@ -1,11 +1,13 @@
 import Phaser from 'phaser';
 import { Music } from '../content/assetKeys';
 import { getLevel, levels } from '../content/levels';
+import { offersHeroic } from '../logic/heroicSwitch';
 import { isLevelUnlocked, visibleLevels } from '../logic/levelRules';
 import { musicOf } from '../systems/MusicPlayer';
-import { CHARMS_NOTICE } from '../logic/save';
+import { CHARMS_NOTICE, levelMode, setLevelMode } from '../logic/save';
 import { revealNextHero } from './heroReveal';
 import { CHARMS_CARD } from './NoticeScene';
+import { lastInputDevice } from '../systems/inputDevice';
 import { saveSystem } from '../systems/SaveSystem';
 import { LevelCard } from '../ui/LevelCard';
 import { MenuButton } from '../ui/MenuButton';
@@ -19,10 +21,19 @@ const MAX_CARD_HEIGHT = 98;
 const HEADER = 66;
 const FOOTER = 50;
 const GAP = 10;
+const SWITCH_HINT = { keyboard: 'Tab or H: switch Normal / Heroic', gamepad: 'Y or X: switch Normal / Heroic', touch: 'Tap the Normal / Heroic tag to switch' } as const;
 
 export class LevelSelectScene extends MenuScene {
+  private cards: LevelCard[] = [];
+  private hint?: Phaser.GameObjects.Text;
+
   constructor() {
     super('LevelSelect');
+  }
+
+  override update(time = 0, delta = 0): void {
+    super.update(time, delta);
+    this.hint?.setVisible(this.cards[this.menu?.focusIndex ?? -1]?.hasSwitch === true);
   }
 
   protected build(): void {
@@ -35,6 +46,7 @@ export class LevelSelectScene extends MenuScene {
     drawCounts(this, cx + 40, 44, walletEntries(coins, gems));
 
     const cardWidth = Math.min(280, (width - 3 * GAP - 20) / COLUMNS);
+    this.hint = undefined;
     const shown = visibleLevels(levels, levelSave.cleared);
     const rows = Math.ceil(shown.length / COLUMNS);
     const cardHeight = Math.min(MAX_CARD_HEIGHT, Math.floor((height - HEADER - FOOTER - (rows - 1) * GAP) / rows));
@@ -47,8 +59,21 @@ export class LevelSelectScene extends MenuScene {
         cleared: levelSave.cleared.includes(level.id),
         playerLevel: progress.level,
         requirementName: level.unlockedBy ? getLevel(level.unlockedBy).name : undefined,
+        heroicAvailable: offersHeroic(level, levelSave.cleared),
+        mode: levelMode(saveSystem.data, level.id),
+        heroicCleared: levelSave.heroic.cleared.includes(level.id),
       };
-      return new LevelCard(this, x, y, cardWidth, cardHeight, level, state, () => this.scene.start('HeroSelect', { levelId: level.id }));
+      return new LevelCard(
+        this,
+        x,
+        y,
+        cardWidth,
+        cardHeight,
+        level,
+        state,
+        (mode) => this.scene.start('HeroSelect', { levelId: level.id, heroic: mode === 'heroic' }),
+        (mode) => saveSystem.update((save) => setLevelMode(save, level.id, mode)),
+      );
     });
     const lastRowY = top + (rows - 1) * (cardHeight + GAP);
     const footerY = Math.min(height - 24, lastRowY + cardHeight / 2 + 26);
@@ -60,7 +85,11 @@ export class LevelSelectScene extends MenuScene {
     const backAt = slot(cards.length + 1);
     const camp = new MenuButton(this, campAt.x, campAt.y, Math.min(cardWidth, 160), 28, 'Camp', () => this.scene.start('Camp'));
     const back = new MenuButton(this, backAt.x, backAt.y, Math.min(cardWidth, 160), 28, 'Back', () => this.goBack());
+    if (cards.some((card) => card.hasSwitch)) {
+      this.hint = menuText(this, cx, Math.min(height - 8, footerY + 26), SWITCH_HINT[lastInputDevice()], 16, '#9a9ab8');
+    }
     this.showPendingNotice();
+    this.cards = cards;
     this.menu = new MenuList(this, [...cards, camp, back], { columns: COLUMNS, onBack: () => this.goBack() });
   }
 

@@ -32,7 +32,7 @@ describe('parseSave', () => {
       weapons: { owned: [STARTING_WEAPON, 'brokenWand'], levels: { brokenWand: 3 } },
       loadout: { weapon: 'brokenWand', slots: ['fireball', null, 'frostNova'] },
       skills: { owned: [{ id: 'fireball', level: 2 }, { id: 'frostNova', level: 1 }] },
-      levels: { cleared: ['ruins'], bestTimes: { ruins: 91000 } },
+      levels: { ...defaultSave().levels, cleared: ['ruins'], bestTimes: { ruins: 91000 } },
       stats: { totalKills: 40, goldPeak: 200, bossKillsByHero: { wizard: ['stoneGuardian'] } },
     });
     expect(parseSave(serialize(save))).toEqual(save);
@@ -72,7 +72,7 @@ describe('parseSave', () => {
 
   it('drops non-string and duplicate cleared ids and bad best times', () => {
     const json = JSON.stringify({ levels: { cleared: ['ruins', 3, 'ruins', ''], bestTimes: { ruins: 5000, desert: 'fast', palace: -1 } } });
-    expect(parseSave(json).levels).toEqual({ cleared: ['ruins'], bestTimes: { ruins: 5000 } });
+    expect(parseSave(json).levels).toEqual({ ...defaultSave().levels, cleared: ['ruins'], bestTimes: { ruins: 5000 } });
   });
 
   it('ignores unknown fields and old version numbers', () => {
@@ -102,10 +102,10 @@ describe('save transforms', () => {
     const first = applyLevelClear(aSave({ coins: 10 }), { levelId: 'ruins', rewardWeaponId: 'brokenWand', timeMs: 90_000, runCoins: 25 });
     expect(first.coins).toBe(35);
     expect(first.loadout.weapon).toBe('brokenWand');
-    expect(first.levels).toEqual({ cleared: ['ruins'], bestTimes: { ruins: 90_000 } });
+    expect(first.levels).toEqual({ ...defaultSave().levels, cleared: ['ruins'], bestTimes: { ruins: 90_000 } });
 
     const slower = applyLevelClear(first, { levelId: 'ruins', timeMs: 120_000 });
-    expect(slower.levels).toEqual({ cleared: ['ruins'], bestTimes: { ruins: 90_000 } });
+    expect(slower.levels).toEqual({ ...defaultSave().levels, cleared: ['ruins'], bestTimes: { ruins: 90_000 } });
     expect(applyLevelClear(first, { levelId: 'ruins', timeMs: 60_000 }).levels.bestTimes).toEqual({ ruins: 60_000 });
   });
 
@@ -151,8 +151,8 @@ describe('save repair and migration', () => {
   it('migrates a version 1 save to the current version keeping its data', () => {
     const v1 = { version: 1, progress: { level: 3, xp: 10 }, coins: 7, levels: { cleared: ['ruins'] } };
     const migrated = parseSave(JSON.stringify(v1));
-    expect(SAVE_VERSION).toBe(8);
-    expect(migrated.version).toBe(8);
+    expect(SAVE_VERSION).toBe(SAVE_VERSION);
+    expect(migrated.version).toBe(SAVE_VERSION);
     expect(migrated.coins).toBe(7);
     expect(migrated.levels.cleared).toEqual(['ruins']);
     expect(migrated.settings).toEqual(defaultSave().settings);
@@ -242,7 +242,7 @@ describe('migration to version 6', () => {
     const migrated = parseSave(JSON.stringify(v5));
     expect(migrated.skills.owned).toEqual([{ id: 'fireball', level: 1 }]);
     expect(migrated.loadout).toEqual({ weapon: 'brokenWand', slots: ['fireball', null, null] });
-    expect(migrated.version).toBe(8);
+    expect(migrated.version).toBe(SAVE_VERSION);
     expect(migrated).not.toHaveProperty('powers');
   });
 
