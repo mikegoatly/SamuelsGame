@@ -1,6 +1,6 @@
 # Proposal: The Sewer (hidden level) and a hidden hero
 
-Status: **decisions made 2026-10-27; two small calls open (javelin twist, Gloop passive)**
+Status: **all decisions made 2026-10-27; S1 next**
 
 ## 1. Finding it: the grate room
 
@@ -145,7 +145,7 @@ level 5. Nothing goes through *everything*. So the Javelin is the "line them up"
 - A slow, heavy throw (about one every 0.7s) that flies through **every** enemy in its path, hitting each once with a
   small knockback, then **sticks in the floor or wall** and fades. No charging, so it plays differently from the bow.
 - Good in the sewer's long tunnels and against swarms in a line; weaker against one spread-out enemy.
-- Level 5 twist (proposed): **the stuck javelin bursts after 1s**, hitting monsters around it.
+- Level 5 twist: **the stuck javelin bursts after 1s**, hitting monsters around it.
 
 ## 8. Gloop the Slime (chosen hero)
 
@@ -153,6 +153,6 @@ level 5. Nothing goes through *everything*. So the Javelin is the "line them up"
 - **Gloop trail:** a harmless green trail behind him (looks only, honours reduce-flashes, capped so it stays cheap).
 - **Signature weapon: Sludge Slinger**, lobs a blob that bursts into a puddle which slows monsters (twist: puddles
   also poison). Only Gloop starts with it.
-- **Passive (proposed): Second Blob.** Once per level, a hit that would knock him out splits him instead: he
-  wobbles back up at 30% HP with a moment of safety. Fits "slime", is easy to understand, and is different from every
-  other hero.
+- **Passive: Second Blob.** Once per run (each level attempt), a hit that would knock him out shrinks him instead:
+  he drops to 30% HP, gets a moment of safety, and stays smaller for the rest of the run (his body shrinks too,
+  so he is a little harder to hit). A revive token is separate and still works after it.
