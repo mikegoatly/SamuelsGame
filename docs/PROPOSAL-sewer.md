@@ -1,6 +1,6 @@
 # Proposal: The Sewer (hidden level) and a hidden hero
 
-Status: **ideas, waiting for decisions** (2026-10-27)
+Status: **decisions made 2026-10-27; two small calls open (javelin twist, Gloop passive)**
 
 ## 1. Finding it: the grate room
 
@@ -113,11 +113,46 @@ line on the results screen when Squeak beats the Rat King would be a nice touch.
 Suggested phases: **S1** grate room + discovery + hero unlock (with a stub card); **S2** sewer map, hazards and
 monsters; **S3** boss, reward, Heroic + crown, balance.
 
-## 5. Decisions needed
+## 5. Decisions (user, 2026-10-27)
 
-1. Prompt on the grate (Climb down / Not now) or drop straight in?
-2. How rare: 50% of desert side rooms + pity after 3 runs, or something else?
-3. Boss: Rat King, Mother Sludge or Old Snapjaw?
-4. Reward: Sludge Slinger weapon, gems only, or an accessory?
-5. Hero: Squeak, Gloop or Rusty?
-6. Hidden card (no sign until found) or a "???" card with a hint?
+1. **Prompt** on the grate: Climb down / Not now.
+2. **Rarity:** 50% of desert side rooms while undiscovered, guaranteed after 3 runs without one.
+3. **Boss: Mother Sludge** (design below).
+4. **Reward: a Javelin** (design below). The Sludge Slinger becomes Gloop's weapon instead.
+5. **Hero: Gloop the Slime**, leaves a harmless gloop trail, wields the Sludge Slinger.
+6. **Completely hidden** until found: no card, no hint (the desert "something drips" tagline is dropped).
+
+## 6. Mother Sludge (chosen boss)
+
+A huge green slime in a round chamber with a sludge moat. Kept readable for a child: one boss bar for the whole
+family of blobs, every attack telegraphed.
+- **Splitting:** at 66% she splits into 2 Sludgelings; each splits into 2 small Sludgelets at half its own HP
+  (4 at most). Each piece keeps its share of the HP, so the bar never jumps up. The fight ends when every piece is
+  gone.
+- **Merging:** two pieces left alone for ~5s wobble, glow and slide together (a line between them warns you) and
+  merge back into a bigger piece. Merging adds their HP together but **never heals**, so it's a nuisance, not a
+  punishment. Hitting either piece cancels it.
+- **Attacks:** hop-slam (shadow circle grows where she'll land), sludge spit (3-5 globs, like the bandit spread),
+  puddles left where she lands (slow, harmless). Smaller pieces are faster and only hop and spit; she alone summons
+  2 Sludge Blobs every ~20s.
+- **New code:** a split/merge boss controller (pure rules in `logic/bossSplit.ts`: HP shares, split thresholds,
+  merge timer and cancel); the attacks reuse `bossBrain` (slam, spit, summon).
+
+## 7. Javelin (sewer reward)
+
+What we have that's close: the **Bow** pierces 3 enemies on a full draw, and the **Apprentice Staff** pierces 1 at
+level 5. Nothing goes through *everything*. So the Javelin is the "line them up" weapon:
+- A slow, heavy throw (about one every 0.7s) that flies through **every** enemy in its path, hitting each once with a
+  small knockback, then **sticks in the floor or wall** and fades. No charging, so it plays differently from the bow.
+- Good in the sewer's long tunnels and against swarms in a line; weaker against one spread-out enemy.
+- Level 5 twist (proposed): **the stuck javelin bursts after 1s**, hitting monsters around it.
+
+## 8. Gloop the Slime (chosen hero)
+
+- Stats: HP high, speed low, attack mid. Unlocked the moment the grate is found.
+- **Gloop trail:** a harmless green trail behind him (looks only, honours reduce-flashes, capped so it stays cheap).
+- **Signature weapon: Sludge Slinger**, lobs a blob that bursts into a puddle which slows monsters (twist: puddles
+  also poison). Only Gloop starts with it.
+- **Passive (proposed): Second Blob.** Once per level, a hit that would knock him out splits him instead: he
+  wobbles back up at 30% HP with a moment of safety. Fits "slime", is easy to understand, and is different from every
+  other hero.
