@@ -9,7 +9,10 @@ import { addLoot, expectedLoot, noLoot, type LootValue } from '../src/logic/loot
 import { addXp } from '../src/logic/progression';
 import { REFLECT_COOLDOWN_MS } from '../src/logic/reflect';
 import { mulberry32 } from '../src/logic/rng';
-import { planWave, type WaveSpawn } from '../src/logic/waveMix';
+import { planWave, wavesInRoom, type LevelCurve, type WaveSpawn } from '../src/logic/waveMix';
+import { MARKER_MS } from '../src/logic/spawnMarker';
+import { stragglerOf } from '../src/logic/straggler';
+import { timingOf, WaveScheduler } from '../src/logic/waveSchedule';
 import { xpReward } from '../src/logic/xp';
 import { HAZARD_HITS } from '../src/logic/hazard/hits';
 import { hazardCount } from '../src/logic/hazard/plan';
@@ -29,7 +32,8 @@ export const REFERENCE: Reference = { weaponId: 'brokenWand', accuracy: 0.6, ski
 
 /** Scales the hit rates so a standing player matches what the aim-only bot suffered in playtests (palace room 2 about 450, desert room 4 about 470). */
 const CALIBRATION = 0.43;
-const WAVE_OVERHEAD_S = 3;
+/** Walking to the monsters and picking up loot around each room fight; waves themselves no longer pause between each other. */
+const ROOM_WALK_LOOT_S = 3;
 const SAMPLES = 24;
 const BOSS_XP_BONUS = 100;
 const TRANSIT_S = 6;
@@ -147,47 +151,97 @@ function reflectedPerSecond(def: EnemyDef, level: number, playerLevel: number, r
   return reflections * damageToPlayer(def.baseDamage, level, playerLevel) * def.reflect!.damageScale * BOLT_RATE;
 }
 
-/** One wave: monsters die one after another and each hurts until it does. Standing-player damage, seconds and xp. */
-function waveEstimate(shots: MonsterShot[], playerLevel: number, ref: Reference) {
+const STEP_S = 0.1;
+const MAX_FIGHT_S = 600;
+
+interface Foe {
+  shot: MonsterShot;
+  arrivedAt: number;
+  killSeconds: number;
+}
+
+/** Damage a standing player takes per second from one living monster, plus what it does on death. */
+function threatOf({ def, level }: MonsterShot, playerLevel: number, ref: Reference, shotsPerSecond: number): { perSecond: number; onDeath: number } {
+  let perSecond = CALIBRATION * rateOf(def) * damageToPlayer(def.custom === 'jester' ? def.blastDamage! : def.baseDamage, level, playerLevel);
+  if (def.reflect) perSecond += CALIBRATION * reflectedPerSecond(def, level, playerLevel, ref, shotsPerSecond);
+  const onDeath = def.custom === 'beetle' && def.blastDamage ? damageToPlayer(def.blastDamage, level, playerLevel) * BLAST_CHANCE * CALIBRATION : 0;
+  return { perSecond, onDeath };
+}
+
+/**
+ * One room played out on the real scheduler: groups trickle in, later waves start on the timer or when the room is nearly clear, and the
+ * reference player kills the oldest monster first. Each monster hurts from its arrival until it dies, so overlap (and the cap) shows up as damage.
+ */
+function roomFight(level: LevelConfig, curve: LevelCurve, order: number, encounter: Encounter, playerLevel: number, ref: Reference, seed: number) {
   const weapon = getWeapon(ref.weaponId);
   const shotsPerSecond = 1000 / weapon.fireRateMs;
-  let clock = 0;
+  const rng = mulberry32(order * 7919 + seed * 104729);
+  const scheduler = new WaveScheduler({
+    order,
+    totalWaves: wavesInRoom(curve, order),
+    timing: timingOf(curve),
+    plan: (wave) => planWave(level.enemyPool, curve, { order, wave, levels: [encounter.minLevel, encounter.maxLevel] }, infoOf, rng),
+    straggler: () => stragglerOf(level.enemyPool, curve, order, [encounter.minLevel, encounter.maxLevel], infoOf, rng),
+    sizeOf: (spawn) => expand([{ ...spawn, role: 'any' }]).length,
+    rng: mulberry32(seed + 1),
+  });
+  const alive: Foe[] = [];
+  const pending: { arriveAt: number; foes: Foe[] }[] = [];
+  const spawned: MonsterShot[] = [];
+  const hurt = (foe: Foe, until: number): number => {
+    const { perSecond, onDeath } = threatOf(foe.shot, playerLevel, ref, shotsPerSecond);
+    return perSecond * (until - foe.arrivedAt) + onDeath;
+  };
   let damage = 0;
   let xp = 0;
-  for (const { def, level, elite } of shots) {
-    const shield = def.shield ? (1 + (1 - def.shield.reduction)) / 2 : 1;
-    const dps = damageToEnemy(weapon.baseDamage, playerLevel, level) * shotsPerSecond * ref.accuracy * ref.skillBoost * shield;
-    clock += (enemyMaxHp(def.baseHp, level) * (elite ? 1.3 : 1)) / Math.max(1, dps);
-    let perSecond = CALIBRATION * rateOf(def) * damageToPlayer(def.custom === 'jester' ? def.blastDamage! : def.baseDamage, level, playerLevel);
-    if (def.reflect) perSecond += CALIBRATION * reflectedPerSecond(def, level, playerLevel, ref, shotsPerSecond);
-    damage += perSecond * clock;
-    if (def.custom === 'beetle' && def.blastDamage) damage += damageToPlayer(def.blastDamage, level, playerLevel) * BLAST_CHANCE * CALIBRATION;
-    xp += xpReward(level, playerLevel);
+  let target: Foe | undefined;
+  let clock = 0;
+  let work = 0;
+  const counted = (): number => alive.length + pending.reduce((sum, p) => sum + p.foes.length, 0);
+  while (true) {
+    if (clock >= MAX_FIGHT_S) throw new Error(`room ${order} of ${level.id} is unwinnable for the reference player (${alive.length} alive after ${MAX_FIGHT_S}s)`);
+    for (const event of scheduler.tick({ dtMs: STEP_S * 1000, alive: counted() })) {
+      if (event.kind !== 'spawn') continue;
+      const arriveAt = clock + MARKER_MS / 1000;
+      const foes = expand([{ ...event.spawn, role: 'any' }]).map((shot): Foe => {
+        const dps = damageToEnemy(weapon.baseDamage, playerLevel, shot.level) * shotsPerSecond * ref.accuracy * ref.skillBoost * (shot.def.shield ? (1 + (1 - shot.def.shield.reduction)) / 2 : 1);
+        return { shot, arrivedAt: arriveAt, killSeconds: (enemyMaxHp(shot.def.baseHp, shot.level) * (shot.elite ? 1.3 : 1)) / Math.max(1, dps) };
+      });
+      pending.push({ arriveAt, foes });
+      spawned.push(...foes.map((f) => f.shot));
+    }
+    while (pending.length > 0 && pending[0]!.arriveAt <= clock) alive.push(...pending.shift()!.foes);
+    if (scheduler.allReleased && counted() === 0) break;
+    clock += STEP_S;
+    target ??= alive[0];
+    if (!target) continue;
+    work += STEP_S;
+    if (work < target.killSeconds) continue;
+    damage += hurt(target, clock);
+    xp += xpReward(target.shot.level, playerLevel);
+    alive.splice(alive.indexOf(target), 1);
+    target = undefined;
+    work = 0;
   }
-  return { damage, seconds: clock + WAVE_OVERHEAD_S, xp };
+  return { damage, seconds: clock + ROOM_WALK_LOOT_S, xp, shots: spawned };
 }
 
 export function estimateRoom(level: LevelConfig, order: number, encounter: Encounter, playerLevel: number, ref: Reference = REFERENCE, theme?: Pick<MapTheme, 'hazards' | 'spikePairsPerRoom'>): RoomEstimate {
   const curve = curveOf(level);
-  const waves = curve.waves[Math.min(curve.waves.length, order) - 1] ?? 1;
   let standing = 0;
   let seconds = 0;
   let xp = 0;
   let monsters = 0;
   let loot = noLoot();
   for (let seed = 0; seed < SAMPLES; seed++) {
-    const rng = mulberry32(order * 7919 + seed * 104729);
-    for (let wave = 1; wave <= waves; wave++) {
-      const shots = expand(planWave(level.enemyPool, curve, { order, wave, levels: [encounter.minLevel, encounter.maxLevel] }, infoOf, rng));
-      const result = waveEstimate(shots, playerLevel, ref);
-      standing += result.damage / SAMPLES;
-      seconds += result.seconds / SAMPLES;
-      xp += result.xp / SAMPLES;
-      monsters += shots.length / SAMPLES;
-      for (const shot of shots) {
-        const table = lootTables[shot.def.lootTableId];
-        if (table) loot = addLoot(loot, expectedLoot(table, coinValue, shot.elite, healValue), 1 / SAMPLES);
-      }
+    const result = roomFight(level, curve, order, encounter, playerLevel, ref, seed);
+    standing += result.damage / SAMPLES;
+    seconds += result.seconds / SAMPLES;
+    xp += result.xp / SAMPLES;
+    monsters += result.shots.length / SAMPLES;
+    for (const shot of result.shots) {
+      const table = lootTables[shot.def.lootTableId];
+      if (table) loot = addLoot(loot, expectedLoot(table, coinValue, shot.elite, healValue), 1 / SAMPLES);
     }
   }
   standing += theme ? hazardShare(theme, order) * playerMaxHp(playerLevel) : 0;

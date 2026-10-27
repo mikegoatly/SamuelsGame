@@ -1,5 +1,6 @@
 import { rollAffix, type Affix } from './elites';
 import type { LevelRange } from './waves';
+import type { WaveTiming } from './waveSchedule';
 import { pickWeighted } from './weighted';
 
 export interface PoolEntry {
@@ -23,6 +24,8 @@ export interface LevelCurve {
   waves: readonly number[];
   size: { base: number; perRoom: number; perWave: number; max: number };
   elite: { fromRoom: number; base: number; perRoom: number; max: number };
+  /** Overrides for how monsters arrive over time; anything left out uses `DEFAULT_TIMING`. */
+  timing?: Partial<WaveTiming>;
 }
 
 export interface WaveContext {

@@ -57,6 +57,7 @@ export const SFX_DEFS = {
   howl: { files: ['wolf_0.ogg'], volume: 0.45, rate: 1.1, minGapMs: 800 },
   raise: { files: variants('poison', 2), volume: 0.45, rate: 0.7, minGapMs: 200 },
   eliteSpawn: { files: ['bossphase.ogg'], volume: 0.3, rate: 1.4, minGapMs: 400 },
+  spawnMark: { files: ['gravity_0.ogg'], volume: 0.22, rate: 1.7, jitter: 0.06, minGapMs: 180 },
   victory: { files: ['victory.ogg'], volume: 0.7 },
   crack: { files: ['swordhit_0.ogg'], volume: 0.5, rate: 0.5, jitter: 0.08, minGapMs: 120 },
   pitFall: { files: ['slam_0.ogg'], volume: 0.5, rate: 0.55, minGapMs: 150 },

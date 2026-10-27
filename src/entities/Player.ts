@@ -69,6 +69,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   private readonly offhand?: Phaser.GameObjects.Image;
   private readonly aimDirection = new Phaser.Math.Vector2(1, 0);
   private readonly position = new Phaser.Math.Vector2();
+  private readonly headingDirection = new Phaser.Math.Vector2(1, 0);
   private swing = { startedAt: -Infinity, aim: 0, reverse: false };
   private readonly draw = new BowDraw();
   private drawWeapon: WeaponDef | undefined;
@@ -116,6 +117,11 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   /** Pause-safe game time, ms. */
   get now(): number {
     return this.clock.now;
+  }
+
+  /** Unit direction the player last walked in (monsters arriving "behind" appear opposite it). */
+  get heading(): { x: number; y: number } {
+    return this.headingDirection;
   }
 
   get isDashing(): boolean {
@@ -167,6 +173,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this.position.set(this.x, this.y);
     this.controls.update(this.scene, this.position);
     this.aimDirection.copy(this.controls.aimVector);
+    if (this.controls.moveVector.lengthSq() > 0.04) this.headingDirection.copy(this.controls.moveVector).normalize();
 
     this.handleDash(now);
     if (!this.timers.isDashing(now) && !this.timers.inKnockback(now)) {

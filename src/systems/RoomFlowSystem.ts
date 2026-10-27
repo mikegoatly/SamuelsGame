@@ -5,9 +5,10 @@ import { curveOf, infoOf } from '../content/levels/curve';
 import type { Player } from '../entities/Player';
 import { insetRect, rectCenter, rectContains } from '../logic/geometry';
 import { findRoomAt } from '../logic/roomFlow';
-import { pickRoleSpawn } from '../logic/spawnPoints';
 import type { LevelObjects, RoomSpec } from '../logic/tiledObjects';
+import { stragglerOf } from '../logic/straggler';
 import { planWave, wavesInRoom } from '../logic/waveMix';
+import { timingOf, WaveScheduler } from '../logic/waveSchedule';
 import { ClearWatch } from './ClearWatch';
 import type { DoorLayer } from './DoorLayer';
 import type { EnemyFactory } from './EnemyFactory';
@@ -16,11 +17,12 @@ import type { LevelDirector } from './LevelDirector';
 import { floatText } from './floatText';
 import { feel } from './feel';
 import { playSfx } from './sfx';
+import { spawnSize } from './spawnSize';
+import { WaveRunner } from './WaveRunner';
 
 const TRIGGER_INSET = 16;
 const SPAWN_INSET = 24;
 const MIN_SPAWN_DISTANCE = 90;
-const NEXT_WAVE_DELAY_MS = 1500;
 const BOSS_SPAWN_DELAY_MS = 900;
 
 export interface RoomFlowOptions {
@@ -38,13 +40,13 @@ export interface RoomFlowOptions {
 export class RoomFlowSystem implements LevelDirector {
   private readonly cleared = new Set<number>();
   private current?: RoomSpec;
-  private wave = 0;
+  private runner?: WaveRunner;
   private readonly watch: ClearWatch;
   private bossStarted = false;
   private stopped = false;
 
   constructor(private readonly o: RoomFlowOptions) {
-    this.watch = new ClearWatch(o.scene, () => o.factory.living(), o.events, () => this.onWaveCleared(), () => this.onStatuesStir());
+    this.watch = new ClearWatch(o.scene, () => o.factory.living(), o.events, () => this.onWaveCleared(), () => this.onStatuesStir(), () => this.runner?.released ?? false);
     o.events.on('boss-died', () => this.onBossDied());
   }
 
@@ -56,8 +58,13 @@ export class RoomFlowSystem implements LevelDirector {
     this.o.scene.events.on(Phaser.Scenes.Events.UPDATE, this.update, this);
   }
 
+  get nextWaveProgress(): number | undefined {
+    return this.runner?.nextWaveProgress;
+  }
+
   stop(): void {
     this.stopped = true;
+    this.runner?.stop();
     this.watch.stop();
     this.o.scene.events.off(Phaser.Scenes.Events.UPDATE, this.update, this);
   }
@@ -69,7 +76,9 @@ export class RoomFlowSystem implements LevelDirector {
 
   private update(): void {
     const { player, world } = this.o;
-    if (this.stopped || player.dead || this.current || this.bossStarted) return;
+    if (player.dead) this.runner?.stop();
+    if (this.stopped || player.dead || this.bossStarted) return;
+    if (this.current) return this.runner?.update();
     const room = findRoomAt(world.rooms, player, TRIGGER_INSET, this.cleared);
     if (room) this.startRoom(room);
     else if (world.bossArena && this.cleared.size === this.totalRooms && rectContains(insetRect(world.bossArena.rect, TRIGGER_INSET), player)) {
@@ -81,20 +90,38 @@ export class RoomFlowSystem implements LevelDirector {
     this.current = room;
     this.sealDoors(room.order);
     this.o.events.emit('room-started', room.order, this.totalRooms);
-    this.startWave(1);
+    this.runner = new WaveRunner({
+      scene: this.o.scene,
+      player: this.o.player,
+      factory: this.o.factory,
+      scheduler: this.schedulerFor(room),
+      rect: room.rect,
+      inset: SPAWN_INSET,
+      minDistance: MIN_SPAWN_DISTANCE,
+      isBlocked: this.o.isBlocked,
+      onWave: (wave) => this.onWave(wave),
+    });
+    this.watch.arm();
   }
 
-  private startWave(wave: number): void {
-    const room = this.current;
-    if (!room || this.stopped) return;
-    this.wave = wave;
-    const spawns = planWave(this.o.level.enemyPool, curveOf(this.o.level), { order: room.order, wave, levels: [room.minLevel, room.maxLevel] }, infoOf, Math.random);
-    for (const spawn of spawns) {
-      const { x, y } = pickRoleSpawn(room.rect, this.o.player, spawn.role, Math.random, this.o.isBlocked, SPAWN_INSET, MIN_SPAWN_DISTANCE);
-      this.o.factory.spawnGroup(getEnemy(spawn.enemyId), spawn.level, x, y, spawn.affix);
-    }
-    if (spawns.some((s) => s.affix)) playSfx(this.o.scene, 'eliteSpawn');
-    this.watch.arm();
+  private schedulerFor(room: RoomSpec): WaveScheduler {
+    const { level } = this.o;
+    const curve = curveOf(level);
+    const levels = [room.minLevel, room.maxLevel] as const;
+    return new WaveScheduler({
+      order: room.order,
+      totalWaves: wavesInRoom(curve, room.order),
+      timing: timingOf(curve),
+      plan: (wave) => planWave(level.enemyPool, curve, { order: room.order, wave, levels }, infoOf, Math.random),
+      straggler: () => stragglerOf(level.enemyPool, curve, room.order, levels, infoOf, Math.random),
+      rng: Math.random,
+      sizeOf: (spawn) => spawnSize(spawn.enemyId),
+    });
+  }
+
+  private onWave(wave: number): void {
+    this.o.events.emit('wave-started', wave);
+    if (wave >= 2) floatText(this.o.scene, this.o.player.x, this.o.player.y - 20, `Wave ${wave}!`, '#ffd27a', 16, 20, 1100);
   }
 
   private onStatuesStir(): void {
@@ -104,10 +131,8 @@ export class RoomFlowSystem implements LevelDirector {
   private onWaveCleared(): void {
     const room = this.current;
     if (!room || this.bossStarted || this.stopped) return;
-    if (this.wave < wavesInRoom(curveOf(this.o.level), room.order)) {
-      this.o.scene.time.delayedCall(NEXT_WAVE_DELAY_MS, () => this.startWave(this.wave + 1));
-      return;
-    }
+    this.runner?.stop();
+    this.runner = undefined;
     this.cleared.add(room.order);
     this.current = undefined;
     this.o.doors.open(room.order);

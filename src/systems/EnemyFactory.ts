@@ -14,6 +14,8 @@ import { insetRect, rectContains, type Point, type Rect } from '../logic/geometr
 import { pickEmergePoint, pickRectSpawn, pickThrone } from '../logic/spawnPoints';
 
 const FADE_IN_MS = 300;
+/** Monsters arriving from a spawn marker cannot act or hurt for this long. */
+const SPAWN_GRACE_MS = 500;
 const BOSS_FADE_IN_MS = 700;
 const MINION_RADIUS = 36;
 const MINION_INSET = 24;
@@ -61,22 +63,22 @@ export class EnemyFactory {
     return (this.group.getChildren() as Enemy[]).filter((e) => e.alive);
   }
 
-  spawn(def: EnemyDef, level: number, x: number, y: number, extras?: EnemyExtras): Enemy {
-    return this.fadeIn(new Enemy(this.scene, x, y, def, level, this.context, extras), FADE_IN_MS);
+  spawn(def: EnemyDef, level: number, x: number, y: number, extras?: EnemyExtras, graceMs = FADE_IN_MS): Enemy {
+    return this.fadeIn(new Enemy(this.scene, x, y, def, level, this.context, extras), FADE_IN_MS, graceMs);
   }
 
   /** Spawns a def as a whole encounter: single monsters as themselves, packs as their members around the point (a houndmaster brings his hounds). */
   spawnGroup(def: EnemyDef, level: number, x: number, y: number, affix?: Affix): Enemy[] {
     const { pack } = def;
-    if (!pack) return [this.spawn(def, level, x, y, { affix })];
+    if (!pack) return [this.spawn(def, level, x, y, { affix }, SPAWN_GRACE_MS)];
     const member = getEnemy(pack.member);
     const memberLevel = Math.max(1, level - (pack.levelDrop ?? 0));
     const count = packCount(pack.count, Math.random);
     const spots = member.custom === 'twin'
       ? [{ x: x - TWIN_GAP, y }, { x: x + TWIN_GAP, y }]
       : scatterAround({ x, y }, count, PACK_RADIUS, Math.random, this.blocked);
-    const leader = pack.leader ? this.spawn(def, level, x, y, { affix }) : undefined;
-    const members = spots.map((spot, i) => this.spawn(member, memberLevel, spot.x, spot.y, i === 0 && !leader ? { affix } : undefined));
+    const leader = pack.leader ? this.spawn(def, level, x, y, { affix }, SPAWN_GRACE_MS) : undefined;
+    const members = spots.map((spot, i) => this.spawn(member, memberLevel, spot.x, spot.y, i === 0 && !leader ? { affix } : undefined, SPAWN_GRACE_MS));
     if (leader) for (const hound of members) assignHound(leader, hound);
     if (member.custom === 'twin' && members.length === 2) linkTwins(members[0]!, members[1]!);
     return leader ? [leader, ...members] : members;
@@ -109,11 +111,12 @@ export class EnemyFactory {
     return pickRectSpawn(area.rect, { x, y }, MINION_RADIUS, Math.random, area.isBlocked, MINION_INSET);
   }
 
-  private fadeIn<T extends Enemy>(enemy: T, duration: number): T {
+  private fadeIn<T extends Enemy>(enemy: T, duration: number, graceMs = duration): T {
     this.group.add(enemy);
     enemy.setAlpha(0);
     enemy.armed = false;
-    this.scene.tweens.add({ targets: enemy, alpha: 1, duration, onComplete: () => (enemy.armed = true) });
+    this.scene.tweens.add({ targets: enemy, alpha: 1, duration });
+    this.scene.tweens.addCounter({ from: 0, to: 1, duration: Math.max(duration, graceMs), onComplete: () => (enemy.armed = true) });
     return enemy;
   }
 }

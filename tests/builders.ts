@@ -1,4 +1,7 @@
 import { expect } from 'vitest';
+import { mulberry32 } from '../src/logic/rng';
+import type { WaveSpawn } from '../src/logic/waveMix';
+import { DEFAULT_TIMING, WaveScheduler, type ScheduleEvent, type SchedulerOptions, type WaveTiming } from '../src/logic/waveSchedule';
 import type { LootTable } from '../src/logic/loot';
 import type { PlayerProgress } from '../src/logic/progression';
 import { defaultSave, type SaveData } from '../src/logic/save';
@@ -107,6 +110,33 @@ export function eventsOver<E>(step: (now: number) => E | null | undefined, from:
   for (let now = from; now <= to; now += stepMs) {
     const event = step(now);
     if (event) log.push({ at: now, event });
+  }
+  return log;
+}
+
+export const aTiming = (overrides: Partial<WaveTiming> = {}): WaveTiming => ({ ...DEFAULT_TIMING, ...overrides });
+
+export const aSpawn = (overrides: Partial<WaveSpawn> = {}): WaveSpawn => ({ enemyId: 'grunt', level: 1, role: 'any', ...overrides });
+
+/** A scheduler over fixed waves of `groups` plain spawns each (the first one featured when `featured`). */
+export function aScheduler(overrides: Partial<SchedulerOptions> & { groups?: number; featured?: boolean; seed?: number } = {}): WaveScheduler {
+  const { groups = 6, featured = false, seed = 1, ...options } = overrides;
+  return new WaveScheduler({
+    order: 1,
+    totalWaves: 2,
+    timing: aTiming(),
+    plan: () => Array.from({ length: groups }, (_, i) => aSpawn(featured && i === 0 ? { featured: true } : {})),
+    straggler: () => aSpawn({ enemyId: 'straggler' }),
+    rng: mulberry32(seed),
+    ...options,
+  });
+}
+
+/** Ticks `scheduler` every `stepMs` for `ms` (alive may change over time) and returns events with the elapsed time. */
+export function runScheduler(scheduler: WaveScheduler, ms: number, alive: number | ((at: number) => number) = 0, stepMs = 50): { at: number; event: ScheduleEvent }[] {
+  const log: { at: number; event: ScheduleEvent }[] = [];
+  for (let at = 0; at <= ms; at += stepMs) {
+    for (const event of scheduler.tick({ dtMs: stepMs, alive: typeof alive === 'number' ? alive : alive(at) })) log.push({ at, event });
   }
   return log;
 }

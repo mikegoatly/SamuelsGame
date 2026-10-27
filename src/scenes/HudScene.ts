@@ -35,6 +35,7 @@ const BAR_WIDTH = 140;
 const FULLSCREEN_SIZE = 28;
 const FULLSCREEN_MARGIN = 8;
 const PAUSE_Y = 58;
+const WAVE_BAR = { width: 90, height: 6, y: 25 };
 
 export class HudScene extends Phaser.Scene {
   private bars!: Phaser.GameObjects.Graphics;
@@ -42,6 +43,8 @@ export class HudScene extends Phaser.Scene {
   private levelText!: Phaser.GameObjects.Text;
   private waveText!: Phaser.GameObjects.Text;
   private muteText!: Phaser.GameObjects.Text;
+  private waveBar!: Phaser.GameObjects.Graphics;
+  private director!: LevelDirector;
   private bossBar!: Phaser.GameObjects.Graphics;
   private bossName!: Phaser.GameObjects.Text;
   private boss: { hp: number; max: number } | null = null;
@@ -73,6 +76,8 @@ export class HudScene extends Phaser.Scene {
     this.levelText = this.makeText(BAR_X, 4, '#ffffff', 16);
     this.hpText = this.makeText(BAR_X + 5, 27, '#ffffff', 16).setOrigin(0, 0.5);
     this.waveText = this.makeText(0, 4, '#d8d8e8', 16).setOrigin(1, 0);
+    this.waveBar = this.add.graphics();
+    this.director = director;
     this.bossBar = this.add.graphics();
     this.bossName = this.makeText(0, 4, '#ffd0a0', 12).setOrigin(0.5, 0).setVisible(false);
     this.muteText = this.makeText(BAR_X, 0, '#b0b0c8', 10).setOrigin(0, 1).setText('Sound off (M)').setVisible(saveSystem.data.settings.muted);
@@ -112,7 +117,7 @@ export class HudScene extends Phaser.Scene {
     events.on('xp-changed', (progress) => this.showProgress(progress, progression.xpForNextLevel));
     events.on('coins-changed', (total) => this.showCoins(total));
     events.on('gems-changed', (gems) => this.showGems(gems));
-    events.on('wave-started', (wave) => this.waveText.setText(`Wave ${wave}`));
+    events.on('wave-started', (wave) => !roomTotal && this.waveText.setText(`Wave ${wave}`));
     events.on('room-started', (order, total) => this.waveText.setText(`Room ${order}/${total}`));
     events.on('boss-started', () => {
       this.waveText.setText('Boss');
@@ -136,6 +141,7 @@ export class HudScene extends Phaser.Scene {
   update(_time: number, delta: number): void {
     this.vignette.update(delta, this.hp.value / this.hp.max, saveSystem.data.settings.reduceShake);
     this.touchView.update();
+    this.drawWaveBar();
     this.skillBar.update();
     this.potionSlot.update();
   }
@@ -159,6 +165,17 @@ export class HudScene extends Phaser.Scene {
     this.vignette.resize(this.scale.width, this.scale.height);
     this.intro?.layout();
     this.drawBossBar();
+  }
+
+  /** Countdown to the next wave, right-aligned under the room/wave text; hidden when none is pending. */
+  private drawWaveBar(): void {
+    const progress = this.director.nextWaveProgress;
+    this.waveBar.clear();
+    if (progress === undefined) return;
+    const { width, height, y } = WAVE_BAR;
+    const x = this.waveText.x - width;
+    this.waveBar.fillStyle(0x14121c, 0.85).fillRect(x - 1, y - 1, width + 2, height + 2);
+    this.waveBar.fillStyle(0xffb04a, 1).fillRect(x, y, Math.round(width * Phaser.Math.Clamp(progress, 0, 1)), height);
   }
 
   private showBoss(name: string, hp: number, max: number): void {

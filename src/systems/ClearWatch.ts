@@ -20,6 +20,8 @@ export class ClearWatch {
     events: GameEvents,
     private readonly onClear: () => void,
     private readonly onWake: () => void = () => undefined,
+    /** False while more monsters are still due to arrive: the room cannot clear (or wake its statues) yet. */
+    private readonly ready: () => boolean = () => true,
   ) {
     events.on('enemy-died', () => this.armed && scene.time.delayedCall(AFTER_DEATH_MS, () => this.check()));
     scene.time.addEvent({ delay: POLL_MS, loop: true, callback: () => this.check() });
@@ -36,7 +38,7 @@ export class ClearWatch {
   }
 
   private check(): void {
-    if (!this.armed) return;
+    if (!this.armed || !this.ready()) return;
     const living = this.living();
     const status = clearStatus(living.filter((e) => e.countsForClear).length, living.filter((e) => e.canWake).length);
     if (status === 'fighting') return;
