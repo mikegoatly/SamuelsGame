@@ -2,9 +2,14 @@ import Phaser from 'phaser';
 import { KeyLatch } from '../logic/keyLatch';
 import { SLOT_COUNT } from '../logic/loadout';
 import type { InputSource } from './InputController';
+import { heldKeys } from './inputDevice';
 
 const KEY_NAMES = ['UP', 'DOWN', 'LEFT', 'RIGHT', 'W', 'A', 'S', 'D', 'SPACE', 'ONE', 'TWO', 'THREE', 'E', 'R', 'F', 'RMB'] as const;
 type KeyName = (typeof KEY_NAMES)[number];
+const KEY_CODES: Record<Exclude<KeyName, 'RMB'>, string> = {
+  UP: 'ArrowUp', DOWN: 'ArrowDown', LEFT: 'ArrowLeft', RIGHT: 'ArrowRight', W: 'KeyW', A: 'KeyA', S: 'KeyS', D: 'KeyD',
+  SPACE: 'Space', ONE: 'Digit1', TWO: 'Digit2', THREE: 'Digit3', E: 'KeyE', R: 'KeyR', F: 'KeyF',
+};
 const SKILL_KEYS: readonly (readonly KeyName[])[] = [['RMB', 'ONE'], ['E', 'TWO'], ['R', 'THREE']];
 const RIGHT_BUTTON = 2;
 
@@ -41,6 +46,10 @@ export class KeyboardMouseSource implements InputSource {
     scene.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => pointer.button === RIGHT_BUTTON && this.latches.RMB.down());
     scene.input.on('pointerup', (pointer: Phaser.Input.Pointer) => pointer.button === RIGHT_BUTTON && this.latches.RMB.up());
     window.addEventListener('blur', () => Object.values(this.latches).forEach((latch) => latch.reset()));
+    // A paused scene never sees key events, so a key released behind a dialog would stay held.
+    const sync = (): void => (Object.keys(KEY_CODES) as (keyof typeof KEY_CODES)[]).forEach((name) => this.latches[name].sync(heldKeys.has(KEY_CODES[name])));
+    scene.events.on(Phaser.Scenes.Events.RESUME, sync);
+    scene.events.once(Phaser.Scenes.Events.SHUTDOWN, () => scene.events.off(Phaser.Scenes.Events.RESUME, sync));
   }
 
   update(scene: Phaser.Scene): void {

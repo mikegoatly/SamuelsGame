@@ -1,5 +1,7 @@
 import Phaser from 'phaser';
+import { ReleaseGate } from '../logic/heldKeys';
 import { moveFocus, stickDirection, type Direction } from '../logic/menuNav';
+import { heldKeys } from '../systems/inputDevice';
 import { playSfx } from '../systems/sfx';
 
 export interface MenuItem {
@@ -51,6 +53,7 @@ export class MenuList {
   private pressed = -1;
   private pad: PadSnapshot = { direction: null, confirm: false, back: false, toggle: false };
   private readonly columns: number;
+  private readonly keyGate = new ReleaseGate(heldKeys);
   private readonly onKey = (event: KeyboardEvent): void => this.handleKey(event);
 
   constructor(
@@ -105,6 +108,7 @@ export class MenuList {
   }
 
   private handleKey(event: KeyboardEvent): void {
+    if (!this.keyGate.ready()) return;
     const direction = KEY_DIRECTIONS[event.code];
     if (direction) this.move(direction);
     else if (event.code === 'Enter' || event.code === 'Space' || event.code === 'NumpadEnter') {

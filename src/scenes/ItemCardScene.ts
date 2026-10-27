@@ -1,7 +1,8 @@
 import Phaser from 'phaser';
 import { Tex } from '../content/assetKeys';
+import { ReleaseGate } from '../logic/heldKeys';
 import type { CardData } from '../logic/itemCards';
-import { lastInputDevice } from '../systems/inputDevice';
+import { heldKeys, lastInputDevice } from '../systems/inputDevice';
 import { gameText } from '../ui/gameText';
 import { menuText } from '../ui/menuText';
 import { MenuScene } from '../ui/MenuScene';
@@ -16,6 +17,7 @@ const EMPTY: CardData = { title: '', subtitle: '', color: '#ffffff', frame: 0, t
 export class ItemCardScene extends MenuScene {
   private card = EMPTY;
   private wired = false;
+  private keyGate = new ReleaseGate(heldKeys);
 
   constructor(key = 'ItemCard') {
     super(key);
@@ -28,6 +30,7 @@ export class ItemCardScene extends MenuScene {
 
   override create(): void {
     super.create();
+    this.keyGate = new ReleaseGate(heldKeys);
     this.wireInput();
   }
 
@@ -68,11 +71,14 @@ export class ItemCardScene extends MenuScene {
     const dismiss = (): void => {
       if (this.inputReady(INPUT_DELAY_MS)) this.close();
     };
-    this.input.keyboard?.on('keydown', dismiss);
+    const dismissByKey = (): void => {
+      if (this.keyGate.ready()) dismiss();
+    };
+    this.input.keyboard?.on('keydown', dismissByKey);
     this.input.on('pointerdown', dismiss);
     this.input.gamepad?.on('down', dismiss);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
-      this.input.keyboard?.off('keydown', dismiss);
+      this.input.keyboard?.off('keydown', dismissByKey);
       this.input.off('pointerdown', dismiss);
       this.input.gamepad?.off('down', dismiss);
     });

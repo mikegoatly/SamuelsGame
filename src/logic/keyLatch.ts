@@ -26,6 +26,11 @@ export class KeyLatch {
     return was;
   }
 
+  /** Matches the real key state after events were missed (e.g. a paused scene); never counts as a press. */
+  sync(held: boolean): void {
+    this.held = held;
+  }
+
   reset(): void {
     this.pressed = this.held = false;
   }

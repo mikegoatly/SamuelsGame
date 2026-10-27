@@ -32,6 +32,18 @@ describe('KeyLatch', () => {
     expect(key.take()).toBe(true);
   });
 
+  it.each([
+    ['released while the game was paused', true, false, false],
+    ['pressed while the game was paused', false, true, true],
+  ])('sync after %s matches the real key without a phantom press', (_name, heldBefore, heldNow, expected) => {
+    const key = new KeyLatch();
+    if (heldBefore) key.down();
+    key.read();
+    key.sync(heldNow);
+    expect(key.read()).toBe(expected);
+    expect(key.take()).toBe(false);
+  });
+
   it('reset drops held and pending state', () => {
     const key = new KeyLatch();
     key.down();
