@@ -67,7 +67,7 @@ export const MUSIC_FILES: Record<string, string> = {
 /** Pixel explosion atlas frames (Kenney Explosion Pack). */
 export const EXPLOSION_FRAMES = Array.from({ length: 9 }, (_, i) => `pixelExplosion0${i}.png`);
 
-export const FONT = 'KenneyPixel';
+export const FONT = 'SamuelPixel';
 
 /** Tiny Dungeon packed sheet: 16px tiles, no spacing, 12 cols x 11 rows. frame = row * 12 + col. */
 export const TILE_SIZE = 16;

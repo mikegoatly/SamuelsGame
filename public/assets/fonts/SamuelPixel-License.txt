@@ -1,0 +1,8 @@
+SamuelPixel.ttf
+
+Derived from Kenney Pixel (KenneyPixel.ttf, Kenney, www.kenney.nl, License: Creative Commons Zero, CC0
+http://creativecommons.org/publicdomain/zero/1.0/) by tools/make_font.py. Glyph shapes are re-rasterised from
+Kenney Pixel on a 16px grid with some glyphs (l, i, j, I, 1, |, t, 0, 8) redrawn for readability.
+Advance widths are identical to Kenney Pixel except the space (2.5px -> 2px, so words land on whole pixels); vertical metrics are identical.
+
+This derived font is released under CC0 as well: free to use in personal, educational and commercial projects.
