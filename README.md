@@ -76,7 +76,7 @@ Pause offers Resume or Quit to level select. Levels are data in `src/content/lev
 Progress (level, XP), gems, owned weapons and cleared levels are saved in `localStorage` (`samuels-game-save`, versioned,
 tolerant parsing in `src/logic/save.ts`). Coins picked up in a run are banked on quit/clear and lost on death.
 You start with the Apprentice Staff; Broken Wand is the Ruins reward. Enemies drop coins, potions and gems
-(`src/content/lootTables.ts`). To reset: `localStorage.removeItem('samuels-game-save')`.
+(`src/content/lootTables.ts`). Save slots: main menu > Save slots switches between 3 games (slot 1 is `samuels-game-save`, slots 2-3 are `samuels-game-save-2/-3`, active slot in `samuels-game-slot`); settings are shared. To reset the active slot: `localStorage.removeItem('samuels-game-save')` (slot 1).
 
 ## Level 1: Broken Wand (Ruins)
 

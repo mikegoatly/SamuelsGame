@@ -11,6 +11,15 @@ export function applySavedMute(game: Phaser.Game): void {
   feel.setReduced(saveSystem.data.settings.reduceShake);
 }
 
+/** Switches save slot (settings carry over) and re-applies them to the running game. */
+export function switchSaveSlot(game: Phaser.Game, slot: number): boolean {
+  if (!saveSystem.switchTo(slot)) return false;
+  applySavedMute(game);
+  game.events.emit(MUTE_EVENT, saveSystem.data.settings.muted);
+  game.events.emit(MUSIC_VOLUME_EVENT);
+  return true;
+}
+
 export function toggleMute(game: Phaser.Game): boolean {
   const muted = !saveSystem.data.settings.muted;
   saveSystem.update((save) => withMuted(save, muted));
