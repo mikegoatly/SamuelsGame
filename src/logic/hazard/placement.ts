@@ -142,6 +142,28 @@ function placePlate(s: Spot): PlacedHazard | null {
   return plate;
 }
 
+/** A wall pipe's puff box (a 3x3 off the wall), the wall tile the pipe sits on, and the direction it breathes in degrees. */
+function pipeAt(room: LayoutRoom, side: number, along: number): { rect: Rect; wall: { x: number; y: number }; dir: number } {
+  const { rect } = room;
+  if (side === 0) return { rect: { x: along - 1, y: rect.y, w: 3, h: 3 }, wall: { x: along, y: rect.y - 1 }, dir: 90 };
+  if (side === 1) return { rect: { x: along - 1, y: rect.y + rect.h - 3, w: 3, h: 3 }, wall: { x: along, y: rect.y + rect.h }, dir: 270 };
+  if (side === 2) return { rect: { x: rect.x, y: along - 1, w: 3, h: 3 }, wall: { x: rect.x - 1, y: along }, dir: 0 };
+  return { rect: { x: rect.x + rect.w - 3, y: along - 1, w: 3, h: 3 }, wall: { x: rect.x + rect.w, y: along }, dir: 180 };
+}
+
+/** A sewer pipe in the wall (any side) whose puff box clears the lanes, cover and bridges. */
+function placePipe(s: Spot): PlacedHazard | null {
+  const { rect } = s.room;
+  for (let attempt = 0; attempt < ATTEMPTS; attempt++) {
+    const side = randInt(s.rng, 0, 3);
+    const along = side < 2 ? randInt(s.rng, rect.x + 1, rect.x + rect.w - 2) : randInt(s.rng, rect.y + 1, rect.y + rect.h - 2);
+    const pipe = pipeAt(s.room, side, along);
+    if (!fits(s, pipe.rect, 0)) continue;
+    return make(s, 'gasPipe', pipe.rect, { radius: 26, dir: pipe.dir, pipeX: pipe.wall.x * TILE_SIZE + TILE_SIZE / 2, pipeY: pipe.wall.y * TILE_SIZE + TILE_SIZE / 2 });
+  }
+  return null;
+}
+
 function placeKind(s: Spot, kind: ActiveHazardKind): PlacedHazard | null {
   switch (kind) {
     case 'crackedFloor':
@@ -150,6 +172,8 @@ function placeKind(s: Spot, kind: ActiveHazardKind): PlacedHazard | null {
       return placeBox(s, kind, [2, 3], [2, 3], 1, 0);
     case 'gasVent':
       return placeBox(s, kind, [3, 3], [3, 3], 1, 0, { radius: 26 });
+    case 'gasPipe':
+      return placePipe(s);
     case 'pendulum':
       return placePendulum(s);
     case 'flameJet':
@@ -171,7 +195,7 @@ function areaHazard(s: Spot, kind: ActiveHazardKind, level: number): PlacedHazar
 
 const isArea = (kind: ActiveHazardKind): boolean => kind === 'rubble' || kind === 'wind' || kind === 'sandstorm';
 /** Big footprints first, so they find room before the small ones. */
-const ORDER: ActiveHazardKind[] = ['pendulum', 'gasVent', 'crackedFloor', 'firePit', 'arrowWall', 'flameJet'];
+const ORDER: ActiveHazardKind[] = ['pendulum', 'gasVent', 'gasPipe', 'crackedFloor', 'firePit', 'arrowWall', 'flameJet'];
 
 function fill(s: Spot, kind: ActiveHazardKind, count: number): PlacedHazard[] {
   if (count <= 0) return [];

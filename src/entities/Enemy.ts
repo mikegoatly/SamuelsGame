@@ -417,8 +417,11 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     this.scene.time.delayedCall(ms + 30, () => this.alive && this.applyBaseTint());
   }
 
+  /** Movement multiplier from the ground underfoot (sludge channels), set each frame by the level's ChannelSystem. */
+  terrainSlow = 1;
+
   get speedFactor(): number {
-    return slowFactor(this.slow, this.clock.now) * this.mods.speedMultiplier;
+    return slowFactor(this.slow, this.clock.now) * this.mods.speedMultiplier * this.terrainSlow;
   }
 
   private get slowed(): boolean {

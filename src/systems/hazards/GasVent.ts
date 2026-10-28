@@ -17,8 +17,8 @@ const GAS = 0x9be84a;
 
 /** A floor grate that hisses for a second, then breathes a poison cloud that ticks damage on anyone inside. */
 export class GasVent extends HazardBase {
-  private readonly centre = rectCenter(this.spec.rect);
-  private readonly radius = this.spec.params.radius ?? 26;
+  protected readonly centre = rectCenter(this.spec.rect);
+  protected readonly radius = this.spec.params.radius ?? 26;
   private readonly ticks = new Cooldowns<unknown>();
   private readonly mist: Emitter;
   private readonly carry = { value: 0 };
@@ -63,12 +63,17 @@ export class GasVent extends HazardBase {
     }
   }
 
-  private paint(density: number, warn: number): void {
-    const { x, y } = this.centre;
-    const g = this.g.clear();
+  /** The resting look of the source: a floor grate (wall pipes draw nothing here, their sprite is the source). */
+  protected drawSource(g: Phaser.GameObjects.Graphics, x: number, y: number): void {
     g.fillStyle(0x14180c, 0.85).fillCircle(x, y, 7);
     g.lineStyle(2, 0x4a5a24, 1).strokeCircle(x, y, 7);
     for (let i = -1; i <= 1; i++) g.lineStyle(1, 0x050804, 1).lineBetween(x - 5, y + i * 2.5, x + 5, y + i * 2.5);
+  }
+
+  private paint(density: number, warn: number): void {
+    const { x, y } = this.centre;
+    const g = this.g.clear();
+    this.drawSource(g, x, y);
     if (density > 0) g.fillStyle(GAS, 0.1 + 0.22 * density).fillCircle(x, y, this.radius).lineStyle(2, GAS, 0.35 + 0.5 * density).strokeCircle(x, y, this.radius);
     if (warn > 0) {
       const pulse = Math.floor(warn * 8) % 2 === 0;

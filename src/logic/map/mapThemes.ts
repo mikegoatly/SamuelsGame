@@ -1,6 +1,10 @@
 import { Frame } from '../../content/assetKeys';
+import { SEWER_ENCOUNTERS } from '../../content/levels/sewerMonsters';
+import { RogueFrame } from '../../content/sewerFrames';
+import type { ChannelPlan } from '../layout/channels';
+import type { DecorPlan } from '../layout/decor';
 import type { BossHazard, HazardPlan } from '../hazard/plan';
-import { DESERT_PRESET, PALACE_PRESET, RUINS_PRESET, type LayoutPreset, type RandomPlan } from '../layoutPresets';
+import { DESERT_PRESET, PALACE_PRESET, RUINS_PRESET, SEWER_PRESET, type LayoutPreset, type RandomPlan } from '../layoutPresets';
 
 export interface Encounter {
   waves: number;
@@ -17,7 +21,7 @@ export interface MapTheme {
   /** Bigger grid, room shapes and side-room odds for runtime random maps (the preset above still gives sizes, order and cover). */
   random: RandomPlan;
   /** Variants are rolled in order against cumulative chances; anything left over is `base`. */
-  floor: { base: number; variants: { frame: number; chance: number }[] };
+  floor: { base: number; variants: readonly { frame: number; chance: number }[] };
   wall: { base: number; alt: readonly number[]; altChance: number; accent: number; accentChance: number };
   /** Solid obstacles painted into the wall layer (pillars, rocks, boulders...). */
   cover: readonly number[];
@@ -32,6 +36,12 @@ export interface MapTheme {
   bossHazard?: BossHazard;
   /** Adds `throne` objects to the boss arena (boss teleport destinations). */
   thrones?: boolean;
+  /** Which sheet the tile frames above index; the map lists a second tileset for 'rogue' (default Tiny Dungeon). */
+  sheet?: 'rogue';
+  /** Sludge channels across the combat rooms (each gets a flush hazard) and a moat round the boss island. */
+  channels?: ChannelPlan;
+  /** Moss, bones, drains and puddles scattered on open floor. */
+  decor?: DecorPlan;
 }
 
 export const RUINS_THEME: MapTheme = {
@@ -114,4 +124,21 @@ export const PALACE_THEME: MapTheme = {
   thrones: true,
 };
 
-export const THEMES: readonly MapTheme[] = [RUINS_THEME, DESERT_THEME, PALACE_THEME];
+export const SEWER_THEME: MapTheme = {
+  id: 'sewer',
+  seed: 8675309,
+  preset: SEWER_PRESET,
+  random: { gridCols: 5, gridRows: 3, shapes: ['plain', 'plain', 'ell', 'ell', 'pillared'], sideChance: 0.6 },
+  sheet: 'rogue',
+  floor: { base: RogueFrame.floor, variants: RogueFrame.floorVariants },
+  wall: { base: RogueFrame.wall, alt: RogueFrame.wallAlt, altChance: 0.4, accent: RogueFrame.wallBroken, accentChance: 0.05 },
+  cover: RogueFrame.cover,
+  encounters: [...SEWER_ENCOUNTERS],
+  quicksandPerRoom: 0,
+  hazards: { gasPipe: [0, 1, 1, 1, 2, 2] },
+  bossHazard: { kind: 'gasPipe', count: 2 },
+  channels: { thickness: [2, 3], bridges: [1, 2], moat: true },
+  decor: { perRoom: [5, 9], moss: RogueFrame.moss, bones: RogueFrame.bones },
+};
+
+export const THEMES: readonly MapTheme[] = [RUINS_THEME, DESERT_THEME, PALACE_THEME, SEWER_THEME];

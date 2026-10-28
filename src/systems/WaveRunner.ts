@@ -3,6 +3,7 @@ import { getEnemy } from '../content/enemies';
 import type { Player } from '../entities/Player';
 import type { Point, Rect } from '../logic/geometry';
 import { markerSpread, roomReady, spawnDistanceFor } from '../logic/groupSize';
+import { wallMountSpot } from '../logic/wallMount';
 import { pickRoleSpawn, type SpawnRole } from '../logic/spawnPoints';
 import { playerOnMarker } from '../logic/spawnMarker';
 import { pickBehindSpawn, type ScheduledSpawn, type WaveScheduler } from '../logic/waveSchedule';
@@ -11,9 +12,11 @@ import { SpawnMarkers } from './SpawnMarkers';
 import { feel } from './feel';
 import { playSfx } from './sfx';
 import { spawnSize } from './spawnSize';
+import { TILE_SIZE } from '../content/assetKeys';
 
 const MARKER_CLEARANCE = 26;
 const RELOCATED_MARKER_MS = 500;
+const MOUNT_SEARCH_TILES = 8;
 
 export interface WaveRunnerOptions {
   scene: Phaser.Scene;
@@ -73,16 +76,24 @@ export class WaveRunner {
     const arrive = (at: Point): void => {
       if (this.stopped) return;
       if (playerOnMarker(at, this.o.player, MARKER_CLEARANCE + spread)) {
-        this.markers.add(this.pick(spawn.role, size), this.o.player.now, arrive, size, spread, RELOCATED_MARKER_MS);
+        this.markers.add(this.pick(spawn.role, size, spawn.enemyId), this.o.player.now, arrive, size, spread, RELOCATED_MARKER_MS);
         return;
       }
       this.o.factory.spawnGroup(getEnemy(spawn.enemyId), spawn.level, at.x, at.y, spawn.affix);
       if (spawn.affix) playSfx(this.o.scene, 'eliteSpawn');
     };
-    this.markers.add(this.pick(spawn.role, size), now, arrive, size, spread);
+    this.markers.add(this.pick(spawn.role, size, spawn.enemyId), now, arrive, size, spread);
   }
 
-  private pick(role: SpawnRole | 'behind', size: number): Point {
+  /** Wall-mounted monsters (pipe spitters) get their marker on the wall edge they will sit on. */
+  private pick(role: SpawnRole | 'behind', size: number, enemyId: string): Point {
+    const at = this.pickOpen(role, size);
+    if (getEnemy(enemyId).custom !== 'spitter') return at;
+    const mount = wallMountSpot(at, this.o.isBlocked, TILE_SIZE, MOUNT_SEARCH_TILES);
+    return mount ? { x: mount.x, y: mount.y } : at;
+  }
+
+  private pickOpen(role: SpawnRole | 'behind', size: number): Point {
     const { rect, player, isBlocked, inset } = this.o;
     const minDistance = spawnDistanceFor(size, this.o.minDistance);
     return role === 'behind'

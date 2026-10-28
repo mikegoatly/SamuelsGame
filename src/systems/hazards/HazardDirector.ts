@@ -7,6 +7,8 @@ import { arrowWall } from './ArrowWall';
 import { crackedFloor } from './CrackedFloor';
 import { firePit } from './FirePit';
 import { flameJet } from './FlameJet';
+import { flush } from './Flush';
+import { gasPipe } from './GasPipe';
 import { gasVent } from './GasVent';
 import { pendulum } from './Pendulum';
 import { rubble } from './Rubble';
@@ -14,7 +16,7 @@ import { sandstorm } from './Sandstorm';
 import type { Hazard, HazardFactory, HazardWorld } from './types';
 import { windGust } from './WindGust';
 
-const FACTORIES: Record<ActiveHazardKind, HazardFactory> = { crackedFloor, rubble, gasVent, firePit, wind: windGust, sandstorm, arrowWall, pendulum, flameJet };
+const FACTORIES: Record<ActiveHazardKind, HazardFactory> = { crackedFloor, rubble, gasVent, firePit, wind: windGust, sandstorm, arrowWall, pendulum, flameJet, gasPipe, flush };
 
 /**
  * Builds every placed hazard from the map and runs them by room: dormant (drawn, no logic) until the player enters its room,

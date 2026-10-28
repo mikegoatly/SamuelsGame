@@ -19,10 +19,14 @@ export const Tex = {
   weaponsExtra: 'weapons-extra',
   /** Hand-drawn monster frames (public/assets/extra/monsters-extra.png), 16px tiles, 12 per row. */
   monsters: 'monsters-extra',
+  /** Hand-drawn sewer sprites (tools/add_sewer_frames.py, public/assets/extra/sewer-extra.png), 16px tiles, 12 per row. */
+  sewer: 'sewer-extra',
   /** Hand-drawn wearable crowns (tools/add_accessory_frames.py), 16px frames, one per column. */
   accessories: 'accessories-extra',
   /** Hand-drawn floor props (tools/add_prop_frames.py), 16px frames. */
   props: 'props-extra',
+  /** Roguelike Dungeon sheet (sewer terrain, public/assets/sewer), 16px frames with 1px spacing. */
+  rogue: 'roguelike-dungeon',
 } as const;
 
 /** Particle sprites the skill icons are built from (PreloadScene tints them), by skill id. */
@@ -52,6 +56,7 @@ export const MapKey = {
   ruins: 'ruins',
   desert: 'desert',
   palace: 'palace',
+  sewer: 'sewer',
 } as const;
 
 /** Music cache key -> file under assets/. */
@@ -129,6 +134,25 @@ export const Frame = {
 
 /** Frames of the hand-drawn monster sheet (tools/add_monster_frames.py). */
 export const MonsterFrame = { rat: 0, beetle: 1, skeleton: 2, wisp: 3, fin: 4, shark: 5, imp: 6, devil: 7, gargoyle: 8, cactus: 9 } as const;
+
+/** Frames of the hand-drawn sewer sheet (docs/assets-sewer.md). */
+export const SewerFrame = {
+  slimeSmall: 0,
+  slimeSmallSquash: 1,
+  slimeBig: 2,
+  slimeBigSquash: 3,
+  toadSit: 6,
+  toadLeap: 7,
+  gator: 8,
+  gatorJaws: 9,
+  mushroom: 10,
+  mushroomPuff: 11,
+  glob: 13,
+  splash: 14,
+  gas: [15, 16, 17] as readonly number[],
+  spitter: 18,
+  spitterFiring: 19,
+} as const;
 
 /** Frames of the hand-drawn prop sheet: the sewer grate is a pit, glowing eyes and bars layered in that order. */
 export const PropFrame = { grateBack: 0, grateBars: 1, eyesOpen: 2, eyesNarrow: 3 } as const;

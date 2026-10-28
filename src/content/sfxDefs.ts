@@ -70,6 +70,11 @@ export const SFX_DEFS = {
   plateClick: { files: ['uimove_0.ogg'], volume: 0.6, rate: 0.55 },
   arrowShot: { files: variants('shoot', 3), volume: 0.25, rate: 1.6, jitter: 0.06, minGapMs: 60 },
   drip: { files: ['potion_0.ogg'], volume: 0.18, rate: 2.2, jitter: 0.12, minGapMs: 1500 },
+  croak: { files: variants('croak', 2), volume: 0.4, jitter: 0.08, minGapMs: 250 },
+  snap: { files: variants('snap', 2), volume: 0.5, jitter: 0.06, minGapMs: 120 },
+  gurgle: { files: variants('gurgle', 2), volume: 0.45, jitter: 0.05, minGapMs: 1500 },
+  splash: { files: variants('splash', 2), volume: 0.4, jitter: 0.08, minGapMs: 100 },
+  squelch: { files: variants('squelch', 2), volume: 0.35, jitter: 0.08, minGapMs: 80 },
   bladeSwish: { files: variants('swing', 2), volume: 0.22, rate: 0.6, jitter: 0.08, minGapMs: 500 },
 } as const satisfies Record<string, SfxDef>;
 

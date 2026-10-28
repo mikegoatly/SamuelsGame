@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { Frame, TILE_SIZE, Tex } from '../content/assetKeys';
+import { SEWER_TINT } from '../content/sewerFrames';
 import type { Environment, LevelConfig } from '../content/levels';
 import type { Rect } from '../logic/geometry';
 import type { HazardSpec, LevelObjects } from '../logic/tiledObjects';
@@ -43,6 +44,8 @@ export interface LevelMap {
   doors?: DoorLayer;
   /** Quicksand patches in world px. */
   slowZones: Rect[];
+  /** Sludge channels in world px (also slow zones); only the sewer has any. */
+  channels: Rect[];
   /** Timed spike traps in world px. */
   spikes: HazardSpec[];
 }
@@ -61,7 +64,7 @@ export const ENVIRONMENT_TINT: Record<Environment, EnvironmentTint> = {
   ruins: uniform(0xc8d0c0),
   desert: { ground: 0xfff0d0, walls: 0xe6c48c },
   palace: { ground: 0xffffff, walls: 0xc4c8d8, checker: 0xd0c0ee },
-  sewer: uniform(0xa8c8a8),
+  sewer: { ground: SEWER_TINT.ground, walls: SEWER_TINT.walls },
   unknown: uniform(null),
 };
 
@@ -71,5 +74,5 @@ export function buildLevelMap(scene: Phaser.Scene, level: LevelConfig, mapKey = 
   const walls = buildRoom(scene);
   const { walls: tint } = ENVIRONMENT_TINT[level.environment];
   if (tint !== null) walls.setTint(tint);
-  return { walls, solid: [], slowZones: [], spikes: [], playerStart: { x: (ROOM_COLS * TILE_SIZE) / 2, y: (ROOM_ROWS * TILE_SIZE) / 2 } };
+  return { walls, solid: [], slowZones: [], channels: [], spikes: [], playerStart: { x: (ROOM_COLS * TILE_SIZE) / 2, y: (ROOM_ROWS * TILE_SIZE) / 2 } };
 }

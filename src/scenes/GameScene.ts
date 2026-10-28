@@ -26,6 +26,7 @@ import { SludgeSystem } from '../systems/SludgeSystem';
 import { HeroUnlocks } from '../systems/HeroUnlocks';
 import { EnemyFactory } from '../systems/EnemyFactory';
 import { GameEvents } from '../systems/GameEvents';
+import { ChannelSystem } from '../systems/ChannelSystem';
 import { HazardDirector } from '../systems/hazards/HazardDirector';
 import { floatText } from '../systems/floatText';
 import { InputController } from '../systems/InputController';
@@ -154,6 +155,12 @@ export class GameScene extends Phaser.Scene {
     const isSolid = (x: number, y: number): boolean => solidAt(walls, lookups, x, y);
     const avoid = map.world ? spawnAvoidRects(map.world) : [];
     const factory = new EnemyFactory(this, enemies, { target: player, events, shots, clock: this.clock, isBlocked: isSolid }, projectiles, avoid);
+    if (map.channels.length > 0) {
+      const sludge = (map.world?.hazards ?? []).filter((h) => h.kind === 'channel');
+      let room = 0;
+      events.on('room-started', (order: number) => (room = order));
+      factory.world.channels = () => sludge.filter((h) => h.room === room).map((h) => h.rect);
+    }
     exposeSpawner(factory, player);
     exposePerfOverlay(this, factory, projectiles, shots);
     const director = (this.director = this.createDirector(map, player, factory, events, blockedByRects(avoid, isSolid)));
@@ -166,6 +173,7 @@ export class GameScene extends Phaser.Scene {
 
     new MeleeSystem({ scene: this, player, enemies, shots, projectiles, isSolid });
     if (map.spikes.length > 0) new SpikeSystem(this, player, this.clock, map.spikes);
+    if (map.channels.length > 0) new ChannelSystem(this, player, enemies, this.clock, map.channels);
     if (map.world && map.world.active.length > 0) new HazardDirector({ scene: this, player, enemies, clock: this.clock, isSolid }, map.world, events);
 
     this.addColliders(map, player, enemies, projectiles, shots);

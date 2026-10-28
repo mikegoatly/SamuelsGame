@@ -46,7 +46,7 @@ const BOSS_XP_BONUS = 100;
 const TRANSIT_S = 6;
 const START_S = 4;
 /** Hits a standing player takes from one instance of each hazard over a room fight. */
-const HAZARD_EXPOSURE: Record<keyof typeof HAZARD_HITS, number> = { crackedFloor: 0.4, rubble: 0.5, gasVent: 0.6, firePit: 1, arrowWall: 1, pendulum: 0.8, flameJet: 0.6, spikes: 0.8 };
+const HAZARD_EXPOSURE: Record<keyof typeof HAZARD_HITS, number> = { crackedFloor: 0.4, rubble: 0.5, gasVent: 0.6, gasPipe: 0.6, firePit: 1, arrowWall: 1, pendulum: 0.8, flameJet: 0.6, spikes: 0.8 };
 
 /** Share of max health a standing player loses to the room's hazards. */
 function hazardShare(theme: Pick<MapTheme, 'hazards' | 'spikePairsPerRoom'>, order: number): number {
@@ -58,6 +58,9 @@ function hazardShare(theme: Pick<MapTheme, 'hazards' | 'spikePairsPerRoom'>, ord
   }
   return share;
 }
+
+/** Poison ticks of a bloat toad's cloud that a player who does not run takes on average. */
+const TOAD_CLOUD_TICKS = 2;
 
 /** Chance a bomb beetle blast lands. */
 const BLAST_CHANCE = 0.4;
@@ -84,6 +87,11 @@ const HIT_RATE: Record<string, number> = {
   twin: 0.3,
   houndmaster: MELEE_RATE,
   hound: MELEE_RATE,
+  blob: MELEE_RATE,
+  spitter: 0.15,
+  toad: 0.25,
+  gator: 0.25,
+  shroom: 0,
 };
 
 /** Slow bodies are easy to kite, so they catch a moving player less often than fast ones. */
@@ -99,6 +107,8 @@ export interface MonsterShot {
   def: EnemyDef;
   level: number;
   elite: boolean;
+  /** A split half: counts as a kill for xp but drops nothing. */
+  half?: boolean;
 }
 
 export interface RoomEstimate {
@@ -142,6 +152,7 @@ function expand(spawns: WaveSpawn[]): MonsterShot[] {
     const def = getEnemy(spawn.enemyId);
     if (!def.pack) {
       shots.push({ def, level: spawn.level, elite: spawn.affix !== undefined });
+      if (def.splitInto) for (let i = 0; i < def.splitInto.count; i++) shots.push({ def: getEnemy(def.splitInto.id), level: spawn.level, elite: false, half: true });
       continue;
     }
     const member = getEnemy(def.pack.member);
@@ -171,7 +182,8 @@ interface Foe {
 function threatOf({ def, level }: MonsterShot, playerLevel: number, ref: Reference, shotsPerSecond: number): { perSecond: number; onDeath: number } {
   let perSecond = CALIBRATION * rateOf(def) * damageToPlayer(def.custom === 'jester' ? def.blastDamage! : def.baseDamage, level, playerLevel);
   if (def.reflect) perSecond += CALIBRATION * reflectedPerSecond(def, level, playerLevel, ref, shotsPerSecond);
-  const onDeath = def.custom === 'beetle' && def.blastDamage ? damageToPlayer(def.blastDamage, level, playerLevel) * BLAST_CHANCE * CALIBRATION : 0;
+  const blasts = def.custom === 'toad' ? TOAD_CLOUD_TICKS : def.custom === 'beetle' ? 1 : 0;
+  const onDeath = blasts > 0 && def.blastDamage ? damageToPlayer(def.blastDamage, level, playerLevel) * blasts * BLAST_CHANCE * CALIBRATION : 0;
   return { perSecond, onDeath };
 }
 
@@ -248,7 +260,7 @@ export function estimateRoom(level: LevelConfig, order: number, encounter: Encou
     monsters += result.shots.length / SAMPLES;
     for (const shot of result.shots) {
       const table = lootTables[shot.def.lootTableId];
-      if (table) loot = addLoot(loot, expectedLoot(table, coinValue, shot.elite, healValue), 1 / SAMPLES);
+      if (table && !shot.half) loot = addLoot(loot, expectedLoot(table, coinValue, shot.elite, healValue), 1 / SAMPLES);
     }
   }
   standing += theme ? hazardShare(theme, order) * playerMaxHp(playerLevel) : 0;
