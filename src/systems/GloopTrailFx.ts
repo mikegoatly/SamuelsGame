@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
-import { GloopTrail, trailAlpha, TRAIL } from '../logic/gloopTrail';
+import { GloopTrail, trailAlpha, trailLimits, TRAIL } from '../logic/gloopTrail';
+import { feel } from './feel';
 import type { SkillWorld } from './skills/types';
 
 const GREEN = 0x7adf4a;
@@ -20,17 +21,18 @@ export class GloopTrailFx {
   private update(): void {
     const { player, clock } = this.world;
     const now = clock.now;
+    const { max, lifeMs } = trailLimits(feel.reduced);
     if (!player.dead) {
       const drop = player.isDashing || player.body!.velocity.lengthSq() > 100 ? this.trail.step(player.x, player.y + 5, now) : (this.trail.reset(), null);
       if (drop) {
-        const slot = this.blobs[this.next++ % this.blobs.length]!;
+        const slot = this.blobs[this.next++ % max]!;
         slot.bornAt = now;
         slot.shape.setPosition(drop.x, drop.y).setScale(player.scaleX).setVisible(true);
       }
     }
     for (const slot of this.blobs) {
       if (!slot.shape.visible) continue;
-      const alpha = trailAlpha(now - slot.bornAt);
+      const alpha = trailAlpha(now - slot.bornAt, lifeMs);
       slot.shape.setAlpha(alpha).setVisible(alpha > 0);
     }
   }

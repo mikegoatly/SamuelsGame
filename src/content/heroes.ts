@@ -21,6 +21,8 @@ export interface HeroDef {
   startingSkillId?: string;
   /** Shown on the locked card; hints at the unlock without spelling it out. */
   hint?: string;
+  /** A secret hero: no card at all on the hero select screen until unlocked. */
+  hidden?: boolean;
 }
 
 /** Low, medium and high ratings as multipliers for HP, speed and attack rate. */
@@ -152,6 +154,7 @@ export const gloop: HeroDef = {
   passive: { id: 'secondBlob', name: 'Second Blob', text: 'Once per level, a knockout hit shrinks him instead: back up at 30% HP.' },
   signatureWeaponId: 'sludgeSlinger',
   hint: "Some friends live where the light doesn't reach.",
+  hidden: true,
 };
 
 export const heroList: readonly HeroDef[] = [wizard, knight, rogue, dwarf, ranger, monk, necromancer, secret, gloop];

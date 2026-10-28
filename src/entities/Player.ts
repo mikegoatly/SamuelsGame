@@ -167,12 +167,12 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     const away = new Phaser.Math.Vector2(this.x - fromX, this.y - fromY).normalize().scale(120);
     this.setVelocity(away.x, away.y);
     this.events.emit('player-hurt');
-    this.events.emit('hp-changed', this.hp, this.maxHp);
-    if (this.hp <= 0) {
-      const outcome = this.knockouts.resolve(() => this.reviver?.() ?? false, feel.isLocked);
-      if (outcome === 'secondBlob') this.shrinkInstead();
-      else if (outcome === 'revive') this.revive();
-      else this.die();
+    const outcome = this.hp <= 0 ? this.knockouts.resolve(() => this.reviver?.() ?? false) : undefined;
+    if (outcome === 'secondBlob') this.shrinkInstead();
+    else if (outcome === 'revive') this.revive();
+    else {
+      this.events.emit('hp-changed', this.hp, this.maxHp);
+      if (outcome === 'die') this.die();
     }
     return 'hurt';
   }
@@ -248,18 +248,18 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     playSfx(this.scene, 'levelUp');
   }
 
-  /** Gloop's Second Blob: back up at 30% HP with a moment of safety, and smaller (so the body is too) for the rest of the run. */
+  /** Gloop's Second Blob: back up at 30% HP with a moment of safety, and smaller (so the body is too) for the rest of the run. The squash wobble only ever dips below the final size, so the body never grows into a wall. */
   private shrinkInstead(): void {
     this.hp = secondBlobHp(this.maxHp);
     this.timers.grantInvulnerability(this.clock.now, SECOND_BLOB.iframesMs);
     this.events.emit('hp-changed', this.hp, this.maxHp);
     floatText(this.scene, this.x, this.y - 16, 'SECOND BLOB!', '#7adf4a', 16, 24, 1500);
     playSfx(this.scene, 'levelUp');
-    if (feel.reduced) this.setScale(SECOND_BLOB.scale);
-    else {
-      sparkBurst(this.scene, this.x, this.y, 0x7adf4a, 14, 60);
-      this.scene.tweens.add({ targets: this, scaleX: { from: 1.35, to: SECOND_BLOB.scale }, scaleY: { from: 0.55, to: SECOND_BLOB.scale }, duration: 520, ease: 'Elastic.easeOut' });
-    }
+    this.setScale(SECOND_BLOB.scale);
+    (this.body as Phaser.Physics.Arcade.Body).updateFromGameObject();
+    if (feel.reduced) return;
+    sparkBurst(this.scene, this.x, this.y, 0x7adf4a, 14, 60);
+    this.scene.tweens.add({ targets: this, scaleX: { from: SECOND_BLOB.scale * 0.7, to: SECOND_BLOB.scale }, scaleY: { from: SECOND_BLOB.scale * 0.6, to: SECOND_BLOB.scale }, duration: 520, ease: 'Bounce.easeOut' });
   }
 
   private die(): void {
@@ -363,16 +363,18 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     const aim = this.aimDirection.angle();
     const spread = this.offhand ? DUAL_SPREAD : 0;
     const angle = this.weaponAngle(time) + spread;
-    const reach = (this.weapon.kind === 'melee' ? 11 : 8) - this.drawFraction * 2 + this.punchReach(time);
+    const size = this.scaleX;
+    const lift = 2 * size;
+    const reach = ((this.weapon.kind === 'melee' ? 11 : 8) - this.drawFraction * 2 + this.punchReach(time)) * size;
     if (this.offhand) {
       const mirrored = 2 * aim - angle;
       this.offhand
-        .setPosition(this.x + Math.cos(mirrored) * reach, this.y - 2 + Math.sin(mirrored) * reach)
+        .setPosition(this.x + Math.cos(mirrored) * reach, this.y - lift + Math.sin(mirrored) * reach)
         .setRotation(mirrored + Math.PI / 2)
         .setAlpha(alpha);
     }
     this.wand
-      .setPosition(this.x + Math.cos(angle) * reach, this.y - 2 + Math.sin(angle) * reach)
+      .setPosition(this.x + Math.cos(angle) * reach, this.y - lift + Math.sin(angle) * reach)
       .setRotation(angle + Math.PI / 2)
       .setScale(1 + this.drawFraction * 0.25)
       .setAlpha(alpha);

@@ -57,6 +57,7 @@ import { getHero, heroKit } from '../content/heroes';
 import { sewerCard } from '../content/cards';
 import { GrateSystem } from '../systems/GrateSystem';
 import { isLevelPlayable } from '../logic/levelRules';
+import { countsForPity } from '../logic/grate';
 import { discoverSewer, queueSewerNotice, recordGrateRun, SEWER_NOTICE } from '../logic/secrets';
 
 export interface GameSceneData {
@@ -125,8 +126,6 @@ export class GameScene extends Phaser.Scene {
     });
     const map = buildLevelMap(this, this.level, installRunMap(this, this.level, this.runMap));
     const { walls, playerStart } = map;
-    const countsForPity = data.runMap === undefined && this.runMap.side !== undefined && !FORCE_GRATE && devSeed() === undefined;
-    if (countsForPity) saveSystem.update((s) => recordGrateRun(s, (map.world?.grates.length ?? 0) > 0));
     const projectiles = createProjectilePool(this);
     const shots = new EnemyProjectiles(this);
     const weapon = weaponAtLevel(getWeapon(save.loadout.weapon), weaponLevel(save, save.loadout.weapon));
@@ -160,7 +159,7 @@ export class GameScene extends Phaser.Scene {
     const director = (this.director = this.createDirector(map, player, factory, events, blockedByRects(avoid, isSolid)));
     const skills = new SkillSystem({ scene: this, player, enemies, shots, clock: this.clock, isSolid, save: saveSystem, events });
     new HeroSystem({ scene: this, player, enemies, shots, clock: this.clock, isSolid }, events);
-    new SludgeSystem({ scene: this, player, enemies, shots, clock: this.clock, isSolid });
+    if (player.weapon.lob) new SludgeSystem({ scene: this, player, enemies, shots, clock: this.clock, isSolid });
     this.unlocks = new HeroUnlocks(this, player, events, saveSystem, player.hero.id, this.level.id, this.level.bossId, (ids) => this.announceHeroes(ids));
     this.acquisition = new SkillAcquisition(this, saveSystem, skills, this.cards);
     const loot = new LootSystem(this, player, events, this.run, saveSystem, this.clock, this.cards, this.acquisition);
@@ -186,6 +185,12 @@ export class GameScene extends Phaser.Scene {
       this.celebrateLevelUp(player);
       this.persistProgress();
       this.offerLevelUpCard(level);
+    });
+    let pityPending = countsForPity({ retry: data.runMap !== undefined, hasPlan: this.runMap.side !== undefined, dev: FORCE_GRATE || devSeed() !== undefined });
+    events.on('room-started', () => {
+      if (!pityPending) return;
+      pityPending = false;
+      saveSystem.update((s) => recordGrateRun(s, (map.world?.grates.length ?? 0) > 0));
     });
     events.on('player-died', () => this.endRun(director));
     events.on('pause-requested', () => this.pauseGame());
@@ -271,7 +276,7 @@ export class GameScene extends Phaser.Scene {
     if (climb) {
       if (first) saveSystem.update(queueSewerNotice);
       const sewer = getLevel(SEWER_ID);
-      if (isLevelPlayable(sewer)) this.leaveRun('Game', { levelId: sewer.id });
+      if (isLevelPlayable(sewer)) this.leaveRun('Game', { levelId: sewer.id, heroic: false });
       else this.leaveRun('LevelSelect', { focusLevelId: sewer.id });
       return;
     }

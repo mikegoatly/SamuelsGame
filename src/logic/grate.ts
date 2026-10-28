@@ -24,3 +24,6 @@ export function chooseSidePlan({ levelId, sewerFound, runsWithoutGrate, rng }: G
 
 /** The pity counter after a random desert run started: reset by a grate, one more without. */
 export const nextRunsWithoutGrate = (count: number, grated: boolean): number => (grated ? 0 : count + 1);
+
+/** Only a fresh, normal random desert run moves the pity counter (and only once it really starts). */
+export const countsForPity = ({ retry, hasPlan, dev }: { retry: boolean; hasPlan: boolean; dev: boolean }): boolean => !retry && hasPlan && !dev;

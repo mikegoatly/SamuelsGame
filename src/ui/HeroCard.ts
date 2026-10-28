@@ -10,7 +10,7 @@ const FOCUS_FILL = 0x3a3166;
 const SELECTED_FILL = 0x4a4020;
 const LOCKED_STROKE = 0x4a4660;
 const SILHOUETTE = 0x15121f;
-const PIP = 7;
+const PIP = 6;
 const PIP_GAP = 2;
 const STATS: readonly { label: string; read: (hero: HeroDef) => number }[] = [
   { label: 'HP', read: (hero) => hero.stats.maxHp },
@@ -41,26 +41,26 @@ export class HeroCard implements MenuItem {
     this.area = scene.add.rectangle(x, y, width, height, IDLE_FILL).setStrokeStyle(2, this.accent);
     const top = y - height / 2;
     const left = x - width / 2;
-    gameText(scene, x, top + 11, unlocked ? hero.className : '???', 16, { color: unlocked ? '#ffffff' : '#7878a0' }).setOrigin(0.5);
-    const sprite = scene.add.image(left + 30, top + height - 30, Tex.tiles, hero.frame).setScale(3);
+    gameText(scene, x, top + 9, unlocked ? hero.className : '???', 16, { color: unlocked ? '#ffffff' : '#7878a0' }).setOrigin(0.5);
+    const sprite = scene.add.image(left + 22, top + height - 22, Tex.tiles, hero.frame).setScale(2);
     if (!unlocked) sprite.setTint(SILHOUETTE);
     else if (hero.tint !== null) sprite.setTint(hero.tint);
     if (unlocked && crownFrame !== undefined) {
       const offset = headOffset(hero.id, false);
-      scene.add.image(sprite.x + offset.x * 3, sprite.y + offset.y * 3, Tex.accessories, crownFrame).setScale(3);
+      scene.add.image(sprite.x + offset.x * 2, sprite.y + offset.y * 2, Tex.accessories, crownFrame).setScale(2);
     }
-    if (unlocked) this.drawStats(left + 62, top + 29);
-    else gameText(scene, left + 62, top + height - 30, 'Locked', 16, { color: '#7878a0' }).setOrigin(0, 0.5);
+    if (unlocked) this.drawStats(left + 44, top + 24);
+    else gameText(scene, left + 44, top + height - 22, 'Locked', 16, { color: '#7878a0' }).setOrigin(0, 0.5);
   }
 
   private drawStats(x: number, y: number): void {
     STATS.forEach(({ label, read }, row) => {
-      const rowY = y + row * 15;
+      const rowY = y + row * 12;
       gameText(this.scene, x, rowY, label, 16, { color: '#b0b0c8' }).setOrigin(0, 0.5);
       const pips = ratingPips(read(this.hero));
       for (let i = 0; i < 3; i++) {
         const color = i < pips ? this.accent : 0x3a3652;
-        this.scene.add.rectangle(x + 30 + i * (PIP + PIP_GAP), rowY, PIP, PIP + 3, color).setOrigin(0, 0.5);
+        this.scene.add.rectangle(x + 28 + i * (PIP + PIP_GAP), rowY, PIP, PIP + 2, color).setOrigin(0, 0.5);
       }
     });
   }

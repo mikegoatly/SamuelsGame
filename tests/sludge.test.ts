@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { weaponDps } from '../src/content/weaponDps';
 import { apprenticeStaff, brokenWand, sludgeSlinger, weaponAtLevel } from '../src/content/weapons';
 import { lobDistance, lobFlightMs, lobHeight, lobPosition, lobProgress, SLUDGE } from '../src/logic/sludge';
-import { GloopTrail, trailAlpha, TRAIL } from '../src/logic/gloopTrail';
+import { GloopTrail, trailAlpha, trailLimits, TRAIL } from '../src/logic/gloopTrail';
 import { expectClose } from './builders';
 
 describe('lobDistance', () => {
@@ -106,6 +106,16 @@ describe('trail', () => {
     trail.step(0, 0, 0);
     trail.reset();
     expect(trail.step(500, 500, 1000)).toBeNull();
+  });
+
+  it('uses fewer blobs with a shorter life when reducing flashes', () => {
+    const normal = trailLimits(false);
+    const reduced = trailLimits(true);
+    expect(normal).toEqual({ max: TRAIL.max, lifeMs: TRAIL.lifeMs });
+    expect(reduced.max).toBeLessThan(normal.max);
+    expect(reduced.lifeMs).toBeLessThan(normal.lifeMs);
+    expectClose(trailAlpha(reduced.lifeMs, reduced.lifeMs), 0);
+    expect(trailAlpha(reduced.lifeMs / 2, reduced.lifeMs)).toBeGreaterThan(0);
   });
 
   it('caps live blobs', () => {

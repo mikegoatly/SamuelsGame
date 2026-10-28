@@ -18,6 +18,10 @@ export class DotTracker<K> {
     return this.entries.has(key);
   }
 
+  hasEntries(): boolean {
+    return this.entries.size > 0;
+  }
+
   clear(): void {
     this.entries.clear();
   }

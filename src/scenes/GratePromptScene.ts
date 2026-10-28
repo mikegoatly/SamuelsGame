@@ -12,8 +12,15 @@ const BORDER = 0x7dd86a;
 
 /** Modal over the paused game when the player steps onto the sewer grate: Climb down, or Not now (the default, so a mashed button never loses a desert run). */
 export class GratePromptScene extends MenuScene {
+  private chosen = false;
+
   constructor() {
     super('GratePrompt');
+  }
+
+  override create(): void {
+    this.chosen = false;
+    super.create();
   }
 
   protected build(): void {
@@ -34,7 +41,8 @@ export class GratePromptScene extends MenuScene {
   }
 
   private choose(climb: boolean): void {
-    if (!this.inputReady(INPUT_DELAY_MS)) return;
+    if (this.chosen || !this.inputReady(INPUT_DELAY_MS)) return;
+    this.chosen = true;
     (this.scene.get('Game') as GameScene).resolveGrate(climb);
   }
 }

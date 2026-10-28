@@ -18,20 +18,24 @@ import { zonesFor } from './skills/ZoneField';
 const GOO = 0x7adf4a;
 const HIT_REACH = 5;
 
-interface Flying {
-  weapon: WeaponDef;
-  from: { x: number; y: number };
-  to: { x: number; y: number };
-  startedAt: number;
-  flightMs: number;
+interface Parts {
   blob: Phaser.GameObjects.Image;
   shadow: Phaser.GameObjects.Ellipse;
   marker: Phaser.GameObjects.Arc;
 }
 
+interface Flying extends Parts {
+  weapon: WeaponDef;
+  from: { x: number; y: number };
+  to: { x: number; y: number };
+  startedAt: number;
+  flightMs: number;
+}
+
 /** Sludge Slinger: lobs a blob in an arc to the aim point (a ring marks the landing); it bursts on landing, on an enemy or on a wall for a small blast and leaves a slowing puddle. Level 5: puddles also poison. */
 export class SludgeSystem {
   private readonly flying = new Set<Flying>();
+  private readonly spare: Parts[] = [];
   private readonly puddles: (() => void)[] = [];
   private readonly poison = new DotTracker<Enemy>();
   private poisonDamage = 0;
@@ -49,15 +53,26 @@ export class SludgeSystem {
     const from = { x: x + direction.x * 10, y: y + direction.y * 10 };
     const to = aimPoint(from, direction, Math.max(0, distance - 10), isSolid);
     const flightMs = lobFlightMs(Math.hypot(to.x - from.x, to.y - from.y), weapon.speed);
-    const blob = scene.add.image(from.x, from.y, Tex.tiles, Frame.blob).setDepth(10);
-    const shadow = scene.add.ellipse(from.x, from.y, 8, 4, 0x000000, 0.3).setDepth(2);
-    const marker = scene.add.circle(to.x, to.y, 7, GOO, 0.12).setStrokeStyle(1, GOO, 0.8).setDepth(2);
-    this.flying.add({ weapon, from, to, startedAt: clock.now, flightMs, blob, shadow, marker });
+    const parts = this.spare.pop() ?? this.makeParts();
+    parts.blob.setPosition(from.x, from.y).setVisible(true);
+    parts.shadow.setPosition(from.x, from.y).setVisible(true);
+    parts.marker.setPosition(to.x, to.y).setVisible(true);
+    this.flying.add({ ...parts, weapon, from, to, startedAt: clock.now, flightMs });
     playSfx(scene, 'shoot', { rate: 0.6, volume: 0.9 });
     muzzleFlash(scene, from.x, from.y, aim, GOO);
   }
 
+  private makeParts(): Parts {
+    const { scene } = this.world;
+    return {
+      blob: scene.add.image(0, 0, Tex.tiles, Frame.blob).setDepth(10),
+      shadow: scene.add.ellipse(0, 0, 8, 4, 0x000000, 0.3).setDepth(2),
+      marker: scene.add.circle(0, 0, 7, GOO, 0.12).setStrokeStyle(1, GOO, 0.8).setDepth(2),
+    };
+  }
+
   private update(): void {
+    if (this.flying.size === 0 && !this.poison.hasEntries()) return;
     if (runOver(this.world)) {
       for (const item of this.flying) this.discard(item);
       this.flying.clear();
@@ -65,7 +80,7 @@ export class SludgeSystem {
       return;
     }
     const now = this.world.clock.now;
-    for (const item of [...this.flying]) {
+    for (const item of this.flying) {
       const t = lobProgress(now - item.startedAt, item.flightMs);
       const at = lobPosition(item.from, item.to, t, SLUDGE.arcPeak);
       item.blob.setPosition(at.x, at.y - at.lift).setRotation(t * 6);
@@ -80,11 +95,15 @@ export class SludgeSystem {
 
   private hitsSomething(at: { x: number; y: number }): boolean {
     if (this.world.isSolid(at.x, at.y)) return true;
-    return liveEnemies(this.world.enemies).some((e) => Phaser.Math.Distance.Between(at.x, at.y, e.x, e.y) <= e.displayWidth / 2 + HIT_REACH);
+    for (const e of this.world.enemies.getChildren() as Enemy[]) {
+      if (e.active && e.alive && e.targetable && Phaser.Math.Distance.Between(at.x, at.y, e.x, e.y) <= e.displayWidth / 2 + HIT_REACH) return true;
+    }
+    return false;
   }
 
   private discard(item: Flying): void {
-    for (const object of [item.blob, item.shadow, item.marker]) object.destroy();
+    for (const object of [item.blob, item.shadow, item.marker]) object.setVisible(false);
+    this.spare.push({ blob: item.blob, shadow: item.shadow, marker: item.marker });
   }
 
   private burst(item: Flying, at: { x: number; y: number }): void {

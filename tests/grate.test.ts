@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { chooseSidePlan, FORCED_GRATE, GRATE_PITY_RUNS, nextRunsWithoutGrate } from '../src/logic/grate';
+import { chooseSidePlan, countsForPity, FORCED_GRATE, GRATE_PITY_RUNS, nextRunsWithoutGrate } from '../src/logic/grate';
 import { mulberry32 } from '../src/logic/rng';
 
 const plan = (over: Partial<Parameters<typeof chooseSidePlan>[0]> = {}) =>
@@ -71,5 +71,17 @@ describe('nextRunsWithoutGrate', () => {
       count = nextRunsWithoutGrate(count, forced);
     }
     expect(history).toEqual([false, false, false, true, false]);
+  });
+});
+
+describe('countsForPity', () => {
+  const run = { retry: false, hasPlan: true, dev: false };
+  it.each([
+    ['a fresh random desert run', run, true],
+    ['a retry', { ...run, retry: true }, false],
+    ['a map without a side plan (classic, other levels)', { ...run, hasPlan: false }, false],
+    ['a dev override', { ...run, dev: true }, false],
+  ])('%s', (_, input, expected) => {
+    expect(countsForPity(input)).toBe(expected);
   });
 });
