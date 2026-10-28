@@ -50,6 +50,8 @@ export interface WeaponDef {
   projectileFrame?: number;
   /** Lobbed in an arc to a landing point instead of flying straight (Sludge Slinger). */
   lob?: boolean;
+  /** Thrown straight through every enemy in its path, then sticks in the floor or a wall (Javelin). */
+  javelin?: boolean;
   /** What level 5 adds. */
   twist?: WeaponTwist;
   /** Upgrade level of this copy (1 when unset). */
@@ -190,7 +192,23 @@ export const sludgeSlinger: WeaponDef = {
   description: 'Lobs goo that leaves a slowing puddle',
 };
 
-export const weaponList: readonly WeaponDef[] = [apprenticeStaff, brokenWand, goldenSword, twinDaggers, hammer, bow, fists, sludgeSlinger];
+/** Slow heavy throw through every enemy in line. One target: 20 per 700ms = 28.6 DPS (between the staff 18.8 and the wand 40); two in a line already beat the wand and the bow. */
+export const javelin: WeaponDef = {
+  id: 'javelin',
+  kind: 'ranged',
+  name: 'Javelin',
+  frame: Frame.javelin,
+  baseDamage: 20,
+  fireRateMs: 700,
+  speed: 320,
+  range: 260,
+  tint: null,
+  javelin: true,
+  twist: 'stickBurst',
+  description: 'Slow throw that pierces every enemy in line',
+};
+
+export const weaponList: readonly WeaponDef[] = [apprenticeStaff, brokenWand, goldenSword, twinDaggers, hammer, bow, fists, sludgeSlinger, javelin];
 
 export const weapons: Record<string, WeaponDef> = Object.fromEntries(weaponList.map((weapon) => [weapon.id, weapon]));
 

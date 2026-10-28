@@ -61,6 +61,8 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   meleeHandler?: (x: number, y: number, aim: number, weapon: WeaponDef) => { reverse: boolean } | undefined;
   /** Called when a charged weapon's draw is released (bow); `fraction` is 0..1 of a full draw. */
   bowHandler?: (x: number, y: number, aim: number, fraction: number, weapon: WeaponDef) => void;
+  /** Called when the Javelin is thrown. */
+  javelinHandler?: (x: number, y: number, aim: number, weapon: WeaponDef) => void;
   /** Called when a lobbed weapon (Sludge Slinger) fires: `distance` is how far the blob should land. */
   lobHandler?: (x: number, y: number, aim: number, distance: number, weapon: WeaponDef) => void;
   /** How far the bow is drawn right now, 0..1. */
@@ -316,6 +318,10 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     if (!this.controls.fire || !this.timers.tryFire(now, this.fireRateMs)) return;
     if (this.weapon.kind === 'melee') {
       this.swingSword(now);
+      return;
+    }
+    if (this.weapon.javelin) {
+      this.javelinHandler?.(this.x, this.y - 2, this.aimDirection.angle(), this.weapon);
       return;
     }
     if (this.weapon.lob) {

@@ -1,5 +1,5 @@
 export type BossPhase = 1 | 2;
-export type BossMode = 'chase' | 'telegraph' | 'dash' | 'burrowed' | 'rising';
+export type BossMode = 'chase' | 'telegraph' | 'dash' | 'burrowed' | 'rising' | 'leap';
 
 interface Timer {
   /** Delay before the first use, counted from the fight start (or from entering a phase that introduces the attack). */
@@ -34,6 +34,17 @@ export interface SpitAttack extends Timer {
   count: number;
   /** Total fan angle of the aimed volley, radians. */
   arc: number;
+  /** When set, the boss stops and warns for this long (aimed once, at the start) before the volley, instead of firing at once. */
+  windupMs?: number;
+}
+
+/** Warns with a growing circle where she will land, leaps there for the last `flightMs` of the warning, and slams on landing. */
+export interface HopAttack extends Timer {
+  kind: 'hop';
+  cooldownMs: number;
+  telegraphMs: number;
+  flightMs: number;
+  radius: number;
 }
 
 export interface SummonAttack extends Timer {
@@ -90,7 +101,7 @@ export interface SeekAttack extends Timer {
   speedFactor: number;
 }
 
-export type BossAttack = SlamAttack | BurrowAttack | BurstAttack | SpitAttack | SummonAttack | LungeAttack | TeleportAttack | SpiralAttack | SeekAttack;
+export type BossAttack = SlamAttack | HopAttack | BurrowAttack | BurstAttack | SpitAttack | SummonAttack | LungeAttack | TeleportAttack | SpiralAttack | SeekAttack;
 type AttackKind = BossAttack['kind'];
 
 export interface BossPhaseConfig {
@@ -107,6 +118,10 @@ export interface BossBrainConfig {
 export type BossAction =
   | { type: 'telegraph'; radius: number; durationMs: number }
   | { type: 'slam' }
+  | { type: 'hopTelegraph'; radius: number; durationMs: number; flightMs: number }
+  | { type: 'hopLaunch'; flightMs: number }
+  | { type: 'land'; radius: number }
+  | { type: 'telegraphFan'; count: number; arc: number; durationMs: number }
   | { type: 'burrow'; travelMs: number }
   | { type: 'emerge'; radius: number }
   | { type: 'burst'; count: number }
@@ -132,6 +147,8 @@ export interface BossState {
   current: BossAttack | null;
   /** When the boss went underground; timed attacks are pushed back by the time spent there. */
   hiddenAt: number;
+  /** When a hop leaves the ground (0 when none is pending). */
+  launchAt: number;
   /** Follow-up lunges still to come in the current combo. */
   chain: number;
   /** Next time each attack kind may fire. */
@@ -150,7 +167,7 @@ export function phaseAttack<K extends AttackKind>(config: BossBrainConfig, phase
 export function newBossState(config: BossBrainConfig, now: number): BossState {
   const due: BossState['due'] = {};
   for (const attack of config.phases[1].attacks) due[attack.kind] = now + attack.firstMs;
-  return { phase: 1, mode: 'chase', strikeAt: 0, active: null, current: null, hiddenAt: 0, chain: 0, due };
+  return { phase: 1, mode: 'chase', strikeAt: 0, active: null, current: null, hiddenAt: 0, launchAt: 0, chain: 0, due };
 }
 
 const hidden = (mode: BossMode): boolean => mode === 'burrowed' || mode === 'rising';
@@ -175,8 +192,19 @@ const TIMED: readonly AttackKind[] = ['burst', 'spit', 'summon', 'spiral', 'seek
 
 function advanceSequence(s: BossState, now: number, out: BossAction[]): void {
   const attack = s.current;
+  if (attack?.kind === 'hop' && s.mode === 'telegraph' && s.launchAt > 0 && now >= s.launchAt) {
+    s.mode = 'leap';
+    s.launchAt = 0;
+    out.push({ type: 'hopLaunch', flightMs: attack.flightMs });
+  }
   if (now < s.strikeAt || !attack) return;
-  if (s.mode === 'telegraph' && attack.kind === 'slam') {
+  if (s.mode === 'leap' && attack.kind === 'hop') {
+    finish(s, 'hop', now + attack.cooldownMs);
+    out.push({ type: 'land', radius: attack.radius });
+  } else if (s.mode === 'telegraph' && attack.kind === 'spit') {
+    finish(s, 'spit', now + attack.everyMs);
+    out.push({ type: 'spit', count: attack.count, arc: attack.arc });
+  } else if (s.mode === 'telegraph' && attack.kind === 'slam') {
     finish(s, 'slam', now + attack.cooldownMs);
     out.push({ type: 'slam' });
   } else if (s.mode === 'telegraph' && attack.kind === 'lunge') {
@@ -220,6 +248,17 @@ function startSequence(attacks: BossAttack[], s: BossState, now: number, out: Bo
       out.push({ type: 'telegraph', radius: attack.radius, durationMs: attack.telegraphMs });
       return;
     }
+    if (attack.kind === 'hop') {
+      begin(s, attack, 'telegraph', now + attack.telegraphMs);
+      s.launchAt = now + attack.telegraphMs - attack.flightMs;
+      out.push({ type: 'hopTelegraph', radius: attack.radius, durationMs: attack.telegraphMs, flightMs: attack.flightMs });
+      return;
+    }
+    if (attack.kind === 'spit' && attack.windupMs) {
+      begin(s, attack, 'telegraph', now + attack.windupMs);
+      out.push({ type: 'telegraphFan', count: attack.count, arc: attack.arc, durationMs: attack.windupMs });
+      return;
+    }
     if (attack.kind === 'lunge') {
       begin(s, attack, 'telegraph', now + attack.telegraphMs);
       s.chain = (attack.lunges ?? 1) - 1;
@@ -247,11 +286,14 @@ function begin(s: BossState, attack: BossAttack, mode: BossMode, strikeAt: numbe
   s.strikeAt = strikeAt;
 }
 
-const SEQUENCED: readonly AttackKind[] = ['slam', 'burrow', 'lunge', 'teleport'];
+const SEQUENCED: readonly AttackKind[] = ['slam', 'hop', 'burrow', 'lunge', 'teleport'];
+
+/** A spit with a windup is a sequenced attack (the boss stops and warns); without one it fires on its timer. */
+const sequenced = (attack: BossAttack): boolean => SEQUENCED.includes(attack.kind) || (attack.kind === 'spit' && !!attack.windupMs);
 
 function fireTimed(attacks: BossAttack[], s: BossState, now: number, out: BossAction[]): void {
   for (const attack of attacks) {
-    if (SEQUENCED.includes(attack.kind) || !TIMED.includes(attack.kind)) continue;
+    if (sequenced(attack) || !TIMED.includes(attack.kind)) continue;
     if ((s.due[attack.kind] ?? Infinity) > now) continue;
     s.due[attack.kind] = now + (attack as { everyMs: number }).everyMs;
     if (attack.kind === 'burst') out.push({ type: 'burst', count: attack.count });

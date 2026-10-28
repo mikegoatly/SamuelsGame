@@ -1,6 +1,6 @@
-"""Draws the hand-made weapon frames (0 bow, 1 arrow, 2 fist, 3 sludge slinger, 4 goo blob) into public/assets/extra/weapons-extra.png.
+"""Draws the hand-made weapon frames (0 bow, 1 arrow, 2 fist, 3 sludge slinger, 4 goo blob, 5 javelin) into public/assets/extra/weapons-extra.png.
 
-The game merges that strip into the Tiny Dungeon texture at load (frames 132-136), so Kenney's sheet stays stock.
+The game merges that strip into the Tiny Dungeon texture at load (frames 132-137), so Kenney's sheet stays stock.
 Run: python tools/add_weapon_frames.py   (needs Pillow)
 """
 import math
@@ -95,8 +95,21 @@ def blob() -> dict:
     return outlined(px)
 
 
+def javelin() -> dict:
+    px = {(7, y): LIGHT for y in range(4, 14)}
+    px.update({(8, y): WOOD for y in range(4, 14)})
+    for y in (6, 9):
+        px[(7, y)] = px[(8, y)] = DARK_RED
+    for x, y in [(7, 0), (8, 0), (6, 1), (7, 1), (8, 1), (9, 1), (6, 2), (7, 2), (8, 2), (9, 2), (6, 3), (7, 3), (8, 3), (9, 3)]:
+        px[(x, y)] = STEEL
+    px[(7, 1)] = px[(7, 2)] = (234, 240, 250, 255)
+    for x, y in [(7, 14), (8, 14), (7, 15), (8, 15), (6, 14), (9, 14)]:
+        px[(x, y)] = RED
+    return outlined(px)
+
+
 def main() -> None:
-    arts = [bow(), arrow(), fist(), slinger(), blob()]
+    arts = [bow(), arrow(), fist(), slinger(), blob(), javelin()]
     out = Image.new('RGBA', (16 * len(arts), 16), (0, 0, 0, 0))
     for column, art in enumerate(arts):
         for (x, y), colour in art.items():

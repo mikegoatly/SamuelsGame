@@ -52,11 +52,12 @@ class GroundEffects {
   }
 
   /** A puddle of goo that slows the player (as quicksand does) until it dries up. */
-  puddle(player: Player, x: number, y: number, owner: unknown): void {
-    const zone = puddleZone({ x, y }, PUDDLE.radius);
+  puddle(player: Player, x: number, y: number, owner: unknown, size: { radius?: number; ttlMs?: number } = {}): void {
+    const radius = size.radius ?? PUDDLE.radius;
+    const zone = puddleZone({ x, y }, radius);
     const now = this.clock.now;
-    const shape = this.scene.add.circle(x, y, PUDDLE.radius, GOO, 0.5).setStrokeStyle(1, 0x2f7a2a, 0.7).setDepth(2).setScale(1, 0.7);
-    this.puddles.push({ zone, shape, born: now, until: now + PUDDLE.ttlMs, player, owner });
+    const shape = this.scene.add.circle(x, y, radius, GOO, 0.5).setStrokeStyle(1, 0x2f7a2a, 0.7).setDepth(2).setScale(1, 0.7);
+    this.puddles.push({ zone, shape, born: now, until: now + (size.ttlMs ?? PUDDLE.ttlMs), player, owner });
     player.slowZones.push(zone);
     const evict = puddleToEvict(this.puddles.map((p) => p.owner), owner, PUDDLE.maxPerBlob, PUDDLE.maxTotal);
     if (evict >= 0) this.dropPuddle(evict);

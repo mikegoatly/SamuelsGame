@@ -15,6 +15,7 @@ const CASES = [
   { level: ruins, theme: RUINS_THEME },
   { level: desert, theme: DESERT_THEME },
   { level: palace, theme: PALACE_THEME },
+  { level: sewer, theme: SEWER_THEME },
 ];
 
 /** Each level entered at its recommended level, and the whole journey with the player carrying their level over. */

@@ -282,13 +282,19 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     }
     if (strike.stunMs > 0) this.stun(strike.stunMs);
     this.cancelDash();
-    if (!this.def.boss) {
-      const knock = new Phaser.Math.Vector2(directionX, directionY).normalize().scale(KNOCKBACK_SPEED * knockback);
+    const push = this.knockbackScale;
+    if (push > 0) {
+      const knock = new Phaser.Math.Vector2(directionX, directionY).normalize().scale(KNOCKBACK_SPEED * knockback * push);
       this.setVelocity(knock.x, knock.y);
       this.knockbackUntil = this.clock.now + KNOCKBACK_MS;
     }
     this.setTintFill(0xffffff);
     this.scene.time.delayedCall(80, () => this.alive && this.applyBaseTint());
+  }
+
+  /** How much of a hit's shove this monster takes: bosses none, unless a boss overrides it (Mother Sludge's pieces take a little). */
+  protected get knockbackScale(): number {
+    return this.def.boss ? 0 : 1;
   }
 
   flashShield(): void {
@@ -537,6 +543,16 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     this.destroy();
   }
 
+  /** The level its kill pays xp for (a split boss's intermediate pieces pay next to nothing: the family pays once). */
+  protected get killLevel(): number {
+    return this.level;
+  }
+
+  /** The loot table this monster drops on death ('' for none). */
+  protected dropTable(): string {
+    return grantsLoot({ split: this.small, raised: this.raised }) ? this.def.lootTableId : '';
+  }
+
   protected die(): void {
     this.alive = false;
     this.disableBody();
@@ -546,7 +562,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     this.behaviour?.onDeath?.();
     this.mods.onDeath();
     this.recordCorpse();
-    this.events.emit('enemy-died', this.level, this.x, this.y, grantsLoot({ split: this.small, raised: this.raised }) ? this.def.lootTableId : '', this.def.boss === true, this.lastHit === 'ally', this.isElite);
+    this.events.emit('enemy-died', this.killLevel, this.x, this.y, this.dropTable(), this.def.boss === true, this.lastHit === 'ally', this.isElite);
     deathBurst(this.scene, this.x, this.y, deathTint(this.def.id, this.def.tint), this.def.boss === true);
     playSfx(this.scene, 'enemyDie');
     this.scene.tweens.killTweensOf(this);

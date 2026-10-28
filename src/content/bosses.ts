@@ -68,3 +68,33 @@ export const madKingBrain: BossBrainConfig = {
     },
   },
 };
+
+/** Mother Sludge: leaps with a growing shadow, spits a fan of slow globs after a warning stance and calls two blobs now and then. She splits at 66% (see logic/bossSplit), so there is one phase. */
+export const motherSludgeBrain: BossBrainConfig = (() => {
+  const phase = {
+    speedMultiplier: 1,
+    attacks: [
+      { kind: 'hop' as const, firstMs: 3500, cooldownMs: 4200, telegraphMs: 1100, flightMs: 450, radius: 46 },
+      { kind: 'spit' as const, firstMs: 2500, everyMs: 5200, count: 5, arc: 1.2, windupMs: 800 },
+      { kind: 'summon' as const, firstMs: 9000, everyMs: 20000, count: 2, minion: 'sludgeBlob', levelDrop: 2, maxAlive: 4 },
+    ],
+  };
+  return { phaseTwoAt: 0, phases: { 1: phase, 2: phase } };
+})();
+
+const hopAndSpit = (hop: { firstMs: number; cooldownMs: number; telegraphMs: number; flightMs: number; radius: number }, spit: { firstMs: number; everyMs: number; count: number; arc: number; windupMs: number }): BossBrainConfig => {
+  const phase = { speedMultiplier: 1, attacks: [{ kind: 'hop' as const, ...hop }, { kind: 'spit' as const, ...spit }] };
+  return { phaseTwoAt: 0, phases: { 1: phase, 2: phase } };
+};
+
+/** The two halves: quicker hops, a smaller fan of globs, no summoning. */
+export const sludgelingBrain = hopAndSpit(
+  { firstMs: 2500, cooldownMs: 3800, telegraphMs: 900, flightMs: 400, radius: 34 },
+  { firstMs: 4000, everyMs: 4800, count: 3, arc: 0.8, windupMs: 700 },
+);
+
+/** The four small ones: the fastest hoppers, a thin spit. */
+export const sludgeletBrain = hopAndSpit(
+  { firstMs: 2200, cooldownMs: 3800, telegraphMs: 800, flightMs: 350, radius: 26 },
+  { firstMs: 4200, everyMs: 5200, count: 3, arc: 0.5, windupMs: 650 },
+);

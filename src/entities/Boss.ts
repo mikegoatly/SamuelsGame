@@ -7,6 +7,8 @@ import { spreadDirections } from '../logic/enemyAi';
 import { bossPhase, newBossState, stepBoss, summonCount, type BossAction, type BossBrainConfig, type BossState } from '../logic/bossBrain';
 import { feel } from '../systems/feel';
 import { playSfx } from '../systems/sfx';
+import { BossFamily, type PieceSpawner } from './boss/BossFamily';
+import { SludgeMoves } from './boss/moves';
 import { Enemy, type EnemyContext, type HitSource } from './Enemy';
 import type { ShotStyle } from './EnemyProjectile';
 import type { Player } from './Player';
@@ -29,7 +31,22 @@ export interface BossHooks {
   teleportSpot(last: { x: number; y: number } | null, avoid: { x: number; y: number }, avoidRadius: number): { x: number; y: number };
   /** Live enemies of this type, for the minion cap. */
   aliveCount(enemyId: string): number;
+  /** Spawns one piece of Mother Sludge's family with its share of the health. */
+  piece: PieceSpawner;
 }
+
+/** A piece of a family: which family, its id in it, and the health it was born with. */
+export interface PieceInit {
+  family: BossFamily;
+  id: number;
+  hp: number;
+}
+
+const SPLIT_WINDUP_MS = { mother: 700, piece: 450 };
+const BOB_MS = 260;
+const ANGRY_FRAME = 5;
+const MERGE_TINT = 0xb8ffe8;
+const SLIDE_MAX = 160;
 
 /** Generic boss body: the pure state machine in `logic/bossBrain` (data-driven per boss) decides, this class performs. */
 export class Boss extends Enemy {
@@ -44,13 +61,60 @@ export class Boss extends Enemy {
   /** One chance per lunge to connect; a dodge (dash or i-frames) uses it up. */
   private lungeResolved = false;
   private lastThrone: { x: number; y: number } | null = null;
+  /** Mother Sludge's family (undefined for every other boss); the mother is piece 1. */
+  private readonly family?: BossFamily;
+  private readonly moves?: SludgeMoves;
+  pieceId = 0;
+  /** Game-clock time the pending split happens (0 when none): the piece stands still and wobbles until then. */
+  splitAt = 0;
+  /** Sliding toward its merge partner. */
+  merging = false;
+  private slide = { x: 0, y: 0, at: 0 };
+  private angry = false;
+  private shownFrame = -1;
+  private wobbling = false;
+  /** Set as a piece dies: the last one of the family drops the boss loot and ends the fight. */
+  private lastPiece = false;
 
-  constructor(scene: Phaser.Scene, x: number, y: number, def: EnemyDef, level: number, context: EnemyContext, private readonly hooks: BossHooks) {
-    super(scene, x, y, def, level, context);
+  constructor(scene: Phaser.Scene, x: number, y: number, def: EnemyDef, level: number, context: EnemyContext, private readonly hooks: BossHooks, piece?: PieceInit) {
+    super(scene, x, y, def, level, context, piece ? { hp: piece.hp } : {});
     this.config = def.brain!;
     this.setSize(12, 12).setOffset(2, 4);
     this.brain = newBossState(this.config, this.clock.now);
-    this.events.emit('boss-spawned', def.name ?? def.id, this.hp, this.maxHp);
+    if (def.tier !== undefined) {
+      this.family = piece?.family ?? new BossFamily(scene, this.clock, this.events, level, this.maxHp, hooks.piece, hooks.emergeSpot);
+      this.pieceId = piece?.id ?? 1;
+      this.moves = new SludgeMoves(this, this.family, hooks.emergeSpot);
+      this.angry = def.tier > 0;
+      this.family.add(this);
+    }
+    if (!piece) this.events.emit('boss-spawned', def.name ?? def.id, this.hp, this.maxHp);
+  }
+
+  /** Free to be paired for a merge: walking, not mid-attack or splitting. */
+  get mergeReady(): boolean {
+    return this.alive && this.armed && this.brain.mode === 'chase' && this.splitAt === 0 && !this.merging && !this.target.dead;
+  }
+
+  /** Where the merge meets, and when: the piece walks there, arriving as the countdown ends. */
+  slideTo(x: number, y: number, at: number): void {
+    this.slide.x = x;
+    this.slide.y = y;
+    this.slide.at = at;
+  }
+
+  /** Pieces take a little shove from a hit, the mother none. */
+  protected override get knockbackScale(): number {
+    return this.family && this.def.tier! > 0 && this.brain.mode === 'chase' && !this.merging && this.splitAt === 0 ? 0.35 : 0;
+  }
+
+  protected override get killLevel(): number {
+    return this.family && !this.lastPiece ? 1 : this.level;
+  }
+
+  protected override dropTable(): string {
+    if (!this.family) return super.dropTable();
+    return this.lastPiece ? this.def.lootTableId : '';
   }
 
   override get targetable(): boolean {
@@ -60,7 +124,12 @@ export class Boss extends Enemy {
   override takeHit(amount: number, directionX: number, directionY: number, knockback = 1, source: HitSource = 'basic'): void {
     if (!this.targetable) return;
     super.takeHit(amount, directionX, directionY, knockback, source);
-    if (this.alive) this.events.emit('boss-hp', this.hp, this.maxHp);
+    if (this.alive) this.announceHp(true);
+  }
+
+  private announceHp(hit: boolean): void {
+    if (this.family) this.family.report(this, hit);
+    else this.events.emit('boss-hp', this.hp, this.maxHp);
   }
 
   /** Bosses only drift while walking; lunges, slams, burrows and teleports are never interrupted. */
@@ -70,11 +139,11 @@ export class Boss extends Enemy {
 
   override takeDot(amount: number, css?: string, tint?: number): void {
     super.takeDot(amount, css, tint);
-    if (this.alive) this.events.emit('boss-hp', this.hp, this.maxHp);
+    if (this.alive) this.announceHp(false);
   }
 
   override tryContact(player: Player): void {
-    if (!this.targetable) return;
+    if (!this.targetable || this.brain.mode === 'leap') return;
     if (this.brain.mode === 'dash') {
       if (this.lungeResolved) return;
       this.lungeResolved = true;
@@ -86,6 +155,11 @@ export class Boss extends Enemy {
 
   protected override act(time: number): void {
     if (!this.armed) return;
+    if (feel.isLocked || this.target.dead) {
+      this.setVelocity(0, 0);
+      return;
+    }
+    if (this.family && this.actAsPiece(time)) return;
     const step = stepBoss(this.config, this.brain, time, this.hp / this.maxHp);
     this.brain = step.state;
     for (const action of step.actions) this.perform(action);
@@ -94,7 +168,7 @@ export class Boss extends Enemy {
       this.setVelocity(0, 0);
       return;
     }
-    if (mode === 'dash') return;
+    if (mode === 'dash' || mode === 'leap') return;
     if (mode === 'burrowed' && this.brain.active === 'teleport') {
       this.setVelocity(0, 0);
       return;
@@ -104,15 +178,81 @@ export class Boss extends Enemy {
     this.chase(time, burrowed ? speed * BURROW_SPEED_MULTIPLIER : speed, !burrowed);
   }
 
+  /** A piece of the family busy splitting or merging: true when it handled the frame. */
+  private actAsPiece(time: number): boolean {
+    if (this.splitAt > 0) {
+      this.setVelocity(0, 0);
+      return true;
+    }
+    if (this.brain.mode === 'chase' && this.family!.splitDue(this)) {
+      this.beginSplit();
+      return true;
+    }
+    if (!this.merging) return false;
+    const dx = this.slide.x - this.x;
+    const dy = this.slide.y - this.y;
+    const distance = Math.hypot(dx, dy);
+    const speed = Math.min(SLIDE_MAX, distance / Math.max(0.2, (this.slide.at - time) / 1000)) * this.speedFactor;
+    if (distance < 1) this.setVelocity(0, 0);
+    else this.setVelocity((dx / distance) * speed, (dy / distance) * speed);
+    return true;
+  }
+
+  /** The mother roars and turns angry; any piece wobbles; then the family swaps it for its two halves. */
+  private beginSplit(): void {
+    this.setVelocity(0, 0);
+    this.splitAt = this.clock.now + (this.def.tier === 0 ? SPLIT_WINDUP_MS.mother : SPLIT_WINDUP_MS.piece);
+    if (this.def.tier === 0) {
+      this.angry = true;
+      this.enrage();
+    } else playSfx(this.scene, 'squelch', { rate: 0.8 });
+  }
+
+  override preUpdate(time: number, delta: number): void {
+    super.preUpdate(time, delta);
+    if (this.alive && this.family) this.animate();
+  }
+
+  /** Mother: calm face, then angry. Sludgelings keep the angry face; sludgelets flick between calm and angry. Merging pieces wobble and glow. */
+  private animate(): void {
+    const now = this.clock.now;
+    const tier = this.def.tier!;
+    const frame = tier === 2 ? 4 + (Math.floor(now / BOB_MS) % 2) : this.angry ? ANGRY_FRAME : 4;
+    if (frame !== this.shownFrame) {
+      this.setFrame(frame);
+      this.shownFrame = frame;
+    }
+    if (this.merging) {
+      const wobble = feel.reduced ? 0 : Math.sin(now / 55) * 0.1;
+      const base = this.def.scale ?? 1;
+      this.setScale(base * (1 + wobble), base * (1 - wobble));
+      this.forcedTint = feel.reduced || Math.sin(now / 90) > 0 ? MERGE_TINT : null;
+      this.applyBaseTint();
+      this.wobbling = true;
+    } else if (this.wobbling) {
+      this.wobbling = false;
+      this.setScale(this.def.scale ?? 1);
+      this.forcedTint = null;
+      this.applyBaseTint();
+    }
+  }
+
   protected override die(): void {
     this.forcedTint = null;
     this.clearTelegraph();
     this.stopDust();
+    this.lastPiece = this.family ? this.family.pieceDied(this) : true;
+    if (!this.lastPiece) {
+      feel.shake(120, 0.005);
+      playSfx(this.scene, 'squelch');
+      super.die();
+      return;
+    }
     this.shots.clear();
     feel.shake(500, 0.012);
     playSfx(this.scene, 'bossRoar');
     super.die();
-    this.events.emit('boss-hp', 0, this.maxHp);
+    this.events.emit('boss-hp', 0, this.family ? this.family.maxHp : this.maxHp);
     this.events.emit('boss-died', this.x, this.y);
   }
 
@@ -123,6 +263,10 @@ export class Boss extends Enemy {
     else if (action.type === 'burrow') this.burrow();
     else if (action.type === 'burst') this.burst(action.count);
     else if (action.type === 'spit') this.spit(action.count, action.arc);
+    else if (action.type === 'hopTelegraph') this.moves?.hopTelegraph(action.radius, action.durationMs, action.flightMs);
+    else if (action.type === 'hopLaunch') this.moves?.hopLaunch(action.flightMs);
+    else if (action.type === 'land') this.moves?.land(action.radius);
+    else if (action.type === 'telegraphFan') this.moves?.fanTelegraph(action.count, action.arc, action.durationMs);
     else if (action.type === 'summon') this.summon(action.count, action.minion, action.levelDrop, action.maxAlive);
     else if (action.type === 'telegraphLine') this.startLine(action.length, action.width, action.durationMs);
     else if (action.type === 'lunge') this.startLunge(action.speed);
@@ -242,7 +386,7 @@ export class Boss extends Enemy {
     if (emerging && !magic) this.sandBurst(x, y);
     feel.shake(200, 0.01);
     playSfx(this.scene, 'slam');
-    if (Phaser.Math.Distance.Between(x, y, this.target.x, this.target.y) <= radius + 4) {
+    if (!this.target.dead && !feel.isLocked && Phaser.Math.Distance.Between(x, y, this.target.x, this.target.y) <= radius + 4) {
       this.target.takeDamage(damageToPlayer(this.def.slamDamage ?? 20, this.level, this.target.level), x, y, 'boss');
     }
   }
@@ -268,11 +412,11 @@ export class Boss extends Enemy {
   }
 
   /** Boss bolts count as boss damage, not ranged. */
-  private bolt(x: number, y: number, dirX: number, dirY: number, speed: number, damage: number, range: number, style: ShotStyle = {}): void {
+  bolt(x: number, y: number, dirX: number, dirY: number, speed: number, damage: number, range: number, style: ShotStyle = {}): void {
     this.shots.fire(x, y, dirX, dirY, speed, damage, range, { ...style, source: 'boss' });
   }
 
-  private boltDamage(): number {
+  boltDamage(): number {
     return damageToPlayer(this.def.boltDamage ?? 9, this.level, this.target.level);
   }
 
@@ -287,6 +431,7 @@ export class Boss extends Enemy {
   }
 
   private spit(count: number, arc: number): void {
+    if (this.moves?.fanPending) return this.moves.fireFan(count, arc);
     const damage = this.boltDamage();
     const dx = this.target.x - this.x;
     const dy = this.target.y - this.y;
@@ -316,10 +461,12 @@ export class Boss extends Enemy {
   private clearTelegraph(): void {
     for (const shape of this.telegraph) shape.destroy();
     this.telegraph = [];
+    this.moves?.clear();
   }
 
   override destroy(fromScene?: boolean): void {
     this.stopDust();
+    this.clearTelegraph();
     super.destroy(fromScene);
   }
 }

@@ -32,6 +32,8 @@ export interface HudData {
   /** Set for Heroic Survival: the saved best time (0 when none yet); swaps Room/Wave for a timer. */
   survivalBestMs?: number;
   bossName?: string;
+  /** One short child-friendly line under the boss banner. */
+  bossTagline?: string;
 }
 
 const BAR_X = 10;
@@ -85,7 +87,7 @@ export class HudScene extends Phaser.Scene {
     this.beatBest = false;
     this.barY = WAVE_BAR.y;
     this.boss = null;
-    const { events, progression, player, director, loot, skills, roomTotal, heroic, bossName } = data;
+    const { events, progression, player, director, loot, skills, roomTotal, heroic, bossName, bossTagline } = data;
     this.skillBar = new SkillBar(this, skills);
     this.potionSlot = new PotionSlot(this);
     this.vignette = new DamageVignette(this);
@@ -141,7 +143,7 @@ export class HudScene extends Phaser.Scene {
     events.on('room-started', (order, total) => this.waveText.setText(`Room ${order}/${total}`));
     events.on('boss-started', () => {
       this.waveText.setText('Boss');
-      if (bossName) intro.play(bossName);
+      if (bossName) intro.play(bossName, bossTagline);
     });
     events.on('player-hurt', () => this.vignette.hurt());
     events.on('boss-spawned', (name, hp, max) => this.showBoss(name, hp, max));

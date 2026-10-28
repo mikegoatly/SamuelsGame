@@ -170,15 +170,11 @@ describe('sewer gas pipes and sludge', () => {
     }
   });
 
-  it('still fit both boss-chamber pipes and nearly every planned combat pipe', () => {
-    let planned = 0;
-    let placed = 0;
+  it('keeps gas pipes out of the boss chamber', () => {
     for (const { world } of worlds) {
       const boss = world.layout.rooms[world.layout.rooms.length - 1]!;
-      planned += 2;
-      placed += world.active.filter((a) => a.kind === 'gasPipe' && a.room === boss.index).length;
+      expect(world.active.filter((a) => a.kind === 'gasPipe' && a.room === boss.index)).toHaveLength(0);
     }
-    expect(placed / planned).toBeGreaterThan(0.9);
   });
 });
 

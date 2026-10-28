@@ -136,7 +136,6 @@ export const SEWER_THEME: MapTheme = {
   encounters: [...SEWER_ENCOUNTERS],
   quicksandPerRoom: 0,
   hazards: { gasPipe: [0, 1, 1, 1, 2, 2] },
-  bossHazard: { kind: 'gasPipe', count: 2 },
   channels: { thickness: [2, 3], bridges: [1, 2], moat: true },
   decor: { perRoom: [5, 9], moss: RogueFrame.moss, bones: RogueFrame.bones },
 };

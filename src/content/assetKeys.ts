@@ -109,6 +109,7 @@ export const Frame = {
   fist: 134,
   slinger: 135,
   blob: 136,
+  javelin: 137,
   wolf: 124,
   coin: 102,
   ring: 101,

@@ -1,11 +1,12 @@
 import type { BossBrainConfig } from '../logic/bossBrain';
+import type { Tier } from '../logic/bossSplit';
 import type { BlinkTuning } from '../logic/blink';
 import type { ChargeTuning } from '../logic/charge';
 import type { SplitSpec } from '../logic/blob';
 import type { Shield } from '../logic/shield';
 import { Frame, Tex } from './assetKeys';
 import { madKingBrain, sandRatBrain, stoneGuardianBrain } from './bosses';
-import { SEWER_PLACEHOLDER_BOSS } from './levels/sewerPlaceholders';
+import { sludgeBoss } from './motherSludge';
 import { newMonsters } from './monsters';
 
 export type CustomKind = 'beetle' | 'archer' | 'wisp' | 'rat' | 'necromancer' | 'shark' | 'imp' | 'turret' | 'devil' | 'priest' | 'jester' | 'gargoyle' | 'twin' | 'houndmaster' | 'hound' | 'blob' | 'spitter' | 'toad' | 'gator' | 'shroom';
@@ -77,6 +78,8 @@ export interface EnemyDef {
   /** Charger alpha while stalking (assassins fade out until they strike). */
   cloak?: number;
   brain?: BossBrainConfig;
+  /** Mother Sludge's family: 0 the mother, 1 a sludgeling, 2 a sludgelet. Unset for every other monster. */
+  tier?: Tier;
   slamDamage?: number;
   boltDamage?: number;
   boltSpeed?: number;
@@ -256,6 +259,6 @@ export const madKing: EnemyDef = {
   boltSpeed: 85,
 };
 
-export const enemies: EnemyDef[] = [slime, bat, cyclops, spider, ghost, stoneGuardian, scorpion, bandit, mummy, vulture, sandRat, palaceGuard, royalArcher, darkMage, assassin, madKing, ...newMonsters, SEWER_PLACEHOLDER_BOSS];
+export const enemies: EnemyDef[] = [slime, bat, cyclops, spider, ghost, stoneGuardian, scorpion, bandit, mummy, vulture, sandRat, palaceGuard, royalArcher, darkMage, assassin, madKing, ...newMonsters, ...sludgeBoss];
 
 export const getEnemy = (id: string): EnemyDef => enemies.find((e) => e.id === id) ?? slime;

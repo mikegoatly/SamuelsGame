@@ -1,6 +1,6 @@
 # Proposal: The Sewer (hidden level) and a hidden hero
 
-Status: **all decisions made 2026-10-27; S1 next**
+Status: **S1-S3 built** (decisions made 2026-10-27; boss details in the boss builder's report)
 
 ## 1. Finding it: the grate room
 
@@ -156,3 +156,17 @@ level 5. Nothing goes through *everything*. So the Javelin is the "line them up"
 - **Passive: Second Blob.** Once per run (each level attempt), a hit that would knock him out shrinks him instead:
   he drops to 30% HP, gets a moment of safety, and stays smaller for the rest of the run (his body shrinks too,
   so he is a little harder to hit). A revive token is separate and still works after it.
+
+## 9. Made during build (coordinator)
+
+- UI text switched to the SamuelPixel font (more readable than Kenney Pixel) across the game.
+- The grate **replaces a treasure chest** in a side room: about half of side rooms before discovery, a quarter after.
+- Gloop is **hidden on Hero Select** until he is unlocked (no locked card, no hint).
+- Switching hero equips that hero's **signature weapon** (so Gloop gets the Sludge Slinger).
+- The pity counter only counts runs that **reach room 1**, so quitting early never uses up a roll.
+- **Sewer Gator rework:** 110px, surfaces when ignored, 45 HP, one per wave.
+- The sewer wave **curve was smoothed** (no spikes between rooms).
+- **Gas pipes are never placed over sludge.**
+- S3: the Javelin is a custom system (`JavelinSystem`) rather than a bolt-pool projectile, because it must pass through everything and stick; pierce-all hit tracking reuses `BoltHits(Infinity)`. One-target DPS 28.6, between the staff and the wand, since it hits everything in line.
+- S3: the sewer is playable as soon as it is found (no `unlockedBy`): the grate is the gate. Its Heroic version and the Sludge Crown follow the normal rules; Heroic Survival is unchanged.
+- S3: release music is the Ruins track again until a real sewer track exists.

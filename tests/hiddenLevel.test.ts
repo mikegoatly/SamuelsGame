@@ -31,17 +31,20 @@ describe('the hidden sewer card', () => {
   });
 });
 
-describe('the sewer stub', () => {
-  it('is listed right after the desert, hidden and coming soon', () => {
+describe('the released sewer', () => {
+  it('is listed right after the desert, hidden until found, playable and rewards the Javelin', () => {
     const ids = levels.map((l) => l.id);
     expect(ids.indexOf('sewer')).toBe(ids.indexOf('desert') + 1);
-    expect(sewer).toMatchObject({ name: 'Sunken Sewer', recommendedLevel: 9, monsterLevelRange: [8, 11], comingSoon: true, hiddenUntilFound: true, tagline: 'The tunnels are still flooding...' });
+    expect(sewer).toMatchObject({ name: 'Sunken Sewer', recommendedLevel: 9, monsterLevelRange: [8, 11], hiddenUntilFound: true, rewardWeaponId: 'javelin' });
+    expect(sewer.comingSoon).toBeUndefined();
+    expect(isLevelPlayable(sewer)).toBe(true);
   });
 
-  it('shows no card until found, and offers no Heroic switch while coming soon', () => {
+  it('shows no card until found, is open once found (cleared or not), and offers Heroic only after its own clear', () => {
     expect(visibleLevels(levels, ['ruins', 'desert', 'palace']).map((l) => l.id)).not.toContain('sewer');
     expect(visibleLevels(levels, [], true).map((l) => l.id)).toContain('sewer');
-    expect(offersHeroic({ ...sewer, mapKey: 'sewer' }, ['sewer', 'desert'])).toBe(false);
-    expect(isLevelPlayable(sewer)).toBe(false);
+    expect(isLevelUnlocked(sewer, [])).toBe(true);
+    expect(offersHeroic({ ...sewer }, ['desert'])).toBe(false);
+    expect(offersHeroic({ ...sewer }, ['desert', 'sewer'])).toBe(true);
   });
 });

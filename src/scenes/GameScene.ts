@@ -22,6 +22,7 @@ import { withRevive } from '../logic/campPurchases';
 import { feel } from '../systems/feel';
 import { GameClock } from '../systems/GameClock';
 import { HeroSystem } from '../systems/HeroSystem';
+import { JavelinSystem } from '../systems/JavelinSystem';
 import { SludgeSystem } from '../systems/SludgeSystem';
 import { HeroUnlocks } from '../systems/HeroUnlocks';
 import { EnemyFactory } from '../systems/EnemyFactory';
@@ -71,7 +72,7 @@ export interface GameSceneData {
 
 const devSeed = (): number | undefined => (import.meta.env.DEV ? parseSeed(new URLSearchParams(window.location.search).get('seed')) : undefined);
 
-/** Where Climb down leads; while the sewer is a teaser, the climb lands on its Level Select card instead. */
+/** Where Climb down leads: the sewer on Normal with the same hero and loadout (its Level Select card if it is ever a teaser again). */
 const SEWER_ID = 'sewer';
 const BUTTON_START = 9;
 const REWARD_FADE_MS = 600;
@@ -167,6 +168,7 @@ export class GameScene extends Phaser.Scene {
     const director = (this.director = this.createDirector(map, player, factory, events, blockedByRects(avoid, isSolid)));
     const skills = new SkillSystem({ scene: this, player, enemies, shots, clock: this.clock, isSolid, save: saveSystem, events });
     new HeroSystem({ scene: this, player, enemies, shots, clock: this.clock, isSolid }, events);
+    if (player.weapon.javelin) new JavelinSystem({ scene: this, player, enemies, shots, clock: this.clock, isSolid });
     if (player.weapon.lob) new SludgeSystem({ scene: this, player, enemies, shots, clock: this.clock, isSolid });
     this.unlocks = new HeroUnlocks(this, player, events, saveSystem, player.hero.id, this.level.id, this.level.bossId, (ids) => this.announceHeroes(ids));
     this.acquisition = new SkillAcquisition(this, saveSystem, skills, this.cards);
@@ -219,7 +221,7 @@ export class GameScene extends Phaser.Scene {
     camera.startFollow(player, true, 0.15, 0.15);
     camera.fadeIn(250);
 
-    this.scene.launch('Hud', { events, progression, player, director, loot, skills, roomTotal: map.world?.rooms.length, heroic: this.heroic, survivalBestMs: this.survival ? save.survival.bestMs : undefined, bossName: this.level.bossId ? getEnemy(this.level.bossId).name : undefined });
+    this.scene.launch('Hud', { events, progression, player, director, loot, skills, roomTotal: map.world?.rooms.length, heroic: this.heroic, survivalBestMs: this.survival ? save.survival.bestMs : undefined, bossName: this.level.bossId ? getEnemy(this.level.bossId).name : undefined, bossTagline: this.level.bossId ? getEnemy(this.level.bossId).tip : undefined });
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       removeRunMap(this, this.level);
       director.stop();

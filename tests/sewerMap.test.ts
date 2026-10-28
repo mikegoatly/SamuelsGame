@@ -89,13 +89,13 @@ describe('sewer map file', () => {
 describe('sewer gas pipes', () => {
   const worlds = [buildWorld(SEWER_THEME), ...seedsFor(120).map((seed) => randomWorld(SEWER_THEME, seed))];
 
-  it('follows the plan: none in room 1, then one or two, with a pair in the boss chamber', () => {
+  it('follows the plan: none in room 1, then one or two, and none in the boss chamber (Mother Sludge is enough)', () => {
     expect(hazardCount(SEWER_THEME.hazards!, 'gasPipe', 1)).toBe(0);
     expect(introductionOrder(SEWER_THEME.hazards!)).toEqual(['gasPipe']);
     const { layout, active } = buildWorld(SEWER_THEME);
     for (const room of layout.rooms.filter((r) => r.kind === 'combat')) expect(active.filter((a) => a.kind === 'gasPipe' && a.room === room.index)).toHaveLength(hazardCount(SEWER_THEME.hazards!, 'gasPipe', room.index));
     const boss = layout.rooms[layout.rooms.length - 1]!;
-    expect(active.filter((a) => a.room === boss.index && a.kind === 'gasPipe')).toHaveLength(2);
+    expect(active.filter((a) => a.room === boss.index && a.kind === 'gasPipe')).toHaveLength(0);
   });
 
   it('mounts every pipe on a wall tile beside its puff box, two tiles clear of doors, lanes and cover', () => {
@@ -135,16 +135,16 @@ describe('sewer gas pipes', () => {
 });
 
 describe('sewer level config', () => {
-  it('is the level 8-11 sewer, a teaser for players with its map and a reused track', () => {
-    expect(sewer).toMatchObject({ id: 'sewer', recommendedLevel: 9, monsterLevelRange: [8, 11], mapKey: 'sewer', comingSoon: true, hiddenUntilFound: true, unlockedBy: 'desert' });
-    expect(isLevelPlayable(sewer)).toBe(false);
+  it('is the level 8-11 sewer, playable once found, with its map and a reused track', () => {
+    expect(sewer).toMatchObject({ id: 'sewer', recommendedLevel: 9, monsterLevelRange: [8, 11], mapKey: 'sewer', hiddenUntilFound: true });
+    expect(isLevelPlayable(sewer)).toBe(true);
     expect(sewer.music).toBeDefined();
   });
 
-  it('draws its pool and boss from content that exists (placeholders until the monsters phase wires the real ones)', () => {
+  it('draws its pool and boss from content that exists', () => {
     expect(sewer.enemyPool.length).toBeGreaterThan(0);
     for (const entry of sewer.enemyPool) expect(getEnemy(entry.enemyId).id).toBe(entry.enemyId);
     expect(getEnemy(sewer.bossId!).boss).toBe(true);
-    expect(getEnemy('sewerPlaceholderBoss')).toMatchObject({ boss: true, tint: 0x7ad88a });
+    expect(getEnemy('motherSludge')).toMatchObject({ boss: true, tier: 0, scale: 3 });
   });
 });
