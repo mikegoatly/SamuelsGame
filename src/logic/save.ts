@@ -370,6 +370,8 @@ function applyHeroicClear(save: SaveData, levelId: string, timeMs: number | unde
 export interface LevelClear {
   levelId: string;
   rewardWeaponId?: string;
+  /** Equip the reward weapon when it is new (default true). */
+  equipReward?: boolean;
   rewardSkillIds?: readonly string[];
   timeMs?: number;
   runCoins?: number;
@@ -379,7 +381,7 @@ export interface LevelClear {
 
 export function applyLevelClear(save: SaveData, clear: LevelClear): SaveData {
   let next = addCoins(save, clear.runCoins ?? 0);
-  if (clear.rewardWeaponId) next = grantWeapon(next, clear.rewardWeaponId, !next.weapons.owned.includes(clear.rewardWeaponId));
+  if (clear.rewardWeaponId) next = grantWeapon(next, clear.rewardWeaponId, (clear.equipReward ?? true) && !next.weapons.owned.includes(clear.rewardWeaponId));
   for (const id of clear.rewardSkillIds ?? []) next = grantSkill(next, id);
   const cleared = next.levels.cleared.includes(clear.levelId) ? next.levels.cleared : [...next.levels.cleared, clear.levelId];
   const levels: SaveData['levels'] = { ...next.levels, cleared };

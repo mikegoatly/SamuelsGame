@@ -19,6 +19,7 @@ export const sewer: LevelConfig = {
   bossLevel: 12,
   hiddenUntilFound: !SEWER_DEBUG,
   rewardWeaponId: 'javelin',
+  rewardEquips: false,
   mapKey: MapKey.sewer,
   /** No sewer music in the repo yet: reuses the ruins track (the closest to a cave; the pack's Soothing Melodic Ambience / Harmonics are the candidates for real music), with the standard boss track. */
   music: Music.ruins,

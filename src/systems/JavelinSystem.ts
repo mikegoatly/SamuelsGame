@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { Frame, Tex } from '../content/assetKeys';
 import type { WeaponDef } from '../content/weapons';
+import type { BlastTarget } from '../logic/fireball';
 import type { Enemy } from '../entities/Enemy';
 import { JAVELIN, javelinAt, JavelinHits, planJavelin, stuckLook, type JavelinFlight } from '../logic/javelin';
 import { muzzleFlash } from './fx';
@@ -28,6 +29,11 @@ interface Thrown extends Parts {
   last: { x: number; y: number };
   /** Set once it has landed. */
   stuckAt?: number;
+}
+
+interface Targets {
+  enemies: Enemy[];
+  bodies: BlastTarget[];
 }
 
 /** Javelin: flies in a straight line through every enemy (each hit once), then sticks in the floor or a wall and fades. Level 5: after 1s the stuck javelin bursts, glowing first. */
@@ -76,16 +82,22 @@ export class JavelinSystem {
       return;
     }
     const now = this.world.clock.now;
+    let targets: Targets | undefined;
     for (const item of this.thrown) {
-      if (item.stuckAt === undefined) this.fly(item, now);
+      if (item.stuckAt === undefined) this.fly(item, now, (targets ??= this.targets()));
       if (item.stuckAt !== undefined) this.stick(item, now);
     }
   }
 
-  private fly(item: Thrown, now: number): void {
-    const at = javelinAt(item.flight, now - item.startedAt);
+  /** The live enemies, listed once per frame for every javelin in flight. */
+  private targets(): Targets {
     const enemies = liveEnemies(this.world.enemies);
-    for (const enemy of item.hits.sweep<Enemy>(item.last, at, JAVELIN.width, asTargets(enemies), enemies)) {
+    return { enemies, bodies: asTargets(enemies) };
+  }
+
+  private fly(item: Thrown, now: number, { enemies, bodies }: Targets): void {
+    const at = javelinAt(item.flight, now - item.startedAt);
+    for (const enemy of item.hits.sweep<Enemy>(item.last, at, JAVELIN.width, bodies, enemies)) {
       hurtEnemy(this.world, enemy, item.weapon.baseDamage, item.last.x, item.last.y, 1, JAVELIN.knockback, 'basic');
     }
     item.last = at;

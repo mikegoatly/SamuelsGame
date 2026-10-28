@@ -2,6 +2,7 @@ import type Phaser from 'phaser';
 import { getEnemy } from '../content/enemies';
 import type { Player } from '../entities/Player';
 import type { Point, Rect } from '../logic/geometry';
+import { hasFreeSlot, DEFER_CAPPED_MS } from '../logic/spawnCap';
 import { markerSpread, roomReady, spawnDistanceFor } from '../logic/groupSize';
 import { chooseMount, MountBook } from '../logic/mountPlan';
 import { wallMountSpot } from '../logic/wallMount';
@@ -83,6 +84,12 @@ export class WaveRunner {
       if (this.stopped) return;
       if (playerOnMarker(at, this.o.player, MARKER_CLEARANCE + spread)) {
         this.markers.add(this.pick(spawn, size, key), this.o.player.now, arrive, size, spread, RELOCATED_MARKER_MS);
+        return;
+      }
+      const def = getEnemy(spawn.enemyId);
+      const alive = this.o.factory.living().filter((e) => e.def.id === def.id).length;
+      if (!hasFreeSlot(alive, def.maxAlive)) {
+        this.markers.add(at, this.o.player.now, arrive, size, spread, DEFER_CAPPED_MS);
         return;
       }
       const spawned = this.o.factory.spawnGroup(getEnemy(spawn.enemyId), spawn.level, at.x, at.y, spawn.affix);

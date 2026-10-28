@@ -256,6 +256,7 @@ export const sewerRat: EnemyDef = {
   tint: 0x8fb89a,
   lootTableId: 'sewerRat',
   tip: 'Comes in a big gang. Fight them in a corner!',
+  xpLevelDrop: 2,
 };
 export const sewerRatSwarm: EnemyDef = {
   ...sewerRat,
@@ -278,6 +279,7 @@ export const sludgeBlob: EnemyDef = {
   splitInto: { id: 'sludgeBlobSmall', count: 2 },
   raisable: false,
   tip: 'Slow and sticky. It splits in two when it pops!',
+  xpLevelDrop: 20,
 };
 export const sludgeBlobSmall: EnemyDef = {
   ...sludgeBlob,
@@ -296,7 +298,7 @@ export const pipeSpitter: EnemyDef = {
   name: 'Pipe Spitter',
   ...sewerDrawn(SewerFrame.spitter),
   baseHp: 52,
-  baseDamage: 10,
+  baseDamage: 8,
   speed: 0,
   behaviour: 'custom',
   custom: 'spitter',
@@ -325,16 +327,17 @@ export const sewerGator: EnemyDef = {
   id: 'sewerGator',
   name: 'Sewer Gator',
   ...sewerDrawn(SewerFrame.gator),
-  baseHp: 45,
+  baseHp: 35,
   baseDamage: 17,
-  speed: 60,
+  speed: 70,
   behaviour: 'custom',
   custom: 'gator',
   lootTableId: 'sewerGator',
   cost: 2,
   tip: 'Hides in the goo with only its eyes showing. Snap!',
   swims: true,
-  maxPerWave: 1,
+  maxPerWave: 2,
+  maxAlive: 2,
 };
 export const moldShroom: EnemyDef = {
   id: 'moldShroom',

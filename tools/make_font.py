@@ -21,8 +21,8 @@ SRC = ROOT / "public/assets/fonts/KenneyPixel.ttf"
 OUT = ROOT / "public/assets/fonts/SamuelPixel.ttf"
 PX = 64  # font units per pixel
 # Kenney Pixel's space is 2.5px wide, so every word after the first starts on a half pixel and renders blurry
-# (grey columns). Whole pixels only: 2px here, which also keeps every string at or under its old width.
-SPACE_PX = 2
+# (grey columns). Whole pixels only: 3px here (Kenney's 2.5 rounded up) so words read as separate.
+SPACE_PX = 3
 
 # Hand-drawn overrides for glyphs that Kenney Pixel draws ambiguously. Each entry is (top_y, rows): top_y is
 # the pixel row (0 = sitting on the baseline, 6 = cap height, 7 = ascender height, negative = descender) of the
@@ -33,6 +33,7 @@ SPACE_PX = 2
 #   I  serifed both ends, so it differs from l (taller, one serif) and | (descends).
 #   1  flag plus base serif.   |  runs from below the baseline to the ascender line.
 #   t  Kenney's foot only touched the stem diagonally (a grey pixel at small sizes); ours is joined.
+#   6 8 9 3  rounder and distinct from each other and from B/g.  X x Y  clear diagonals (X read as H).  k  ascender height like b/d/h.
 #   0  was identical to D; now slashed.   8  was identical to B; now has round top and bottom.
 OVERRIDES = {
     "l": (7, [".##.", "..#.", "..#.", "..#.", "..#.", "..#.", "..#.", "..#."]),
@@ -44,6 +45,13 @@ OVERRIDES = {
     "t": (6, [".#..", "###.", ".#..", ".#..", ".#..", ".#..", ".##."]),
     "0": (6, [".###.", "#...#", "#..##", "#.#.#", "##..#", "#...#", ".###."]),
     "8": (6, [".###.", "#...#", "#...#", ".###.", "#...#", "#...#", ".###."]),
+    "6": (6, [".###.", "#....", "#....", "####.", "#...#", "#...#", ".###."]),
+    "9": (6, [".###.", "#...#", "#...#", ".####", "....#", "...#.", ".##.."]),
+    "3": (6, ["####.", "....#", "....#", ".###.", "....#", "....#", "####."]),
+    "X": (6, ["#...#", ".#.#.", ".#.#.", "..#..", ".#.#.", ".#.#.", "#...#"]),
+    "x": (5, ["#...#", ".#.#.", "..#..", "..#..", ".#.#.", "#...#"]),
+    "Y": (6, ["#...#", "#...#", ".#.#.", "..#..", "..#..", "..#..", "..#.."]),
+    "k": (7, ["#....", "#....", "#...#", "#..#.", "###..", "#..#.", "#...#", "#...#"]),
 }
 
 

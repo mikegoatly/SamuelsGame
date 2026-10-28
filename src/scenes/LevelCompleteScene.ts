@@ -80,7 +80,11 @@ export class LevelCompleteScene extends MenuScene {
     const earnedY = height * 0.28 + rows.length * 21;
     menuText(this, cx, earnedY + 2, 'Gold and gems found', 16, '#b0b0c8');
     drawCounts(this, cx, earnedY + 22, walletEntries(coins, gems, '+'));
-    rewards.forEach((reward, i) => this.showReward(cx, earnedY + 50 + i * 26, reward));
+    let rewardY = earnedY + 50;
+    for (const reward of rewards) {
+      this.showReward(cx, rewardY, reward);
+      rewardY += reward.note ? 46 : 26;
+    }
     if (seed !== undefined) menuText(this, cx, height * 0.16 + 26, `Map #${seed}`, 16, '#6c6c88');
     const next = new MenuButton(this, cx - 104, height * 0.88, 200, 34, 'Continue', () => this.leave());
     const camp = new MenuButton(this, cx + 104, height * 0.88, 200, 34, 'Visit Camp', () => this.inputReady(INPUT_DELAY_MS) && this.scene.start('Camp'));
@@ -94,6 +98,7 @@ export class LevelCompleteScene extends MenuScene {
     const text = menuText(this, cx + 10, y, reward.headline, 20, '#ffb060').setOrigin(0, 0.5);
     icon.x = cx - text.width / 2 - 12;
     text.x = cx - text.width / 2 + 4;
+    if (reward.note) menuText(this, cx, y + 22, reward.note, 16, '#d8c8f0');
   }
 
   /** Ignores the first moments so a held dash/fire key does not skip the results. */

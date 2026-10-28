@@ -11,8 +11,9 @@ import { directionTo, distanceTo, goToward, stand } from './steer';
 import type { BehaviourFactory } from './types';
 
 const TUNING: SharkTuning = { underMinMs: 1500, leapRange: 110, riseMs: 600, leapMs: 440, leapSpeed: 250, exposedMs: 1600 };
-const LURK: LurkTuning = { outOfRangeMs: 4000, surfacedMs: 1500 };
+const LURK: LurkTuning = { outOfRangeMs: 3000, surfacedMs: 2500 };
 const CHANNEL_REACH = 220;
+const REPICK_MS = 400;
 const BANK_INSET = 5;
 const RETREAT_SPEED = 1.1;
 const MUD = 0x4a7a3a;
@@ -29,6 +30,7 @@ export const gator: BehaviourFactory = (host, world) => {
   let channel: Rect | undefined = nearestChannel(world.channels?.() ?? [], host, CHANNEL_REACH);
   let state = newShark(host.clock.now);
   let lurk = newLurk();
+  let nextPickAt = 0;
   let surfaced = false;
   let dir = { x: 1, y: 0 };
   let lane: Phaser.GameObjects.Rectangle | undefined;
@@ -135,6 +137,11 @@ export const gator: BehaviourFactory = (host, world) => {
         submerge();
       }
       if (state.phase === 'under') {
+        // Swim to whichever channel segment lies nearest the player, so a gator is never stranded far from the fight.
+        if (time >= nextPickAt) {
+          nextPickAt = time + REPICK_MS;
+          channel = nearestChannel(world.channels?.() ?? [], host.target, Infinity) ?? channel;
+        }
         if (!channel) host.chase(time);
         else {
           const goal = clampIntoRect(channel, host.target, BANK_INSET);

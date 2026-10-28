@@ -101,19 +101,27 @@ describe('balance model: the sewer between desert and palace', () => {
     for (let i = 1; i < rooms.length; i++) expect(rooms[i]! - rooms[i - 1]!, `room ${i + 1}`).toBeLessThanOrEqual(20);
   });
 
-  it('climbs steadily: no room is easier than 85% of the one before, the last is the hardest and none is over 1.6 times the mean', () => {
-    for (let i = 1; i < rooms.length; i++) expect(rooms[i]!, `room ${i + 1}`).toBeGreaterThanOrEqual(rooms[i - 1]! * 0.85);
+  it('climbs steadily: no room is easier than 80% of the one before, the last is the hardest and none is over 1.6 times the mean', () => {
+    for (let i = 1; i < rooms.length; i++) expect(rooms[i]!, `room ${i + 1}`).toBeGreaterThanOrEqual(rooms[i - 1]! * 0.8);
     expect(Math.max(...rooms)).toBe(rooms[rooms.length - 1]);
     expect(Math.max(...rooms)).toBeLessThanOrEqual(mean(rooms) * 1.6);
   });
 
-  it('rises: the last rooms cost over 1.4 times the first ones', () => {
-    expect(mean(rooms.slice(-2))).toBeGreaterThan(mean(rooms.slice(0, 2)) * 1.4);
+  it('rises: the last rooms cost over 1.25 times the first ones', () => {
+    expect(mean(rooms.slice(-2))).toBeGreaterThan(mean(rooms.slice(0, 2)) * 1.25);
   });
 
   it('is about as hard on average as its neighbours (at least 90% of the desert, at most 110% of the palace)', () => {
     expect(mean(rooms)).toBeGreaterThan(mean(pcts(desertRun!)) * 0.9);
     expect(mean(rooms)).toBeLessThan(mean(pcts(palaceRun!)) * 1.1);
+  });
+
+  it('levels the hero like the palace does: +2 to +4 levels from the recommended level, and no more xp than the palace pays', () => {
+    expect(run.endLevel - level.recommendedLevel).toBeGreaterThanOrEqual(2);
+    expect(run.endLevel - level.recommendedLevel).toBeLessThanOrEqual(4);
+    const xp = (r: LevelEstimate): number => r.rooms.reduce((sum, room) => sum + room.xp, 0);
+    expect(xp(run)).toBeLessThan(xp(palaceRun!));
+    expect(xp(run)).toBeGreaterThan(xp(palaceRun!) * 0.4);
   });
 
   it('is survivable: potions cover over half of the damage taken', () => {

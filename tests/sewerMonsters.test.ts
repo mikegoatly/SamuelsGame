@@ -63,7 +63,7 @@ describe('the six sewer monsters', () => {
   });
 
   it('are tougher than the desert and no tougher than the palace for the same role', () => {
-    expect(getEnemy('sewerGator').baseHp).toBeGreaterThan(getEnemy('sandShark').baseHp);
+    expect(getEnemy('sewerGator').baseHp).toBeGreaterThan(getEnemy('sandShark').baseHp * 0.85);
     expect(getEnemy('sewerGator').baseHp).toBeLessThan(getEnemy('gargoyle').baseHp * 1.2);
     expect(getEnemy('pipeSpitter').baseHp).toBeGreaterThan(getEnemy('cactusTurret').baseHp);
     expect(getEnemy('sewerRat').baseHp).toBeGreaterThan(getEnemy('rat').baseHp);

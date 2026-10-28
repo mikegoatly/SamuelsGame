@@ -24,8 +24,6 @@ export const JAVELIN = {
 export interface JavelinFlight {
   from: Point;
   to: Point;
-  /** True when a wall, not the range limit, stopped it. */
-  hitWall: boolean;
   flightMs: number;
 }
 
@@ -33,7 +31,7 @@ export interface JavelinFlight {
 export function planJavelin(from: Point, direction: Point, range: number, speed: number, blocked: (x: number, y: number) => boolean): JavelinFlight {
   const to = aimPoint(from, direction, range, blocked);
   const distance = Math.hypot(to.x - from.x, to.y - from.y);
-  return { from, to, hitWall: distance < range - 3, flightMs: (distance / speed) * 1000 };
+  return { from, to, flightMs: (distance / speed) * 1000 };
 }
 
 /** Where the tip is `elapsedMs` into the flight, and whether it has landed. */

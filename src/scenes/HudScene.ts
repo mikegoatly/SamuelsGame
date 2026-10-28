@@ -34,6 +34,7 @@ export interface HudData {
   bossName?: string;
   /** One short child-friendly line under the boss banner. */
   bossTagline?: string;
+  bossTicks?: readonly number[];
 }
 
 const BAR_X = 10;
@@ -62,6 +63,7 @@ export class HudScene extends Phaser.Scene {
   private bossBar!: Phaser.GameObjects.Graphics;
   private bossName!: Phaser.GameObjects.Text;
   private boss: { hp: number; max: number } | null = null;
+  private bossTicks: readonly number[] = [0.5];
   private hp = { value: 1, max: 1 };
   private fullscreenButton!: Phaser.GameObjects.Image;
   private pauseButton!: Phaser.GameObjects.Container;
@@ -88,6 +90,7 @@ export class HudScene extends Phaser.Scene {
     this.barY = WAVE_BAR.y;
     this.boss = null;
     const { events, progression, player, director, loot, skills, roomTotal, heroic, bossName, bossTagline } = data;
+    this.bossTicks = data.bossTicks ?? [0.5];
     this.skillBar = new SkillBar(this, skills);
     this.potionSlot = new PotionSlot(this);
     this.vignette = new DamageVignette(this);
@@ -242,7 +245,7 @@ export class HudScene extends Phaser.Scene {
     this.bossBar.fillStyle(0x14121c, 0.9).fillRect(x - 2, y - 2, width + 4, 12 + 4);
     this.bossBar.fillStyle(0x5a2a2a, 1).fillRect(x, y, width, 12);
     this.bossBar.fillStyle(0xe0503c, 1).fillRect(x, y, Math.round(width * Phaser.Math.Clamp(this.boss.hp / this.boss.max, 0, 1)), 12);
-    this.bossBar.fillStyle(0xffffff, 0.25).fillRect(x + width / 2 - 1, y, 2, 12);
+    for (const tick of this.bossTicks) this.bossBar.fillStyle(0xffffff, 0.25).fillRect(x + Math.round(width * tick) - 1, y, 2, 12);
   }
 
   private createFullscreenButton(): void {

@@ -15,6 +15,8 @@ export interface LevelConfig {
   bossId?: string;
   bossLevel?: number;
   rewardWeaponId?: string;
+  /** False: the reward weapon is only granted, never swapped in over the player's current weapon (the sewer's Javelin). */
+  rewardEquips?: boolean;
   rewardSkillIds?: readonly string[];
   unlockedBy?: string;
   /** Tilemap cache key; levels without one fall back to the generated arena room. */

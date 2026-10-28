@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { puddleToEvict } from '../src/logic/blob';
 import { newLurk, stepLurk, type LurkTuning } from '../src/logic/gatorLurk';
+import { hasFreeSlot } from '../src/logic/spawnCap';
+import { payLevel } from '../src/logic/xp';
 import { terrainFactor } from '../src/logic/slow';
 import { mulberry32 } from '../src/logic/rng';
 import { planWave, type EnemyInfo } from '../src/logic/waveMix';
@@ -73,5 +75,26 @@ describe('wave planner per-wave caps', () => {
       expect(spawns.filter((s) => s.enemyId === 'gator').length).toBeLessThanOrEqual(2);
       expect(spawns.length).toBe(12);
     }
+  });
+});
+
+describe('alive caps', () => {
+  it.each([
+    { alive: 0, max: 2, free: true },
+    { alive: 1, max: 2, free: true },
+    { alive: 2, max: 2, free: false },
+    { alive: 5, max: undefined, free: true },
+  ])('$alive alive with cap $max: free slot $free', ({ alive, max, free }) => {
+    expect(hasFreeSlot(alive, max)).toBe(free);
+  });
+});
+
+describe('xp pay level', () => {
+  it.each([
+    { level: 10, drop: undefined, paid: 10 },
+    { level: 10, drop: 2, paid: 8 },
+    { level: 3, drop: 20, paid: 1 },
+  ])('level $level with drop $drop pays as level $paid', ({ level, drop, paid }) => {
+    expect(payLevel(level, drop)).toBe(paid);
   });
 });

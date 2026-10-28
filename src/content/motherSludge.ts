@@ -17,6 +17,7 @@ export const motherSludge: EnemyDef = {
   scale: 3,
   boss: true,
   tier: 0,
+  barTicks: [0.66, 0.33],
   brain: motherSludgeBrain,
   slamDamage: 12,
   boltDamage: 9,

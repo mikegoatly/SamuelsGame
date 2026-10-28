@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { pickLanding } from '../../logic/landing';
 import { applyHp, completeMerge, findMerge, isDead, mergeDue, newFamily, splitDue, splitPiece, startMerge, totalHp, type Family, type Piece } from '../../logic/bossSplit';
 import { feel } from '../../systems/feel';
 import type { GameClock } from '../../systems/GameClock';
@@ -8,11 +9,10 @@ import type { Boss } from '../Boss';
 
 const PIECE_IDS = ['motherSludge', 'sludgeling', 'sludgelet'] as const;
 /** Pieces further apart than this do not start to merge. */
-const MERGE_RANGE = 220;
+const MERGE_RANGE = 160;
 const SCAN_MS = 250;
 /** After a hit breaks a merge, no new one starts for this long, so the player gets a breather. */
 const CANCEL_PAUSE_MS = 2500;
-const OFFSET_STEPS = 5;
 const GLOW = 0xb8ffe8;
 
 /** The pieces' spawner, supplied by the level (EnemyFactory). */
@@ -90,16 +90,7 @@ export class BossFamily {
   claimLanding(owner: Boss, want: { x: number; y: number }, r: number, until: number, free: (x: number, y: number) => boolean): { x: number; y: number } {
     const now = this.clock.now;
     for (let i = this.claims.length - 1; i >= 0; i--) if (this.claims[i]!.until <= now || this.claims[i]!.owner === owner) this.claims.splice(i, 1);
-    let spot = want;
-    for (let k = 0; k <= OFFSET_STEPS; k++) {
-      const angle = ((k - 1) * Math.PI * 2) / OFFSET_STEPS;
-      const x = k === 0 ? want.x : want.x + Math.cos(angle) * r * 0.9;
-      const y = k === 0 ? want.y : want.y + Math.sin(angle) * r * 0.9;
-      if (!this.claims.some((c) => Math.hypot(c.x - x, c.y - y) < (c.r + r) * 0.7) && free(x, y)) {
-        spot = { x, y };
-        break;
-      }
-    }
+    const spot = pickLanding(want, r, this.claims, free);
     this.claims.push({ owner, x: spot.x, y: spot.y, r, until });
     return spot;
   }
@@ -134,6 +125,7 @@ export class BossFamily {
   }
 
   private split(boss: Boss): void {
+    if (this.merging && (this.merging[0] === boss || this.merging[1] === boss)) this.endMerge();
     const result = splitPiece(this.state, boss.pieceId, this.clock.now);
     boss.splitAt = 0;
     if (!result) return;

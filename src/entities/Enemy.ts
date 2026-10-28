@@ -11,6 +11,7 @@ import { chargeLaneLength, cloakAlpha, newChargeState, stepCharge, type ChargeSt
 import { rangedStance, spreadDirections } from '../logic/enemyAi';
 import { bodyClear, lineClear } from '../logic/lineOfSight';
 import { Navigator, PathBudget } from '../logic/navigator';
+import { payLevel } from '../logic/xp';
 import { applySlow, noSlow, slowFactor, terrainFactor, type SlowState } from '../logic/slow';
 import { isFrontal, shieldedDamage } from '../logic/shield';
 import { grantsLoot, type Affix } from '../logic/elites';
@@ -543,9 +544,14 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     this.destroy();
   }
 
+  /** False for a piece of a split boss that is not the last: only the family's end counts as a kill. */
+  protected get announcesDeath(): boolean {
+    return true;
+  }
+
   /** The level its kill pays xp for (a split boss's intermediate pieces pay next to nothing: the family pays once). */
   protected get killLevel(): number {
-    return this.level;
+    return payLevel(this.level, this.def.xpLevelDrop);
   }
 
   /** The loot table this monster drops on death ('' for none). */
@@ -562,7 +568,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     this.behaviour?.onDeath?.();
     this.mods.onDeath();
     this.recordCorpse();
-    this.events.emit('enemy-died', this.killLevel, this.x, this.y, this.dropTable(), this.def.boss === true, this.lastHit === 'ally', this.isElite);
+    if (this.announcesDeath) this.events.emit('enemy-died', this.killLevel, this.x, this.y, this.dropTable(), this.def.boss === true, this.lastHit === 'ally', this.isElite);
     deathBurst(this.scene, this.x, this.y, deathTint(this.def.id, this.def.tint), this.def.boss === true);
     playSfx(this.scene, 'enemyDie');
     this.scene.tweens.killTweensOf(this);

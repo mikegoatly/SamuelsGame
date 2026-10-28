@@ -16,7 +16,7 @@ export const SEWER_POOL: PoolEntry[] = [
 export const SEWER_CURVE: LevelCurve = {
   intro: SEWER_INTRO,
   waves: [2, 2, 2, 2, 3, 3],
-  size: { base: 5, perRoom: 0.35, perWave: 0.3, max: 12 },
+  size: { base: 3.5, perRoom: 0.1, perWave: 0.2, max: 12 },
   elite: { fromRoom: 3, base: 0.15, perRoom: 0.05, max: 0.35 },
 };
 

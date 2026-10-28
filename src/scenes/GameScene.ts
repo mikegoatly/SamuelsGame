@@ -221,7 +221,7 @@ export class GameScene extends Phaser.Scene {
     camera.startFollow(player, true, 0.15, 0.15);
     camera.fadeIn(250);
 
-    this.scene.launch('Hud', { events, progression, player, director, loot, skills, roomTotal: map.world?.rooms.length, heroic: this.heroic, survivalBestMs: this.survival ? save.survival.bestMs : undefined, bossName: this.level.bossId ? getEnemy(this.level.bossId).name : undefined, bossTagline: this.level.bossId ? getEnemy(this.level.bossId).tip : undefined });
+    this.scene.launch('Hud', { events, progression, player, director, loot, skills, roomTotal: map.world?.rooms.length, heroic: this.heroic, survivalBestMs: this.survival ? save.survival.bestMs : undefined, bossName: this.level.bossId ? getEnemy(this.level.bossId).name : undefined, bossTagline: this.level.bossId ? getEnemy(this.level.bossId).tip : undefined, bossTicks: this.level.bossId ? getEnemy(this.level.bossId).barTicks : undefined });
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       removeRunMap(this, this.level);
       director.stop();
@@ -317,6 +317,7 @@ export class GameScene extends Phaser.Scene {
         heroic,
         levelId: this.level.id,
         rewardWeaponId: this.level.rewardWeaponId,
+        equipReward: this.level.rewardEquips,
         rewardSkillIds: this.level.rewardSkillIds,
         runCoins: coins,
         timeMs,

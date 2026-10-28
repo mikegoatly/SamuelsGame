@@ -282,6 +282,18 @@ describe('merging', () => {
     expect(cancelMerge(started).merge).toBeNull();
   });
 
+  it('a piece that splits while merging ends the merge for its partner too', () => {
+    const f = split(600);
+    const [a, b] = f.pieces;
+    const started = startMerge(f, a!, b!, 5000);
+    const lowered = applyHp(started, a!.id, Math.floor(a!.maxHp / 2), 5100, false).family;
+    expect(lowered.merge).not.toBeNull();
+    expect(splitDue(lowered, a!.id)).toBe(true);
+    const done = splitPiece(lowered, a!.id, 5200)!;
+    expect(done.family.merge).toBeNull();
+    expect(done.family.pieces.some((p) => p.id === b!.id)).toBe(true);
+  });
+
   it('completing with no merge running does nothing', () => {
     expect(completeMerge(four(), 1)).toBeNull();
     expect(mergeDue(four(), 1e9)).toBe(false);

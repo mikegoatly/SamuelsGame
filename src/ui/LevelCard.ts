@@ -34,6 +34,8 @@ const ENVIRONMENT_COLOR: Record<Environment, number> = {
 const HEROIC_GOLD = 0xffd84a;
 const HEROIC_CSS = '#ffd84a';
 const CHIP = { width: 92, height: 28 };
+/** Cards shorter than this (a crowded Level Select) pack their four lines closer. */
+export const TIGHT_HEIGHT = 78;
 
 export class LevelCard implements MenuItem {
   readonly area: Phaser.GameObjects.Rectangle;
@@ -106,9 +108,10 @@ export class LevelCard implements MenuItem {
     const left = x - width / 2 + 10;
     const alpha = state.unlocked ? 1 : 0.45;
     const top = y - height / 2;
+    const tight = height < TIGHT_HEIGHT;
     const compact = height < 90;
     const size = compact ? 14 : 16;
-    const rows = compact ? [12, 30, 48, 65] : [14, 36, 56, 80];
+    const rows = tight ? [8, 22, 37, 51] : compact ? [12, 30, 48, 65] : [14, 36, 56, 80];
     this.line(left, top + rows[0]!, level.name, size, '#ffffff').setAlpha(alpha);
     if (level.comingSoon) {
       this.line(left, top + rows[1]!, level.tagline ?? '', size, '#d8c8f0');
@@ -139,7 +142,10 @@ export class LevelCard implements MenuItem {
     const label = menuText(this.scene, chip.x, chip.y, this.heroic ? 'HEROIC' : 'Normal', 16, this.heroic ? HEROIC_CSS : '#d8d8e8');
     this.parts.push(label);
     const crown = this.state.heroicCleared ? crownFor(this.level.id) : undefined;
-    if (crown) this.parts.push(this.scene.add.image(this.x + this.width / 2 - 20, this.y + this.height / 2 - 20, Tex.accessories, crown.frame).setScale(2));
+    if (crown) {
+      const tight = this.height < TIGHT_HEIGHT;
+      this.parts.push(this.scene.add.image(this.x + this.width / 2 - (tight ? 14 : 20), this.y + this.height / 2 - (tight ? 12 : 20), Tex.accessories, crown.frame).setScale(tight ? 1.25 : 2));
+    }
   }
 
   private status(x: number, y: number, size: number): void {

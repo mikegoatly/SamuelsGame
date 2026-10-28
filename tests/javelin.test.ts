@@ -13,7 +13,6 @@ describe('planJavelin', () => {
   it('flies the full range in the open and sticks in the floor', () => {
     const flight = planJavelin({ x: 0, y: 0 }, { x: 1, y: 0 }, JAVELIN.range, JAVELIN.speed, open);
     expectClose(flight.to.x, JAVELIN.range, 2);
-    expect(flight.hitWall).toBe(false);
     expectClose(flight.flightMs, (JAVELIN.range / JAVELIN.speed) * 1000, 10);
   });
 
@@ -21,7 +20,19 @@ describe('planJavelin', () => {
     const flight = planJavelin({ x: 0, y: 0 }, { x: 1, y: 0 }, JAVELIN.range, JAVELIN.speed, (x) => wallAt(100)(x));
     expect(flight.to.x).toBeLessThan(100);
     expect(flight.to.x).toBeGreaterThan(90);
-    expect(flight.hitWall).toBe(true);
+  });
+
+  it.each([0, 30, 45, 90, 135, 200, 315])('open floor at %i degrees always flies the full range', (degrees) => {
+    const a = (degrees * Math.PI) / 180;
+    const flight = planJavelin({ x: 500, y: 500 }, { x: Math.cos(a), y: Math.sin(a) }, JAVELIN.range, JAVELIN.speed, open);
+    expectClose(Math.hypot(flight.to.x - 500, flight.to.y - 500), JAVELIN.range, 2);
+  });
+
+  it('a wall to the side of the path (beyond the javelin body) does not stop it, one on the path does', () => {
+    const beside = (x: number, y: number) => y >= 10 && x >= 50 && x <= 60;
+    expectClose(planJavelin({ x: 0, y: 0 }, { x: 1, y: 0 }, JAVELIN.range, JAVELIN.speed, beside).to.x, JAVELIN.range, 2);
+    const onPath = (x: number, y: number) => y >= -2 && y <= 2 && x >= 50 && x <= 60;
+    expect(planJavelin({ x: 0, y: 0 }, { x: 1, y: 0 }, JAVELIN.range, JAVELIN.speed, onPath).to.x).toBeLessThan(50);
   });
 
   it('boxed in against a wall it stays put without flying', () => {

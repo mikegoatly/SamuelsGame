@@ -10,10 +10,13 @@ export interface Reward {
   frame: number;
   tint: number | null;
   headline: string;
+  /** Second line under the headline. */
+  note?: string;
 }
 
 interface RewardSource {
   rewardWeaponId?: string;
+  rewardEquips?: boolean;
   rewardSkillIds?: readonly string[];
 }
 
@@ -22,7 +25,7 @@ export function rewardsOf(level: RewardSource): Reward[] {
   const rewards: Reward[] = [];
   if (level.rewardWeaponId) {
     const weapon = getWeapon(level.rewardWeaponId);
-    rewards.push({ kind: 'weapon', id: weapon.id, name: weapon.name, frame: weapon.frame, tint: weapon.tint, headline: `${weapon.name} acquired!` });
+    rewards.push({ kind: 'weapon', id: weapon.id, name: weapon.name, frame: weapon.frame, tint: weapon.tint, headline: `${weapon.name} acquired!`, ...(level.rewardEquips === false ? { note: 'Equip it on the Loadout screen.' } : {}) });
   }
   for (const id of level.rewardSkillIds ?? []) {
     const skill = getSkill(id);

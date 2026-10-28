@@ -17,7 +17,7 @@ import { planSurvivalWave, survivalStage, type SurvivalSource } from '../src/log
 import { stragglerOf } from '../src/logic/straggler';
 import { timingOf, WaveScheduler } from '../src/logic/waveSchedule';
 import { CLOUD, cloudTicks } from '../src/logic/toad';
-import { xpReward } from '../src/logic/xp';
+import { payLevel, xpReward } from '../src/logic/xp';
 import { HAZARD_HITS } from '../src/logic/hazard/hits';
 import { hazardCount } from '../src/logic/hazard/plan';
 import type { Encounter, MapTheme } from '../src/logic/map/mapThemes';
@@ -238,7 +238,7 @@ function roomFight(level: LevelConfig, curve: LevelCurve, order: number, encount
     work += STEP_S;
     if (work < target.killSeconds) continue;
     damage += hurt(target, clock);
-    xp += xpReward(target.shot.level, playerLevel);
+    xp += xpReward(payLevel(target.shot.level, target.shot.def.xpLevelDrop), playerLevel);
     alive.splice(alive.indexOf(target), 1);
     target = undefined;
     work = 0;
@@ -386,7 +386,7 @@ export function estimateSurvival(startLevel: number, ref: Reference, source: Sur
     const table = lootTables[target.shot.def.lootTableId];
     const heal = table ? expectedLoot(table, coinValue, target.shot.elite, healValue).heal : 0;
     const before = progress.level;
-    progress = addXp(progress, xpReward(target.shot.level, progress.level)).progress;
+    progress = addXp(progress, xpReward(payLevel(target.shot.level, target.shot.def.xpLevelDrop), progress.level)).progress;
     hp = Math.min(playerMaxHp(progress.level), hp + heal * SURVIVAL_PICKUP + (playerMaxHp(progress.level) - playerMaxHp(before)));
     kills++;
     alive.splice(alive.indexOf(target), 1);

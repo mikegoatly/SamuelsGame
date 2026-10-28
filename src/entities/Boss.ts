@@ -108,8 +108,8 @@ export class Boss extends Enemy {
     return this.family && this.def.tier! > 0 && this.brain.mode === 'chase' && !this.merging && this.splitAt === 0 ? 0.35 : 0;
   }
 
-  protected override get killLevel(): number {
-    return this.family && !this.lastPiece ? 1 : this.level;
+  protected override get announcesDeath(): boolean {
+    return !this.family || this.lastPiece;
   }
 
   protected override dropTable(): string {
@@ -155,7 +155,7 @@ export class Boss extends Enemy {
 
   protected override act(time: number): void {
     if (!this.armed) return;
-    if (feel.isLocked || this.target.dead) {
+    if ((feel.isLocked || this.target.dead) && this.brain.mode !== 'dash' && this.brain.mode !== 'leap') {
       this.setVelocity(0, 0);
       return;
     }

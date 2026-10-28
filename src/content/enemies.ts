@@ -50,6 +50,10 @@ export interface EnemyDef {
   lootTableId: string;
   /** Leaves this many of that monster behind when it dies at full strength (the halves are spawned smaller and never split again). */
   splitInto?: SplitSpec;
+  /** Its kills pay xp as a monster this many levels lower (swarm members, split halves). */
+  xpLevelDrop?: number;
+  /** At most this many alive at once in a room, across waves; later arrivals wait for a free slot. */
+  maxAlive?: number;
   /** At most this many in one wave (the planner skips it once reached). */
   maxPerWave?: number;
   /** Lives in sludge channels: never slowed by them. */
@@ -80,6 +84,8 @@ export interface EnemyDef {
   brain?: BossBrainConfig;
   /** Mother Sludge's family: 0 the mother, 1 a sludgeling, 2 a sludgelet. Unset for every other monster. */
   tier?: Tier;
+  /** Where the boss bar shows its marks, as shares of the bar (default one at half). */
+  barTicks?: readonly number[];
   slamDamage?: number;
   boltDamage?: number;
   boltSpeed?: number;
