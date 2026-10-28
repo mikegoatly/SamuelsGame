@@ -16,6 +16,7 @@ import { expectedGroupSize } from '../src/logic/groupSize';
 import { planSurvivalWave, survivalStage, type SurvivalSource } from '../src/logic/survival';
 import { stragglerOf } from '../src/logic/straggler';
 import { timingOf, WaveScheduler } from '../src/logic/waveSchedule';
+import { CLOUD, cloudTicks } from '../src/logic/toad';
 import { xpReward } from '../src/logic/xp';
 import { HAZARD_HITS } from '../src/logic/hazard/hits';
 import { hazardCount } from '../src/logic/hazard/plan';
@@ -59,8 +60,8 @@ function hazardShare(theme: Pick<MapTheme, 'hazards' | 'spikePairsPerRoom'>, ord
   return share;
 }
 
-/** Poison ticks of a bloat toad's cloud that a player who does not run takes on average. */
-const TOAD_CLOUD_TICKS = 2;
+/** Poison ticks of a bloat toad's cloud (a player who stays inside takes them all; BLAST_CHANCE covers who does). */
+const TOAD_CLOUD_TICKS = cloudTicks(CLOUD.durationMs, CLOUD.tickMs);
 
 /** Chance a bomb beetle blast lands. */
 const BLAST_CHANCE = 0.4;

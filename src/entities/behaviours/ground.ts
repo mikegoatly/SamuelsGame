@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { SewerFrame, Tex } from '../../content/assetKeys';
-import { puddleZone, PUDDLE } from '../../logic/blob';
+import { puddleToEvict, puddleZone, PUDDLE } from '../../logic/blob';
 import { damageToPlayer } from '../../logic/combat';
 import type { Rect } from '../../logic/geometry';
 import { CLOUD } from '../../logic/toad';
@@ -19,6 +19,7 @@ interface Puddle {
   born: number;
   until: number;
   player: Player;
+  owner: unknown;
 }
 
 interface Cloud {
@@ -37,6 +38,7 @@ interface Cloud {
 class GroundEffects {
   private readonly puddles: Puddle[] = [];
   private readonly clouds: Cloud[] = [];
+  private readonly expiring: { at: number; item: { destroy(): void } }[] = [];
 
   constructor(
     private readonly scene: Phaser.Scene,
@@ -50,12 +52,14 @@ class GroundEffects {
   }
 
   /** A puddle of goo that slows the player (as quicksand does) until it dries up. */
-  puddle(player: Player, x: number, y: number): void {
+  puddle(player: Player, x: number, y: number, owner: unknown): void {
     const zone = puddleZone({ x, y }, PUDDLE.radius);
     const now = this.clock.now;
     const shape = this.scene.add.circle(x, y, PUDDLE.radius, GOO, 0.5).setStrokeStyle(1, 0x2f7a2a, 0.7).setDepth(2).setScale(1, 0.7);
-    this.puddles.push({ zone, shape, born: now, until: now + PUDDLE.ttlMs, player });
+    this.puddles.push({ zone, shape, born: now, until: now + PUDDLE.ttlMs, player, owner });
     player.slowZones.push(zone);
+    const evict = puddleToEvict(this.puddles.map((p) => p.owner), owner, PUDDLE.maxPerBlob, PUDDLE.maxTotal);
+    if (evict >= 0) this.dropPuddle(evict);
   }
 
   /** A small poison cloud: ticks damage on the player standing in it, then thins away. */
@@ -74,15 +78,29 @@ class GroundEffects {
     this.clouds.push({ zone: newZone(now, CLOUD.durationMs, CLOUD.tickMs), x, y, damage: base, level, player, parts, disc, born: now });
   }
 
+  /** Destroys `item` after `ms` of game time (pause-safe, unlike scene timers). */
+  expire(ms: number, item: { destroy(): void }): void {
+    this.expiring.push({ at: this.clock.now + ms, item });
+  }
+
+  private dropPuddle(index: number): void {
+    const [puddle] = this.puddles.splice(index, 1);
+    if (!puddle) return;
+    this.removeZone(puddle);
+    puddle.shape.destroy();
+  }
+
   private update(): void {
     const now = this.clock.now;
+    for (let i = this.expiring.length - 1; i >= 0; i--) {
+      if (now < this.expiring[i]!.at) continue;
+      this.expiring[i]!.item.destroy();
+      this.expiring.splice(i, 1);
+    }
     for (let i = this.puddles.length - 1; i >= 0; i--) {
       const puddle = this.puddles[i]!;
-      if (now >= puddle.until) {
-        this.removeZone(puddle);
-        puddle.shape.destroy();
-        this.puddles.splice(i, 1);
-      } else puddle.shape.setAlpha(0.5 * Math.min(1, (puddle.until - now) / 700));
+      if (now >= puddle.until) this.dropPuddle(i);
+      else puddle.shape.setAlpha(0.5 * Math.min(1, (puddle.until - now) / 700));
     }
     for (let i = this.clouds.length - 1; i >= 0; i--) {
       const cloud = this.clouds[i]!;

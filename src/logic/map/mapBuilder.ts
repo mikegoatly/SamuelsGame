@@ -180,7 +180,7 @@ function assemble(theme: MapTheme, seed: number, rng: () => number, base: Dungeo
   const hazards = placeHazards(layout, rng, theme.quicksandPerRoom);
   const spikes = placeSpikeTraps(layout, rng, theme.spikePairsPerRoom ?? 0, hazards);
   const bridges = channels.flatMap((c) => c.bridges);
-  const placed = placeActiveHazards(layout, mulberry32(seed ^ HAZARD_SEED_MIX), theme.hazards ?? {}, [...hazards, ...spikes, ...bridges], theme.bossHazard);
+  const placed = placeActiveHazards(layout, mulberry32(seed ^ HAZARD_SEED_MIX), theme.hazards ?? {}, [...hazards, ...spikes, ...bridges], theme.bossHazard, channels.flatMap((c) => c.segments));
   const active = [...placed, ...flushHazards(channels, mulberry32(seed ^ FLUSH_SEED_MIX))];
   const footprints = [...hazards, ...spikes, ...placed.flatMap((h) => (h.kind === 'gasPipe' ? [h.rect] : h.blocks))];
   const decor = theme.decor ? placeDecor(layout, channels, footprints, mulberry32(seed ^ DECOR_SEED_MIX), theme.decor) : [];

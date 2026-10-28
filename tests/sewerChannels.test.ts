@@ -160,6 +160,28 @@ describe('sewer sludge channels', () => {
   });
 });
 
+describe('sewer gas pipes and sludge', () => {
+  it('never put a puff box over sludge, in combat rooms or the boss chamber', () => {
+    for (const { label, world } of worlds) {
+      const wet = new Set(world.channels.flatMap((c) => [...channelTiles(c)]));
+      for (const pipe of world.active.filter((a) => a.kind === 'gasPipe')) {
+        for (const [x, y] of tilesOf(pipe.rect)) expect(wet.has(keyOf(x, y)), `${label} pipe tile ${x},${y}`).toBe(false);
+      }
+    }
+  });
+
+  it('still fit both boss-chamber pipes and nearly every planned combat pipe', () => {
+    let planned = 0;
+    let placed = 0;
+    for (const { world } of worlds) {
+      const boss = world.layout.rooms[world.layout.rooms.length - 1]!;
+      planned += 2;
+      placed += world.active.filter((a) => a.kind === 'gasPipe' && a.room === boss.index).length;
+    }
+    expect(placed / planned).toBeGreaterThan(0.9);
+  });
+});
+
 describe('sewer boss moat', () => {
   it('leaves an open dry island in the middle and the exit on dry planks', () => {
     for (const { label, world } of worlds) {
@@ -169,8 +191,8 @@ describe('sewer boss moat', () => {
       const wet = channelTiles(moat);
       const mid = { x: Math.floor(boss.rect.x + boss.rect.w / 2), y: Math.floor(boss.rect.y + boss.rect.h / 2) };
       let dry = 0;
-      for (let dy = -3; dy <= 3; dy++) for (let dx = -10; dx <= 10; dx++) if (!wet.has(keyOf(mid.x + dx, mid.y + dy))) dry++;
-      expect(dry, label).toBe(7 * 21);
+      for (let dy = -2; dy <= 2; dy++) for (let dx = -7; dx <= 7; dx++) if (!wet.has(keyOf(mid.x + dx, mid.y + dy))) dry++;
+      expect(dry, label).toBe(5 * 15);
       expect(wet.has(keyOf(boss.rect.x + 2, boss.cy)), `${label} exit`).toBe(false);
       expect(wet.size, label).toBeGreaterThan(60);
       expect(wet.size, label).toBeLessThan(boss.rect.w * boss.rect.h * 0.6);

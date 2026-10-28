@@ -14,3 +14,6 @@ export function applySlow(slow: SlowState, now: number, factor: number, duration
   if (now >= slow.until) return { factor, until };
   return { factor: Math.min(slow.factor, factor), until: Math.max(slow.until, until) };
 }
+
+/** Ground slow (sludge channels) that applies to a monster: swimmers live there and are never slowed by it. */
+export const terrainFactor = (swims: boolean | undefined, zoneSlow: number): number => (swims ? 1 : zoneSlow);

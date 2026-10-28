@@ -49,6 +49,10 @@ export interface EnemyDef {
   lootTableId: string;
   /** Leaves this many of that monster behind when it dies at full strength (the halves are spawned smaller and never split again). */
   splitInto?: SplitSpec;
+  /** At most this many in one wave (the planner skips it once reached). */
+  maxPerWave?: number;
+  /** Lives in sludge channels: never slowed by them. */
+  swims?: boolean;
   /** One short, child-readable line saying what the monster does. */
   tip?: string;
   tint?: number;

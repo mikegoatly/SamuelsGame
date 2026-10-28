@@ -159,6 +159,7 @@ export class GameScene extends Phaser.Scene {
       const sludge = (map.world?.hazards ?? []).filter((h) => h.kind === 'channel');
       let room = 0;
       events.on('room-started', (order: number) => (room = order));
+      events.on('boss-started', () => (room = map.world?.bossArena?.order ?? room));
       factory.world.channels = () => sludge.filter((h) => h.room === room).map((h) => h.rect);
     }
     exposeSpawner(factory, player);

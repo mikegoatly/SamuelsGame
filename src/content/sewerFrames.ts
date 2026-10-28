@@ -31,7 +31,7 @@ export const RogueFrame = {
 } as const;
 
 /** Layer tints that pull the light Roguelike sheet toward a dark blue-green sewer (multiplied over the art). */
-export const SEWER_TINT = { ground: 0x6e8e8a, walls: 0x4a6862, sludge: 0x80c8a8, decor: 0x86a8a0, pipe: 0x8aa8a2 } as const;
+export const SEWER_TINT = { ground: 0x7a9a96, walls: 0x3c5852, sludge: 0x80c8a8, decor: 0x86a8a0, pipe: 0x8aa8a2 } as const;
 
 /** Tiny Dungeon wall pipe frames: the plain spout and the one with a green drip. */
 export const PIPE_FRAME = { plain: 7, drip: 8 } as const;

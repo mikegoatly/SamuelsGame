@@ -11,7 +11,7 @@ import { chargeLaneLength, cloakAlpha, newChargeState, stepCharge, type ChargeSt
 import { rangedStance, spreadDirections } from '../logic/enemyAi';
 import { bodyClear, lineClear } from '../logic/lineOfSight';
 import { Navigator, PathBudget } from '../logic/navigator';
-import { applySlow, noSlow, slowFactor, type SlowState } from '../logic/slow';
+import { applySlow, noSlow, slowFactor, terrainFactor, type SlowState } from '../logic/slow';
 import { isFrontal, shieldedDamage } from '../logic/shield';
 import { grantsLoot, type Affix } from '../logic/elites';
 import { deathBurst } from '../systems/fx';
@@ -421,7 +421,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
   terrainSlow = 1;
 
   get speedFactor(): number {
-    return slowFactor(this.slow, this.clock.now) * this.mods.speedMultiplier * this.terrainSlow;
+    return slowFactor(this.slow, this.clock.now) * this.mods.speedMultiplier * terrainFactor(this.def.swims, this.terrainSlow);
   }
 
   private get slowed(): boolean {

@@ -5,7 +5,9 @@ import { feel } from '../feel';
 import { playSfx } from '../sfx';
 import { HazardBase } from './HazardBase';
 import type { Hazard, HazardWorld } from './types';
-import { hazardTargets, playerAlive } from './victims';
+import { claimPush, releasePush } from './pushOwner';
+import { playerAlive } from './victims';
+import type { Enemy } from '../../entities/Enemy';
 
 const ENEMY_SHARE = 0.8;
 const FOAM = 0xe4fff0;
@@ -22,7 +24,6 @@ const unit = (i: number, salt: number): number => Math.abs(Math.sin(i * 127.1 + 
 export class Flush extends HazardBase {
   private readonly deg = this.spec.params.dir ?? 0;
   private startedAt = 0;
-  private pushing = false;
   private warned = -1;
   private surged = -1;
 
@@ -47,12 +48,14 @@ export class Flush extends HazardBase {
     const moving = push.x !== 0 || push.y !== 0;
     const { player } = this.world;
     if (moving && playerAlive(this.world) && rectContains(this.rect, player)) {
-      player.windPush = push;
-      this.pushing = true;
+      claimPush(player, this, push);
     } else this.release();
     if (moving) {
       const k = (dtMs / 1000) * ENEMY_SHARE;
-      for (const enemy of hazardTargets(this.world)) if (rectContains(this.rect, enemy)) enemy.nudge(push.x * k, push.y * k);
+      for (const child of this.world.enemies.getChildren()) {
+        const enemy = child as Enemy;
+        if (enemy.active && enemy.alive && enemy.targetable && !enemy.def.boss && rectContains(this.rect, enemy)) enemy.nudge(push.x * k, push.y * k);
+      }
     }
     this.cues(p);
     this.paint(p, now);
@@ -60,9 +63,7 @@ export class Flush extends HazardBase {
 
   /** Gives the player's push back, but only if this stretch is the one holding it. */
   private release(): void {
-    if (!this.pushing) return;
-    this.pushing = false;
-    this.world.player.windPush = { x: 0, y: 0 };
+    releasePush(this.world.player, this);
   }
 
   private cues(p: FlushPhase): void {

@@ -59,6 +59,9 @@ export class EnemyFactory {
     this.context = { ...context, world: this.world };
   }
 
+  /** Walls and closed doors only (hazard footprints do not count), the test wall-mounted monsters snap to. */
+  isWall = (x: number, y: number): boolean => this.context.isBlocked?.(x, y) ?? false;
+
   living(): Enemy[] {
     return (this.group.getChildren() as Enemy[]).filter((e) => e.alive);
   }

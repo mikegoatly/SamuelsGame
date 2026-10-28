@@ -4,6 +4,7 @@ import { gasDensity, gasHurts, gasPhase } from '../../logic/hazard/vents';
 import { HAZARD_HITS } from '../../logic/hazard/hits';
 import { Cooldowns } from '../../logic/hazard/victims';
 import type { ActiveHazardSpec } from '../../logic/tiledObjects';
+import { feel } from '../feel';
 import { playSfx } from '../sfx';
 import { puff, smokeEmitter, steady, type Emitter } from './emitters';
 import { HazardBase } from './HazardBase';
@@ -75,10 +76,13 @@ export class GasVent extends HazardBase {
     const g = this.g.clear();
     this.drawSource(g, x, y);
     if (density > 0) g.fillStyle(GAS, 0.1 + 0.22 * density).fillCircle(x, y, this.radius).lineStyle(2, GAS, 0.35 + 0.5 * density).strokeCircle(x, y, this.radius);
-    if (warn > 0) {
-      const pulse = Math.floor(warn * 8) % 2 === 0;
-      g.lineStyle(2, pulse ? 0xe8ff7a : 0x5c7a1c, 0.85).strokeCircle(x, y, this.radius * (0.55 + 0.45 * warn));
-    }
+    if (warn > 0) this.warnRing(g, x, y, warn);
+  }
+
+  /** The pre-puff warning: a ring closing in on the cloud's edge (blinking, or steady when flashes are reduced). */
+  protected warnRing(g: Phaser.GameObjects.Graphics, x: number, y: number, warn: number): void {
+    const pulse = feel.reduced || Math.floor(warn * 8) % 2 === 0;
+    g.lineStyle(2, pulse ? 0xe8ff7a : 0x5c7a1c, 0.85).strokeCircle(x, y, this.radius * (0.55 + 0.45 * warn));
   }
 
   override calm(): void {

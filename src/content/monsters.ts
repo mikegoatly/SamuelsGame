@@ -305,6 +305,7 @@ export const pipeSpitter: EnemyDef = {
   placement: 'back',
   raisable: false,
   tip: 'Spits goo at a red circle. Step out of it!',
+  maxPerWave: 2,
 };
 export const bloatToad: EnemyDef = {
   id: 'bloatToad',
@@ -324,7 +325,7 @@ export const sewerGator: EnemyDef = {
   id: 'sewerGator',
   name: 'Sewer Gator',
   ...sewerDrawn(SewerFrame.gator),
-  baseHp: 62,
+  baseHp: 45,
   baseDamage: 17,
   speed: 60,
   behaviour: 'custom',
@@ -332,6 +333,8 @@ export const sewerGator: EnemyDef = {
   lootTableId: 'sewerGator',
   cost: 2,
   tip: 'Hides in the goo with only its eyes showing. Snap!',
+  swims: true,
+  maxPerWave: 1,
 };
 export const moldShroom: EnemyDef = {
   id: 'moldShroom',
@@ -347,6 +350,7 @@ export const moldShroom: EnemyDef = {
   placement: 'back',
   raisable: false,
   tip: 'Heals and shields its friends. Pop it first!',
+  maxPerWave: 1,
 };
 
 export const ruinsMonsters = [ratSwarm, bombBeetle, skeletonArcher, wisp, necromancer];

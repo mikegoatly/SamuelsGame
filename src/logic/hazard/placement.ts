@@ -31,6 +31,8 @@ interface Spot {
   used: Rect[];
   /** Placed hazard footprints, treated as walls when checking the room stays open. */
   walls: Rect[];
+  /** Ground (sludge) that footprints must not cover, with no margin. */
+  ground: readonly Rect[];
 }
 
 const expand = (r: Rect, by: number): Rect => ({ x: r.x - by, y: r.y - by, w: r.w + 2 * by, h: r.h + 2 * by });
@@ -43,7 +45,7 @@ function fits(s: Spot, r: Rect, inset = 1, ring = 0, lane = LANE): boolean {
   for (let y = r.y; y < r.y + r.h; y++) if (Math.abs(y - room.cy) <= lane) return false;
   for (let x = r.x; x < r.x + r.w; x++) if (Math.abs(x - room.cx) <= lane) return false;
   for (let y = r.y - ring; y < r.y + r.h + ring; y++) for (let x = r.x - ring; x < r.x + r.w + ring; x++) if (s.solid.has(`${x},${y}`)) return false;
-  return !s.used.some((u) => rectsOverlap(expand(u, 1), r)) && !sealsOff(s, r);
+  return !s.used.some((u) => rectsOverlap(expand(u, 1), r)) && !s.ground.some((g) => rectsOverlap(g, r)) && !sealsOff(s, r);
 }
 
 /** Floor tiles reachable from the room centre with cover, placed hazards and `extra` as walls. */
@@ -227,12 +229,12 @@ function bossJets(s: Spot, count: number): PlacedHazard[] {
 }
 
 /** Places every planned hazard of every combat room, then the boss arena's one kind; `taken` are rects already used (quicksand, spikes). Never touches the start room. */
-export function placeActiveHazards(layout: DungeonLayout, rng: () => number, plan: HazardPlan, taken: Rect[], boss?: BossHazard): PlacedHazard[] {
+export function placeActiveHazards(layout: DungeonLayout, rng: () => number, plan: HazardPlan, taken: Rect[], boss?: BossHazard, ground: readonly Rect[] = []): PlacedHazard[] {
   const solid = solidTiles(layout);
   const used = [...taken];
   const placed: PlacedHazard[] = [];
   for (const room of layout.rooms) {
-    const s: Spot = { room, rng, solid, used, walls: [] };
+    const s: Spot = { room, rng, solid, used, walls: [], ground };
     if (room.kind === 'combat') {
       for (const kind of [...ORDER, ...ACTIVE_HAZARD_KINDS.filter(isArea)]) placed.push(...fill(s, kind, hazardCount(plan, kind, room.index)));
     } else if (room.kind === 'boss' && boss) {

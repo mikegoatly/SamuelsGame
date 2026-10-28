@@ -40,6 +40,7 @@ export const spitter: BehaviourFactory = (host) => {
     (host.body as Phaser.Physics.Arcade.Body).reset(x, y);
   }
   host.setImmovable(true);
+  const anchor = { x: host.x, y: host.y };
   let state = newTurret(host.clock.now + 900);
   let flight: Flight | undefined;
   let firingUntil = 0;
@@ -89,6 +90,12 @@ export const spitter: BehaviourFactory = (host) => {
       if (step.event === 'warn') launch(time);
     },
     update() {
+      // Nothing moves a pipe: knockback, gravity wells and bodies pushing it are all undone.
+      if (host.x !== anchor.x || host.y !== anchor.y) {
+        host.setPosition(anchor.x, anchor.y);
+        (host.body as Phaser.Physics.Arcade.Body).reset(anchor.x, anchor.y);
+      }
+      host.setVelocity(0, 0);
       const now = host.clock.now;
       host.setFrame(now < firingUntil ? SewerFrame.spitterFiring : SewerFrame.spitter);
       if (!flight) return;

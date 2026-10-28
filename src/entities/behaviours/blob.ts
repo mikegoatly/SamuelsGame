@@ -22,10 +22,10 @@ export const blob: BehaviourFactory = (host, world) => {
     act(time) {
       host.chase(time);
       const now = host.clock.now;
-      if (!host.armed || now < nextDropAt) return;
+      if (!host.armed || now < nextDropAt || host.target.dead || feel.isLocked) return;
       if (trail.drop(host.x, host.y + 4, now)) {
         nextDropAt = now + PUDDLE.dropEveryMs;
-        ground.puddle(host.target, host.x, host.y + 4);
+        ground.puddle(host.target, host.x, host.y + 4, host);
       }
     },
     update() {

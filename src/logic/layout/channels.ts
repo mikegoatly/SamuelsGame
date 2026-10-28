@@ -101,7 +101,7 @@ function bridgesFor(rng: () => number, room: LayoutRoom, strip: Strip, t: number
 
 function combatChannel(rng: () => number, room: LayoutRoom, solid: ReadonlySet<string>, plan: ChannelPlan): Channel | null {
   const t = randInt(rng, plan.thickness[0], plan.thickness[1]);
-  for (const margin of [1, 0]) {
+  for (const margin of [3, 1, 0]) {
     const options = strips(room, solid, t, margin);
     if (options.length === 0) continue;
     const horizontalFirst = rng() < 0.5;
@@ -119,17 +119,20 @@ function combatChannel(rng: () => number, room: LayoutRoom, solid: ReadonlySet<s
   return null;
 }
 
-/** Sludge everywhere outside an elliptical island, with plank bridges along the corridor lane through it. */
+/** A ring of sludge round an elliptical dry island, with a dry belt outside it (room for wall pipes) and plank bridges along the corridor lane through the ring. */
 function moatFor(room: LayoutRoom): Channel {
   const { rect } = room;
   const [mx, my] = [rect.x + rect.w / 2, rect.y + rect.h / 2];
-  const [a, b] = [rect.w / 2 - 3.5, rect.h / 2 - 1.5];
+  const [a, b] = [rect.w / 2 - 6, rect.h / 2 - 3];
+  const [outerA, outerB] = [a + 3, b + 1.5];
   const wet = new Set<string>();
   const planks = new Set<string>();
   for (const k of rectTiles(rect)) {
     const [x, y] = parse(k);
-    const [u, v] = [(x + 0.5 - mx) / a, (y + 0.5 - my) / b];
-    if (u * u + v * v <= 1) continue;
+    const [dx, dy] = [x + 0.5 - mx, y + 0.5 - my];
+    const inner = (dx / a) ** 2 + (dy / b) ** 2;
+    const outer = (dx / outerA) ** 2 + (dy / outerB) ** 2;
+    if (inner <= 1 || outer > 1) continue;
     (Math.abs(y - room.cy) <= 1 ? planks : wet).add(k);
   }
   return { room: room.index, kind: 'moat', rect, dir: 0, segments: cellsToRects(wet), bridges: cellsToRects(planks) };
