@@ -9,6 +9,9 @@ import { musicOf } from '../systems/MusicPlayer';
 import { CHARMS_NOTICE, levelMode, setLevelMode } from '../logic/save';
 import { revealNextHero } from './heroReveal';
 import { CHARMS_CARD } from './NoticeScene';
+import { sewerCard } from '../content/cards';
+import type { CardData } from '../logic/itemCards';
+import { SEWER_NOTICE } from '../logic/secrets';
 import { lastInputDevice } from '../systems/inputDevice';
 import { saveSystem } from '../systems/SaveSystem';
 import { LevelCard } from '../ui/LevelCard';
@@ -23,14 +26,24 @@ const MAX_CARD_HEIGHT = 98;
 const HEADER = 66;
 const FOOTER = 50;
 const GAP = 10;
+/** One-time cards shown over this screen, in order. */
+const NOTICES: readonly [id: string, card: CardData][] = [
+  [CHARMS_NOTICE, CHARMS_CARD],
+  [SEWER_NOTICE, sewerCard],
+];
 const SWITCH_HINT = { keyboard: 'Tab or H: switch Normal / Heroic', gamepad: 'Y or X: switch Normal / Heroic', touch: 'Tap the Normal / Heroic tag to switch' } as const;
 
 export class LevelSelectScene extends MenuScene {
   private cards: LevelCard[] = [];
   private hint?: Phaser.GameObjects.Text;
+  private focusLevelId?: string;
 
   constructor() {
     super('LevelSelect');
+  }
+
+  init(data?: { focusLevelId?: string }): void {
+    this.focusLevelId = data?.focusLevelId;
   }
 
   override update(time = 0, delta = 0): void {
@@ -49,7 +62,7 @@ export class LevelSelectScene extends MenuScene {
 
     const cardWidth = Math.min(280, (width - 3 * GAP - 20) / COLUMNS);
     this.hint = undefined;
-    const shown = visibleLevels(levels, levelSave.cleared);
+    const shown = visibleLevels(levels, levelSave.cleared, saveSystem.data.secrets.sewerFound);
     const rows = Math.ceil(shown.length / COLUMNS);
     const cardHeight = Math.min(MAX_CARD_HEIGHT, Math.floor((height - HEADER - FOOTER - (rows - 1) * GAP) / rows));
     const top = HEADER + cardHeight / 2;
@@ -93,19 +106,20 @@ export class LevelSelectScene extends MenuScene {
     }
     this.showPendingNotice();
     this.cards = cards;
-    this.menu = new MenuList(this, [...cards, camp, back], { columns: COLUMNS, onBack: () => this.goBack() });
+    this.menu = new MenuList(this, [...cards, camp, back], { columns: COLUMNS, initialFocus: Math.max(0, shown.findIndex((level) => level.id === this.focusLevelId)), onBack: () => this.goBack() });
   }
 
-  /** First visit after charms became gems: a card over this screen, which waits underneath. Then any hero unlock reveals. */
+  /** One-time cards (charms became gems, sewer discovered) over this screen, which waits underneath; then any hero unlock reveals. */
   private showPendingNotice(): void {
     if (this.scene.isActive('Notice')) return;
-    if (!saveSystem.data.pendingNotices.includes(CHARMS_NOTICE)) {
+    const pending = NOTICES.find(([id]) => saveSystem.data.pendingNotices.includes(id));
+    if (!pending) {
       revealNextHero(this);
       return;
     }
     this.time.delayedCall(0, () => {
-      this.events.once(Phaser.Scenes.Events.RESUME, () => revealNextHero(this));
-      this.scene.launch('Notice', { ...CHARMS_CARD, under: 'LevelSelect', noticeId: CHARMS_NOTICE });
+      this.events.once(Phaser.Scenes.Events.RESUME, () => this.showPendingNotice());
+      this.scene.launch('Notice', { ...pending[1], under: 'LevelSelect', noticeId: pending[0] });
       this.scene.pause();
     });
   }

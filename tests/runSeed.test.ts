@@ -22,6 +22,42 @@ describe('chooseRunMap', () => {
   });
 });
 
+describe('chooseRunMap side-room plan', () => {
+  const desert = (overrides: Partial<RunMapInput> = {}) => chooseRunMap(input({ levelId: 'desert', cleared: ['desert'], ...overrides }));
+
+  it('desert random maps carry a plan; other levels and classic runs do not', () => {
+    expect(desert().side).toBeDefined();
+    expect(chooseRunMap(input({ levelId: 'ruins' })).side).toBeUndefined();
+    expect(desert({ cleared: [] }).side).toBeUndefined();
+  });
+
+  it('is deterministic from the seed and save state', () => {
+    const seeds = [0.1, 0.3, 0.6, 0.9];
+    for (const roll of seeds) expect(desert({ rng: () => roll })).toEqual(desert({ rng: () => roll }));
+  });
+
+  it('applies the pity rule from the save', () => {
+    expect(desert({ runsWithoutGrate: 3 }).side).toEqual({ force: true, grate: true });
+    expect(desert({ runsWithoutGrate: 3, sewerFound: true }).side?.force).toBe(false);
+  });
+
+  it('a retry keeps the previous plan whatever the save says now', () => {
+    const previous = { seed: 9, classic: false, side: { force: false, grate: true } };
+    expect(desert({ previous, runsWithoutGrate: 3, sewerFound: true })).toEqual(previous);
+  });
+
+  it('the dev grate switch forces a grate room, even on a desert that was never cleared, but not on other levels', () => {
+    expect(desert({ cleared: [], forceGrate: true })).toMatchObject({ classic: false, side: { force: true, grate: true } });
+    expect(desert({ forceGrate: true, devSeed: 5 })).toEqual({ seed: 5, classic: false, side: { force: true, grate: true } });
+    expect(chooseRunMap(input({ levelId: 'ruins', cleared: [], forceGrate: true }))).toEqual({ seed: 0, classic: true });
+  });
+
+  it('the dev grate switch still honours a retry', () => {
+    const previous = { seed: 9, classic: false, side: { force: true, grate: true } };
+    expect(desert({ forceGrate: true, previous })).toEqual(previous);
+  });
+});
+
 describe('parseSeed', () => {
   it.each([
     ['123', 123],

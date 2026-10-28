@@ -8,8 +8,8 @@ import { getAccessory, crownFor, type AccessorySlot } from '../content/accessori
 import { isHeroicUnlocked, type LevelMode } from './heroic';
 import { emptySlots, equipInSlot, firstEmptySlot, sanitizeSlots, type Loadout } from './loadout';
 
-/** v10: `survival`. v9: `levels.heroic`, `levels.mode`, `accessories`. v8: `heroes` + `stats`. v7: `gems` replace `charms`; `potions`, `revive`, `shop`, `weapons.levels` added. v6: `skills` + `loadout` replace `powers` and `weapons.equipped`. v5: `seen` + `itemCards`; v4: volumes + reduceShake; v2: `settings`. Older saves load through the same tolerant parse. */
-export const SAVE_VERSION = 10;
+/** v11: `secrets`. v10: `survival`. v9: `levels.heroic`, `levels.mode`, `accessories`. v8: `heroes` + `stats`. v7: `gems` replace `charms`; `potions`, `revive`, `shop`, `weapons.levels` added. v6: `skills` + `loadout` replace `powers` and `weapons.equipped`. v5: `seen` + `itemCards`; v4: volumes + reduceShake; v2: `settings`. Older saves load through the same tolerant parse. */
+export const SAVE_VERSION = 11;
 /** Gems a level's first Heroic clear pays: one full 3-to-4 item upgrade of every colour. */
 export const HEROIC_CLEAR_GEMS: Gems = { red: 3, green: 3, blue: 3 };
 /** First version that stores `gems` instead of `charms`. */
@@ -17,6 +17,7 @@ const GEMS_VERSION = 7;
 /** First version whose skills and loadout need no conversion from powers. */
 const SKILLS_VERSION = 6;
 export const MAX_SKILL_LEVEL = 5;
+const MAX_GRATE_RUNS = 99;
 export const MAX_POTIONS = 3;
 export const CHARMS_NOTICE = 'charmsToGems';
 export const STARTING_WEAPON = 'apprenticeStaff';
@@ -37,6 +38,13 @@ export const defaultSettings = (): Settings => ({ muted: false, musicVolume: 70,
 export interface OwnedSkill {
   id: string;
   level: number;
+}
+
+/** Things the player has to discover; they stay hidden from menus until found. */
+export interface Secrets {
+  sewerFound: boolean;
+  /** Pity counter: random desert runs in a row that had no grate room. */
+  desertRunsWithoutGrate: number;
 }
 
 export interface SaveData {
@@ -64,6 +72,7 @@ export interface SaveData {
   heroes: { unlocked: string[]; selected: string };
   /** Lifetime totals the hero unlock rules read. */
   stats: AccountStats;
+  secrets: Secrets;
   settings: Settings;
   /** Item/event ids whose card the player has already seen. */
   seen: string[];
@@ -87,6 +96,7 @@ export function defaultSave(): SaveData {
     survival: { bestMs: 0 },
     heroes: { unlocked: [WIZARD], selected: WIZARD },
     stats: { totalKills: 0, goldPeak: 0, bossKillsByHero: {} },
+    secrets: { sewerFound: false, desertRunsWithoutGrate: 0 },
     settings: defaultSettings(),
     seen: [],
   };
@@ -179,6 +189,11 @@ function parseSurvival(value: unknown): SaveData['survival'] {
   return bestMs > 0 && bestWave > 0 ? { bestMs, bestWave } : { bestMs };
 }
 
+function parseSecrets(value: unknown): Secrets {
+  const raw = isRecord(value) ? value : {};
+  return { sewerFound: raw.sewerFound === true, desertRunsWithoutGrate: wholeNumber(raw.desertRunsWithoutGrate, 0, 0, MAX_GRATE_RUNS) };
+}
+
 function parseWeaponLevels(value: unknown, owned: readonly string[]): Record<string, number> {
   const levels: Record<string, number> = {};
   if (!isRecord(value)) return levels;
@@ -222,6 +237,7 @@ export function parseSave(json: string | null | undefined, legacyRewards: Legacy
   save.accessories = parseAccessories(raw.accessories);
   save.survival = parseSurvival(raw.survival);
   Object.assign(save, parseHeroes(raw, isKnownHero));
+  save.secrets = parseSecrets(raw.secrets);
   if (isRecord(raw.settings)) {
     const fallback = defaultSettings();
     save.settings = {

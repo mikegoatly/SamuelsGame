@@ -7,6 +7,7 @@ import { EdgeWatch } from '../logic/edge';
 import { pushCapped, TickGate } from '../logic/heroTraps';
 import { risesAgain } from '../logic/passives';
 import type { GameEvents } from './GameEvents';
+import { GloopTrailFx } from './GloopTrailFx';
 import { SpiritWolfCaster } from './skills/SpiritWolfCaster';
 import { hurtEnemy } from './skills/targets';
 import type { SkillWorld } from './skills/types';
@@ -33,6 +34,7 @@ export class HeroSystem {
       scene.events.on(Phaser.Scenes.Events.UPDATE, this.watchDash, this);
       scene.events.once(Phaser.Scenes.Events.SHUTDOWN, () => scene.events.off(Phaser.Scenes.Events.UPDATE, this.watchDash, this));
     }
+    if (effects.trail) new GloopTrailFx(world);
     if (effects.riseChance > 0) {
       const skeletons = new SpiritWolfCaster(world, SKELETON_LOOK);
       events.on('enemy-died', (_level, x, y, _table, boss, byAlly) => {

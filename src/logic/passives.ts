@@ -2,7 +2,7 @@ import type { Point } from './geometry';
 import { isFrontal, shieldedDamage } from './shield';
 import type { DamageSource } from './unlocks';
 
-export type PassiveId = 'quickCasting' | 'frontGuard' | 'daggerTrap' | 'prospector' | 'longShot' | 'stunStreak' | 'risenDead' | 'fortune';
+export type PassiveId = 'quickCasting' | 'frontGuard' | 'daggerTrap' | 'prospector' | 'longShot' | 'stunStreak' | 'risenDead' | 'fortune' | 'secondBlob';
 
 export interface PassiveEffects {
   /** Fraction of damage taken from the front that is blocked. */
@@ -21,6 +21,10 @@ export interface PassiveEffects {
   riseChance: number;
   /** Raises the weight of rare and epic drops and the skill scroll chance. */
   luck: number;
+  /** Gloop: once per run a knockout hit shrinks him instead. */
+  secondBlob: boolean;
+  /** Gloop: a harmless green trail while he walks. */
+  trail: boolean;
 }
 
 /** Live risen skeletons at most. */
@@ -38,6 +42,8 @@ const NEUTRAL: PassiveEffects = {
   stunMs: 0,
   riseChance: 0,
   luck: 0,
+  secondBlob: false,
+  trail: false,
 };
 
 const EFFECTS: Record<PassiveId, Partial<PassiveEffects>> = {
@@ -49,6 +55,7 @@ const EFFECTS: Record<PassiveId, Partial<PassiveEffects>> = {
   stunStreak: { stunEvery: 5, stunMs: 800 },
   risenDead: { riseChance: 0.15 },
   fortune: { luck: 0.5 },
+  secondBlob: { secondBlob: true, trail: true },
 };
 
 export const passiveEffects = (id: PassiveId): PassiveEffects => ({ ...NEUTRAL, ...EFFECTS[id] });

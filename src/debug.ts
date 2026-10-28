@@ -6,6 +6,8 @@ const flags = import.meta.env.DEV ? (new URLSearchParams(window.location.search)
 export const GOD_MODE = flags.includes('godmode');
 /** Dev-only (`?debug=perf`, or `?debug=godmode,perf`): FPS and load overlay for stress testing. */
 export const PERF_OVERLAY = flags.includes('perf');
+/** Dev-only (`?debug=grate`): desert runs get a random map with a forced grate room, even before the desert is cleared. */
+export const FORCE_GRATE = flags.includes('grate');
 export const GOD_DAMAGE_MULTIPLIER = 10;
 
 export function exposeForDebug(game: Phaser.Game): void {

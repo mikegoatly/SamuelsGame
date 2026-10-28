@@ -61,6 +61,7 @@ export const ENVIRONMENT_TINT: Record<Environment, EnvironmentTint> = {
   ruins: uniform(0xc8d0c0),
   desert: { ground: 0xfff0d0, walls: 0xe6c48c },
   palace: { ground: 0xffffff, walls: 0xc4c8d8, checker: 0xd0c0ee },
+  sewer: uniform(0xa8c8a8),
   unknown: uniform(null),
 };
 

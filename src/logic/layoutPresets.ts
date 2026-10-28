@@ -84,3 +84,9 @@ export interface RandomPlan {
   /** Chance (0-1) of one dead-end treasure room off a combat room. */
   sideChance: number;
 }
+
+/** What a random map's side room must be: `force` guarantees one exists, `grate` makes it a sewer grate instead of a treasure chest. */
+export interface SidePlan {
+  force: boolean;
+  grate: boolean;
+}

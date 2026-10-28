@@ -1,4 +1,4 @@
-export type WeaponTwist = 'pierce' | 'split' | 'wave' | 'daggerThrow' | 'shockwave' | 'spread' | 'forceWave';
+export type WeaponTwist = 'pierce' | 'split' | 'wave' | 'daggerThrow' | 'shockwave' | 'spread' | 'forceWave' | 'poisonPuddle';
 
 export const TWIST_LEVEL = 5;
 export const PIERCE_EXTRA_ENEMIES = 1;

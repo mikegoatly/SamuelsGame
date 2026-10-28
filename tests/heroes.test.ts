@@ -21,9 +21,10 @@ describe('hero content', () => {
     }
   });
 
-  it('every hero but the wizard has an unlock rule and a hint, and nothing else does', () => {
+  it('every hero but the wizard has a hint, and an unlock rule unless it is found by discovery', () => {
+    const discovered = ['gloop'];
     const locked = heroList.filter((h) => h.id !== WIZARD).map((h) => h.id);
-    expect([...unlockableHeroIds].sort()).toEqual([...locked].sort());
+    expect([...unlockableHeroIds].sort()).toEqual(locked.filter((id) => !discovered.includes(id)).sort());
     for (const id of locked) expect(getHero(id).hint, id).toBeTruthy();
   });
 
@@ -42,6 +43,7 @@ describe('hero content', () => {
     expect(pips('ranger')).toEqual([2, 2, 3]);
     expect(pips('monk')).toEqual([2, 3, 2]);
     expect(pips('necromancer')).toEqual([1, 2, 2]);
+    expect(pips('gloop')).toEqual([3, 1, 2]);
     expect(pips(WIZARD)).toEqual([2, 2, 2]);
     expect(RATING.low).toBeLessThan(RATING.mid);
   });
@@ -49,6 +51,20 @@ describe('hero content', () => {
   it('falls back to the wizard for an unknown id and builds kits', () => {
     expect(getHero('nobody').id).toBe(WIZARD);
     expect(heroKit('necromancer')).toEqual({ weaponId: 'apprenticeStaff', skillId: 'spiritWolf' });
+    expect(heroKit('gloop')).toEqual({ weaponId: 'sludgeSlinger', skillId: undefined });
     expect(heroKit('nobody')).toBeUndefined();
+  });
+});
+
+describe('Gloop the Slime', () => {
+  it('is the last hero, with his own frame tint, hint and signature weapon', () => {
+    const gloop = getHero('gloop');
+    expect(heroList[heroList.length - 1]).toBe(gloop);
+    expect(gloop.name).toBe('Gloop the Slime');
+    expect(gloop.signatureWeaponId).toBe('sludgeSlinger');
+    expect(gloop.passive.id).toBe('secondBlob');
+    expect(gloop.passive.text).toBe('Once per level, a knockout hit shrinks him instead: back up at 30% HP.');
+    expect(gloop.hint).toBe("Some friends live where the light doesn't reach.");
+    expect(gloop.tint).not.toBeNull();
   });
 });

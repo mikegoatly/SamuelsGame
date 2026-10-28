@@ -25,6 +25,7 @@ export class PreloadScene extends Phaser.Scene {
     this.load.image(Tex.weaponsExtra, 'extra/weapons-extra.png');
     this.load.spritesheet(Tex.monsters, 'extra/monsters-extra.png', { frameWidth: TILE_SIZE, frameHeight: TILE_SIZE });
     this.load.spritesheet(Tex.accessories, 'extra/accessories-extra.png', { frameWidth: TILE_SIZE, frameHeight: TILE_SIZE });
+    this.load.spritesheet(Tex.props, 'extra/props-extra.png', { frameWidth: TILE_SIZE, frameHeight: TILE_SIZE });
     this.load.atlasXML(Tex.controls, 'controls/flat-dark.png', 'controls/flat-dark.xml');
     this.load.spritesheet(Tex.prompts, 'controls/prompts.png', { frameWidth: PROMPT_SIZE, frameHeight: PROMPT_SIZE });
     for (const [id, file] of Object.entries(SKILL_ICON_SOURCES)) this.load.image(`skill-src-${id}`, file);

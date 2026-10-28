@@ -27,6 +27,7 @@ const ENVIRONMENT_COLOR: Record<Environment, number> = {
   ruins: 0x7ca08c,
   desert: 0xd0a860,
   palace: 0xa070e0,
+  sewer: 0x6aa86a,
   unknown: 0xe0a040,
 };
 

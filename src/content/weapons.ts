@@ -48,6 +48,8 @@ export interface WeaponDef {
   dual?: boolean;
   /** Tiles frame the shots are drawn with; bolts use the glowing bolt texture. */
   projectileFrame?: number;
+  /** Lobbed in an arc to a landing point instead of flying straight (Sludge Slinger). */
+  lob?: boolean;
   /** What level 5 adds. */
   twist?: WeaponTwist;
   /** Upgrade level of this copy (1 when unset). */
@@ -172,7 +174,23 @@ export const fists: WeaponDef = {
   description: '3-hit combo, the last punch hits hard',
 };
 
-export const weaponList: readonly WeaponDef[] = [apprenticeStaff, brokenWand, goldenSword, twinDaggers, hammer, bow, fists];
+/** Lobs a goo blob up to 200px that bursts into a puddle slowing monsters. Gloop's own; DPS (15 per 600ms = 25) sits between the staff and the wand. */
+export const sludgeSlinger: WeaponDef = {
+  id: 'sludgeSlinger',
+  kind: 'ranged',
+  name: 'Sludge Slinger',
+  frame: Frame.slinger,
+  baseDamage: 15,
+  fireRateMs: 600,
+  speed: 260,
+  range: 200,
+  tint: null,
+  lob: true,
+  twist: 'poisonPuddle',
+  description: 'Lobs goo that leaves a slowing puddle',
+};
+
+export const weaponList: readonly WeaponDef[] = [apprenticeStaff, brokenWand, goldenSword, twinDaggers, hammer, bow, fists, sludgeSlinger];
 
 export const weapons: Record<string, WeaponDef> = Object.fromEntries(weaponList.map((weapon) => [weapon.id, weapon]));
 

@@ -1,7 +1,6 @@
 import Phaser from 'phaser';
 import { Frame, Music } from '../content/assetKeys';
 import { CAMERA_ZOOM } from '../content/config';
-import { getHero } from '../content/heroes';
 import { getLevel, type LevelConfig } from '../content/levels';
 import { getEnemy } from '../content/enemies';
 import { rewardsOf } from '../content/rewards';
@@ -23,6 +22,7 @@ import { withRevive } from '../logic/campPurchases';
 import { feel } from '../systems/feel';
 import { GameClock } from '../systems/GameClock';
 import { HeroSystem } from '../systems/HeroSystem';
+import { SludgeSystem } from '../systems/SludgeSystem';
 import { HeroUnlocks } from '../systems/HeroUnlocks';
 import { EnemyFactory } from '../systems/EnemyFactory';
 import { GameEvents } from '../systems/GameEvents';
@@ -52,6 +52,12 @@ import { installRunMap, removeRunMap } from './runMap';
 import { TreasureSystem } from '../systems/TreasureSystem';
 import { chooseRunMap, parseSeed, type RunMap } from '../logic/runSeed';
 import { hasRandomMap } from '../logic/map';
+import { FORCE_GRATE } from '../debug';
+import { getHero, heroKit } from '../content/heroes';
+import { sewerCard } from '../content/cards';
+import { GrateSystem } from '../systems/GrateSystem';
+import { isLevelPlayable } from '../logic/levelRules';
+import { discoverSewer, queueSewerNotice, recordGrateRun, SEWER_NOTICE } from '../logic/secrets';
 
 export interface GameSceneData {
   levelId: string;
@@ -63,6 +69,8 @@ export interface GameSceneData {
 
 const devSeed = (): number | undefined => (import.meta.env.DEV ? parseSeed(new URLSearchParams(window.location.search).get('seed')) : undefined);
 
+/** Where Climb down leads; while the sewer is a teaser, the climb lands on its Level Select card instead. */
+const SEWER_ID = 'sewer';
 const BUTTON_START = 9;
 const REWARD_FADE_MS = 600;
 const BOSS_XP_BONUS = 100;
@@ -85,6 +93,7 @@ export class GameScene extends Phaser.Scene {
   private heroic = false;
   private survival = false;
   private director?: LevelDirector;
+  private controls!: InputController;
 
   constructor() {
     super('Game');
@@ -110,13 +119,18 @@ export class GameScene extends Phaser.Scene {
       devSeed: devSeed(),
       previous: data.runMap,
       rng: Math.random,
+      sewerFound: save.secrets.sewerFound,
+      runsWithoutGrate: save.secrets.desertRunsWithoutGrate,
+      forceGrate: FORCE_GRATE,
     });
     const map = buildLevelMap(this, this.level, installRunMap(this, this.level, this.runMap));
     const { walls, playerStart } = map;
+    const countsForPity = data.runMap === undefined && this.runMap.side !== undefined && !FORCE_GRATE && devSeed() === undefined;
+    if (countsForPity) saveSystem.update((s) => recordGrateRun(s, (map.world?.grates.length ?? 0) > 0));
     const projectiles = createProjectilePool(this);
     const shots = new EnemyProjectiles(this);
     const weapon = weaponAtLevel(getWeapon(save.loadout.weapon), weaponLevel(save, save.loadout.weapon));
-    const controls = new InputController(this);
+    const controls = (this.controls = new InputController(this));
     this.cards = new CardPresenter({ scene: this.scene, isEnding: () => this.ending, onClosed: () => controls.swallowUntilReleased() }, saveSystem);
     const player = new Player(
       this,
@@ -146,6 +160,7 @@ export class GameScene extends Phaser.Scene {
     const director = (this.director = this.createDirector(map, player, factory, events, blockedByRects(avoid, isSolid)));
     const skills = new SkillSystem({ scene: this, player, enemies, shots, clock: this.clock, isSolid, save: saveSystem, events });
     new HeroSystem({ scene: this, player, enemies, shots, clock: this.clock, isSolid }, events);
+    new SludgeSystem({ scene: this, player, enemies, shots, clock: this.clock, isSolid });
     this.unlocks = new HeroUnlocks(this, player, events, saveSystem, player.hero.id, this.level.id, this.level.bossId, (ids) => this.announceHeroes(ids));
     this.acquisition = new SkillAcquisition(this, saveSystem, skills, this.cards);
     const loot = new LootSystem(this, player, events, this.run, saveSystem, this.clock, this.cards, this.acquisition);
@@ -181,6 +196,7 @@ export class GameScene extends Phaser.Scene {
     this.startMusic(events);
     this.setUpReward(map, player, events);
     if (map.world && map.world.treasures.length > 0) new TreasureSystem(this, player, loot, this.level, map.world.treasures);
+    if (map.world && map.world.grates.length > 0) new GrateSystem(this, player, this.clock, map.world.grates, () => this.canPromptGrate(), () => this.openGratePrompt());
 
     this.physics.world.setBounds(0, 0, walls.width, walls.height);
     const camera = this.cameras.main;
@@ -223,11 +239,46 @@ export class GameScene extends Phaser.Scene {
   }
 
   quitToLevelSelect(): void {
+    this.leaveRun('LevelSelect');
+  }
+
+  /** Ends the run without a result, exactly like Quit from the pause menu (gold banked, run recorded as a quit), then opens `next`. */
+  private leaveRun(next: string, data?: object): void {
     this.unlocks.finish(false, 0);
     this.bankRun();
     if (this.director?.elapsedMs !== undefined) this.recordSurvivalRun(this.director);
     this.scene.stop('Pause');
-    this.scene.start('LevelSelect');
+    this.scene.stop('GratePrompt');
+    this.scene.start(next, data);
+  }
+
+  private canPromptGrate(): boolean {
+    return !this.ending && !this.scene.isPaused() && !this.scene.isActive('Pause');
+  }
+
+  private openGratePrompt(): void {
+    feel.thaw();
+    this.scene.pause();
+    this.scene.pause('Hud');
+    this.scene.launch('GratePrompt');
+  }
+
+  /** The grate prompt's answer. Either way the sewer is discovered (Gloop unlocks); Climb down then leaves the desert like a quit. */
+  resolveGrate(climb: boolean): void {
+    this.scene.stop('GratePrompt');
+    const first = !saveSystem.data.secrets.sewerFound;
+    saveSystem.update((save) => discoverSewer(save, heroKit));
+    if (climb) {
+      if (first) saveSystem.update(queueSewerNotice);
+      const sewer = getLevel(SEWER_ID);
+      if (isLevelPlayable(sewer)) this.leaveRun('Game', { levelId: sewer.id });
+      else this.leaveRun('LevelSelect', { focusLevelId: sewer.id });
+      return;
+    }
+    if (first) this.cards.request(SEWER_NOTICE, sewerCard);
+    this.controls.swallowUntilReleased();
+    this.resumeGame();
+    this.time.delayedCall(0, () => this.cards.flush());
   }
 
   /** Banks coins, grants the reward weapon, records the clear and shows the results screen. */

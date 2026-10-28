@@ -140,7 +140,21 @@ export const secret: HeroDef = {
   hint: 'Many hands, one destiny.',
 };
 
-export const heroList: readonly HeroDef[] = [wizard, knight, rogue, dwarf, ranger, monk, necromancer, secret];
+export const gloop: HeroDef = {
+  id: 'gloop',
+  className: 'Slime',
+  name: 'Gloop the Slime',
+  frame: Frame.slime,
+  tint: 0x8ff08f,
+  color: '#7adf4a',
+  bio: 'A friendly sewer slime who just wants to help.',
+  stats: mods(RATING.high, RATING.low, RATING.mid),
+  passive: { id: 'secondBlob', name: 'Second Blob', text: 'Once per level, a knockout hit shrinks him instead: back up at 30% HP.' },
+  signatureWeaponId: 'sludgeSlinger',
+  hint: "Some friends live where the light doesn't reach.",
+};
+
+export const heroList: readonly HeroDef[] = [wizard, knight, rogue, dwarf, ranger, monk, necromancer, secret, gloop];
 
 export const heroes: Record<string, HeroDef> = Object.fromEntries(heroList.map((hero) => [hero.id, hero]));
 

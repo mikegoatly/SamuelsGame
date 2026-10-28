@@ -69,6 +69,7 @@ export const SFX_DEFS = {
   sandRise: { files: ['gravity_0.ogg'], volume: 0.3, rate: 0.5, minGapMs: 1500 },
   plateClick: { files: ['uimove_0.ogg'], volume: 0.6, rate: 0.55 },
   arrowShot: { files: variants('shoot', 3), volume: 0.25, rate: 1.6, jitter: 0.06, minGapMs: 60 },
+  drip: { files: ['potion_0.ogg'], volume: 0.18, rate: 2.2, jitter: 0.12, minGapMs: 1500 },
   bladeSwish: { files: variants('swing', 2), volume: 0.22, rate: 0.6, jitter: 0.08, minGapMs: 500 },
 } as const satisfies Record<string, SfxDef>;
 

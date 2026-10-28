@@ -1,4 +1,5 @@
 import { SHEET_COLS, TILE_SIZE } from '../../content/assetKeys';
+import type { SidePlan } from '../layoutPresets';
 import { generateRandomLayout } from '../layout/randomLayout';
 import { floorMask, generateLayout, placeHazards, placeSpikeTraps, throneTiles, type DungeonLayout, type LayoutRoom } from '../dungeonLayout';
 import type { Rect } from '../geometry';
@@ -113,7 +114,7 @@ function buildObjects(layout: DungeonLayout, hazards: Rect[], spikes: Rect[], ac
     make('playerStart', 'playerStart', at(start), {}, true),
     ...combat.map((room, i) => make(`room${room.index}`, 'room', rectPx(room.rect), { order: room.index, encounter: `${theme.id}-room-${room.index}`, ...theme.encounters[i]! })),
     ...layout.doors.filter((d) => d.room > 0).map((d, i) => make(`door${i + 1}`, 'door', rectPx(d.rect), { room: d.room })),
-    ...(side ? [make('treasure1', 'treasure', at(side), {}, true)] : []),
+    ...(side ? [layout.grate ? make('grate1', 'grate', at(side), {}, true) : make('treasure1', 'treasure', at(side), {}, true)] : []),
     ...hazards.map((r, i) => make(`quicksand${i + 1}`, 'hazard', rectPx(r), { kind: 'quicksand' })),
     ...spikes.map((r, i) => make(`spikes${i + 1}`, 'hazard', rectPx(r), { kind: 'spikes', offset: (i % 2 === 0 ? i * 640 : (i - 1) * 640) % SPIKE_PERIOD })),
     ...active.map((h, i) => make(`${h.kind}${i + 1}`, 'hazard', rectPx(h.rect), { kind: h.kind, room: h.room, ...h.params })),
@@ -146,10 +147,10 @@ export function buildWorld(theme: MapTheme) {
   return assemble(theme, theme.seed, rng, generateLayout(rng, theme.preset));
 }
 
-/** A fresh map for `seed`: random route, room shapes and optional side room, same rooms and encounters as the classic one. */
-export function buildRandomWorld(theme: MapTheme, seed: number) {
+/** A fresh map for `seed`: random route, room shapes and optional (or forced) side room, same rooms and encounters as the classic one. */
+export function buildRandomWorld(theme: MapTheme, seed: number, side?: SidePlan) {
   const rng = mulberry32(seed);
-  return assemble(theme, seed, rng, generateRandomLayout(rng, theme.preset, theme.random));
+  return assemble(theme, seed, rng, generateRandomLayout(rng, theme.preset, theme.random, side));
 }
 
 type World = ReturnType<typeof buildWorld>;
@@ -196,4 +197,4 @@ function toTmj({ layout, ground, walls, quicksand, spikes, active }: World, them
 export type TmjMap = ReturnType<typeof toTmj>;
 
 export const buildTmj = (theme: MapTheme): TmjMap => toTmj(buildWorld(theme), theme);
-export const buildRandomTmj = (theme: MapTheme, seed: number): TmjMap => toTmj(buildRandomWorld(theme, seed), theme);
+export const buildRandomTmj = (theme: MapTheme, seed: number, side?: SidePlan): TmjMap => toTmj(buildRandomWorld(theme, seed, side), theme);

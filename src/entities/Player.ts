@@ -9,10 +9,13 @@ import { BowDraw } from '../logic/bowDraw';
 import { frontalDamage, passiveEffects, Strikes, type PassiveEffects, type Strike } from '../logic/passives';
 import { PLAYER_IFRAMES_MS, PlayerTimers } from '../logic/playerTimers';
 import { reviveHp, REVIVE_IFRAMES_MS } from '../logic/potions';
+import { KnockoutRules, SECOND_BLOB, secondBlobHp } from '../logic/secondBlob';
+import { lobDistance } from '../logic/sludge';
 import { computePlayerStats, type PlayerStats } from '../logic/stats';
 import { headOffset } from '../logic/accessoryWear';
 import type { DamageSource } from '../logic/unlocks';
 import { dustPuff, muzzleFlash } from '../systems/fx';
+import { sparkBurst } from '../systems/skills/skillFx';
 import { feel } from '../systems/feel';
 import type { GameClock } from '../systems/GameClock';
 import type { GameEvents } from '../systems/GameEvents';
@@ -58,6 +61,8 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   meleeHandler?: (x: number, y: number, aim: number, weapon: WeaponDef) => { reverse: boolean } | undefined;
   /** Called when a charged weapon's draw is released (bow); `fraction` is 0..1 of a full draw. */
   bowHandler?: (x: number, y: number, aim: number, fraction: number, weapon: WeaponDef) => void;
+  /** Called when a lobbed weapon (Sludge Slinger) fires: `distance` is how far the blob should land. */
+  lobHandler?: (x: number, y: number, aim: number, distance: number, weapon: WeaponDef) => void;
   /** How far the bow is drawn right now, 0..1. */
   drawFraction = 0;
   weapon: WeaponDef;
@@ -65,6 +70,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   readonly effects: PassiveEffects;
 
   private readonly strikes: Strikes;
+  private readonly knockouts: KnockoutRules;
   private head?: Phaser.GameObjects.Image;
   private readonly wand: Phaser.GameObjects.Image;
   /** Second dagger of a dual weapon, mirrored across the aim line. */
@@ -99,6 +105,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     if (hero.tint !== null) this.setTint(hero.tint);
     this.effects = passiveEffects(hero.passive.id);
     this.strikes = new Strikes(this.effects);
+    this.knockouts = new KnockoutRules(this.effects.secondBlob);
     this.weapon = weapon;
     scene.add.existing(this);
     scene.physics.add.existing(this);
@@ -144,7 +151,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   }
 
   takeDamage(amount: number, fromX: number, fromY: number, source: DamageSource = 'melee'): DamageResult {
-    if (this.dead || this.actionsLocked || this.invulnerable || GOD_MODE) return 'none';
+    if (this.dead || this.actionsLocked || feel.isLocked || this.invulnerable || GOD_MODE) return 'none';
     const reduced = frontalDamage(amount, this.aimDirection.angle(), { x: fromX - this.x, y: fromY - this.y }, this.effects, source);
     const through = this.damageAbsorber ? this.damageAbsorber(reduced) : reduced;
     if (through <= 0) {
@@ -162,7 +169,9 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this.events.emit('player-hurt');
     this.events.emit('hp-changed', this.hp, this.maxHp);
     if (this.hp <= 0) {
-      if (this.reviver?.()) this.revive();
+      const outcome = this.knockouts.resolve(() => this.reviver?.() ?? false, feel.isLocked);
+      if (outcome === 'secondBlob') this.shrinkInstead();
+      else if (outcome === 'revive') this.revive();
       else this.die();
     }
     return 'hurt';
@@ -206,7 +215,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
 
   private placeHead(alpha: number): void {
     const offset = headOffset(this.hero.id, this.flipX);
-    this.head?.setPosition(this.x + offset.x, this.y + offset.y).setFlipX(this.flipX).setAlpha(alpha);
+    this.head?.setPosition(this.x + offset.x * this.scaleX, this.y + offset.y * this.scaleY).setFlipX(this.flipX).setAlpha(alpha).setScale(this.scaleX);
   }
 
   private showWeapon(): void {
@@ -237,6 +246,20 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this.events.emit('hp-changed', this.hp, this.maxHp);
     floatText(this.scene, this.x, this.y - 16, 'REVIVED!', '#ffe066', 16, 24, 1500);
     playSfx(this.scene, 'levelUp');
+  }
+
+  /** Gloop's Second Blob: back up at 30% HP with a moment of safety, and smaller (so the body is too) for the rest of the run. */
+  private shrinkInstead(): void {
+    this.hp = secondBlobHp(this.maxHp);
+    this.timers.grantInvulnerability(this.clock.now, SECOND_BLOB.iframesMs);
+    this.events.emit('hp-changed', this.hp, this.maxHp);
+    floatText(this.scene, this.x, this.y - 16, 'SECOND BLOB!', '#7adf4a', 16, 24, 1500);
+    playSfx(this.scene, 'levelUp');
+    if (feel.reduced) this.setScale(SECOND_BLOB.scale);
+    else {
+      sparkBurst(this.scene, this.x, this.y, 0x7adf4a, 14, 60);
+      this.scene.tweens.add({ targets: this, scaleX: { from: 1.35, to: SECOND_BLOB.scale }, scaleY: { from: 0.55, to: SECOND_BLOB.scale }, duration: 520, ease: 'Elastic.easeOut' });
+    }
   }
 
   private die(): void {
@@ -293,6 +316,12 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     if (!this.controls.fire || !this.timers.tryFire(now, this.fireRateMs)) return;
     if (this.weapon.kind === 'melee') {
       this.swingSword(now);
+      return;
+    }
+    if (this.weapon.lob) {
+      const reach = Math.hypot(this.controls.aimWorldPoint.x - this.x, this.controls.aimWorldPoint.y - this.y);
+      const distance = lobDistance({ fromPointer: this.controls.aimFromPointer, distance: reach }, this.weapon.range);
+      this.lobHandler?.(this.x, this.y - 2, this.aimDirection.angle(), distance, this.weapon);
       return;
     }
     const bolt = fireProjectile(

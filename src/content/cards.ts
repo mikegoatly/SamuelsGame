@@ -21,6 +21,15 @@ export const heroCard = (hero: HeroDef): CardData => ({
   lines: [`${hero.passive.name}: ${hero.passive.text}`, hero.bio],
 });
 
+export const sewerCard: CardData = {
+  title: 'Sunken Sewer',
+  subtitle: 'Sewer discovered!',
+  color: '#7dd86a',
+  frame: Frame.slime,
+  tint: 0x7dd86a,
+  lines: ['A new level now waits on the level select screen.', 'Someone down there wants to meet you.'],
+};
+
 export const levelUpCard = (level: number): CardData => ({
   title: `Level ${level}!`,
   subtitle: 'Level up',

@@ -26,6 +26,8 @@ export class InputController {
   readonly moveVector = new Phaser.Math.Vector2();
   readonly aimVector = new Phaser.Math.Vector2(1, 0);
   readonly aimWorldPoint = new Phaser.Math.Vector2();
+  /** True while aim comes from a mouse pointer (so its distance means something); stick and touch aim is a direction only. */
+  aimFromPointer = false;
   fire = false;
   readonly skills: boolean[] = Array.from({ length: SLOT_COUNT }, () => false);
   dash = false;
@@ -77,10 +79,12 @@ export class InputController {
     if (source.aimVector && source.aimVector.lengthSq() > 0.01) {
       this.aimVector.copy(source.aimVector).normalize();
       this.aimWorldPoint.copy(origin).add(this.aimVector.clone().scale(100));
+      this.aimFromPointer = false;
     } else if (source.aimWorldPoint) {
       const direction = source.aimWorldPoint.clone().subtract(origin);
       if (direction.lengthSq() > 1) this.aimVector.copy(direction).normalize();
       this.aimWorldPoint.copy(source.aimWorldPoint);
+      this.aimFromPointer = true;
     }
   }
 }
