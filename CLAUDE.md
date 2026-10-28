@@ -72,3 +72,5 @@ agent is stuck, check whether its work already landed, stop it, and finish the r
 - `main` branch, remote `origin` (github.com/mikegoatly/samuelsgame). `.gitattributes` normalises to LF;
   CRLF warnings on Windows are expected and harmless.
 - Commit messages end with the Co-Authored-By line from the current session's instructions.
+- **Every commit bumps the version by 0.1** (0.2.0 → 0.3.0 → …): `npm version <next> --no-git-tag-version`
+  (updates `package.json` and `package-lock.json`); the main menu shows it via `__APP_VERSION__`.

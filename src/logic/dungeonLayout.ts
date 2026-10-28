@@ -48,6 +48,8 @@ export interface DungeonLayout {
   blocks: Pillar[];
   /** Optional dead-end treasure room; its index is `rooms.length`, and its corridor is the last one. */
   sideRoom: LayoutRoom | null;
+  /** The side room holds a sewer grate instead of a treasure chest. */
+  grate?: boolean;
 }
 
 /** Picks a [start, size] span inside a cell that always covers the centre 3-tile block. */

@@ -12,6 +12,7 @@ describe('accessories', () => {
     ['ruins', 'Stone Crown', 0],
     ['desert', 'Sun Crown', 1],
     ['palace', 'Royal Crown', 2],
+    ['sewer', 'Sludge Crown', 4],
   ])('%s awards the %s on frame %i', (levelId, name, frame) => {
     const crown = crownFor(levelId)!;
     expect(crown.name).toBe(name);

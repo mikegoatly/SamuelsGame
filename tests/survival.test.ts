@@ -209,3 +209,11 @@ describe('survival level', () => {
     expect(visibleLevels(levels, []).map((l) => l.id)).toContain('survival');
   });
 });
+
+describe('the secret sewer and Heroic Survival', () => {
+  it('does not take part in the unlock: Ruins, Desert and Palace on Heroic are still all it needs', () => {
+    expect([...SURVIVAL_REQUIRED]).toEqual(['ruins', 'desert', 'palace']);
+    expect(isSurvivalUnlocked(['ruins', 'desert', 'palace'], SURVIVAL_REQUIRED)).toBe(true);
+    expect(isSurvivalUnlocked(['ruins', 'desert', 'sewer'], SURVIVAL_REQUIRED)).toBe(false);
+  });
+});

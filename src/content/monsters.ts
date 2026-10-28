@@ -1,8 +1,11 @@
-import { Frame, MonsterFrame, Tex } from './assetKeys';
+import { Frame, MonsterFrame, SewerFrame, Tex } from './assetKeys';
 import type { EnemyDef } from './enemies';
 
 /** Hand-drawn sprite from the extra monster sheet. */
 const drawn = (frame: number): Pick<EnemyDef, 'texture' | 'textureFrame' | 'frame'> => ({ texture: Tex.monsters, textureFrame: frame, frame: 0 });
+
+/** Hand-drawn sprite from the sewer sheet. */
+const sewerDrawn = (frame: number): Pick<EnemyDef, 'texture' | 'textureFrame' | 'frame'> => ({ texture: Tex.sewer, textureFrame: frame, frame: 0 });
 
 // Ruins
 export const rat: EnemyDef = {
@@ -242,9 +245,121 @@ export const houndmaster: EnemyDef = {
   pack: { member: 'hound', count: [2, 2], leader: true },
 };
 
+// Sewer
+export const sewerRat: EnemyDef = {
+  ...rat,
+  id: 'sewerRat',
+  name: 'Sewer Rat',
+  baseHp: 10,
+  baseDamage: 4,
+  speed: 66,
+  tint: 0x8fb89a,
+  lootTableId: 'sewerRat',
+  tip: 'Comes in a big gang. Fight them in a corner!',
+  xpLevelDrop: 2,
+};
+export const sewerRatSwarm: EnemyDef = {
+  ...sewerRat,
+  id: 'sewerRatSwarm',
+  name: 'Sewer Rat Swarm',
+  cost: 2,
+  pack: { member: 'sewerRat', count: [4, 6], levelDrop: 0 },
+};
+export const sludgeBlob: EnemyDef = {
+  id: 'sludgeBlob',
+  name: 'Sludge Blob',
+  ...sewerDrawn(SewerFrame.slimeBig),
+  baseHp: 40,
+  baseDamage: 8,
+  speed: 27,
+  behaviour: 'custom',
+  custom: 'blob',
+  lootTableId: 'sludgeBlob',
+  cost: 2,
+  splitInto: { id: 'sludgeBlobSmall', count: 2 },
+  raisable: false,
+  tip: 'Slow and sticky. It splits in two when it pops!',
+  xpLevelDrop: 20,
+};
+export const sludgeBlobSmall: EnemyDef = {
+  ...sludgeBlob,
+  id: 'sludgeBlobSmall',
+  name: 'Little Blob',
+  ...sewerDrawn(SewerFrame.slimeSmall),
+  baseHp: 11,
+  baseDamage: 5,
+  speed: 46,
+  lootTableId: 'sludgeBlobSmall',
+  splitInto: undefined,
+  tip: undefined,
+};
+export const pipeSpitter: EnemyDef = {
+  id: 'pipeSpitter',
+  name: 'Pipe Spitter',
+  ...sewerDrawn(SewerFrame.spitter),
+  baseHp: 52,
+  baseDamage: 8,
+  speed: 0,
+  behaviour: 'custom',
+  custom: 'spitter',
+  lootTableId: 'pipeSpitter',
+  cost: 2,
+  placement: 'back',
+  raisable: false,
+  tip: 'Spits goo at a red circle. Step out of it!',
+  maxPerWave: 2,
+};
+export const bloatToad: EnemyDef = {
+  id: 'bloatToad',
+  name: 'Bloat Toad',
+  ...sewerDrawn(SewerFrame.toadSit),
+  baseHp: 36,
+  baseDamage: 6,
+  speed: 42,
+  behaviour: 'custom',
+  custom: 'toad',
+  lootTableId: 'bloatToad',
+  blastDamage: 6,
+  raisable: false,
+  tip: 'Hops close, puffs up red, then pops into poison gas.',
+};
+export const sewerGator: EnemyDef = {
+  id: 'sewerGator',
+  name: 'Sewer Gator',
+  ...sewerDrawn(SewerFrame.gator),
+  baseHp: 35,
+  baseDamage: 17,
+  speed: 70,
+  behaviour: 'custom',
+  custom: 'gator',
+  lootTableId: 'sewerGator',
+  cost: 2,
+  tip: 'Hides in the goo with only its eyes showing. Snap!',
+  swims: true,
+  maxPerWave: 2,
+  maxAlive: 2,
+};
+export const moldShroom: EnemyDef = {
+  id: 'moldShroom',
+  name: 'Mold Shroom',
+  ...sewerDrawn(SewerFrame.mushroom),
+  baseHp: 44,
+  baseDamage: 5,
+  speed: 30,
+  behaviour: 'custom',
+  custom: 'shroom',
+  lootTableId: 'moldShroom',
+  cost: 1,
+  placement: 'back',
+  raisable: false,
+  tip: 'Heals and shields its friends. Pop it first!',
+  maxPerWave: 1,
+};
+
 export const ruinsMonsters = [ratSwarm, bombBeetle, skeletonArcher, wisp, necromancer];
 export const desertMonsters = [fireImp, cactusTurret, mummyPriest, sandShark, dustDevil];
 export const palaceMonsters = [jester, mirrorKnight, houndmaster, gargoyle, twinMages];
+export const sewerMonsters = [sewerRatSwarm, sludgeBlob, pipeSpitter, bloatToad, sewerGator, moldShroom];
 
 /** Every new monster def, including pack members that are not in any level pool. */
-export const newMonsters: EnemyDef[] = [rat, ...ruinsMonsters, ...desertMonsters, ...palaceMonsters, twinMage, hound];
+export const newMonsters: EnemyDef[] = [rat, ...ruinsMonsters, ...desertMonsters, ...palaceMonsters, twinMage, hound, ...sewerMonsters, sewerRat, sludgeBlobSmall];

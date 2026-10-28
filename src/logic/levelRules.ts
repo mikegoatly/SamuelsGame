@@ -6,19 +6,24 @@ interface Unlockable {
   unlockedBy?: string;
   /** Teaser cards: listed, never playable. */
   comingSoon?: boolean;
+  /** Listed only once found (see `visibleLevels`). */
+  hiddenUntilFound?: boolean;
   /** Opens through Heroic clears instead of `unlockedBy`. */
   survival?: boolean;
 }
 
+/** The one check for "can this level be entered yet": teaser levels cannot, so flipping `comingSoon` off is all a stub needs. */
+export const isLevelPlayable = (level: Unlockable): boolean => !level.comingSoon;
+
 export function isLevelUnlocked(level: Unlockable, cleared: readonly string[], heroicCleared: readonly string[] = []): boolean {
-  if (level.comingSoon) return false;
+  if (!isLevelPlayable(level)) return false;
   if (level.survival) return isSurvivalUnlocked(heroicCleared, SURVIVAL_REQUIRED);
   return level.unlockedBy === undefined || cleared.includes(level.unlockedBy);
 }
 
-/** Teaser levels only appear once the level before them is cleared. */
-export function visibleLevels<T extends Unlockable>(all: readonly T[], cleared: readonly string[]): T[] {
-  return all.filter((level) => !level.comingSoon || level.unlockedBy === undefined || cleared.includes(level.unlockedBy));
+/** Teaser levels only appear once the level before them is cleared; secret levels once found. */
+export function visibleLevels<T extends Unlockable>(all: readonly T[], cleared: readonly string[], sewerFound = false): T[] {
+  return all.filter((level) => (level.hiddenUntilFound ? sewerFound : !level.comingSoon || level.unlockedBy === undefined || cleared.includes(level.unlockedBy)));
 }
 
 export function isUnderLevelled(playerLevel: number, recommendedLevel: number): boolean {

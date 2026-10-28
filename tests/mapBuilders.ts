@@ -1,13 +1,14 @@
 import { floorMask, type DungeonLayout } from '../src/logic/dungeonLayout';
 import type { Rect } from '../src/logic/geometry';
 import { buildRandomWorld } from '../src/logic/map/mapBuilder';
+import type { SidePlan } from '../src/logic/layoutPresets';
 import type { MapTheme } from '../src/logic/map/mapThemes';
 
 export const tilesOf = (r: Rect): [number, number][] => Array.from({ length: r.w * r.h }, (_, i) => [r.x + (i % r.w), r.y + Math.floor(i / r.w)]);
 export const seedsFor = (count: number): number[] => Array.from({ length: count }, (_, i) => i * 7919 + 1);
 export const keyOf = (x: number, y: number): string => `${x},${y}`;
 
-export const randomWorld = (theme: MapTheme, seed: number) => buildRandomWorld(theme, seed);
+export const randomWorld = (theme: MapTheme, seed: number, side?: SidePlan) => buildRandomWorld(theme, seed, side);
 export type RandomWorld = ReturnType<typeof randomWorld>;
 
 /** Tiles walkers can stand on: floor minus cover, interior walls and every hazard footprint. */

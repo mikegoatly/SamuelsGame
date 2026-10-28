@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { getEnemy, type EnemyDef } from '../content/enemies';
-import { Boss } from '../entities/Boss';
+import { Boss, type BossHooks } from '../entities/Boss';
 import { Enemy, type EnemyContext, type EnemyExtras } from '../entities/Enemy';
 import { assignHound } from '../entities/behaviours/hounds';
 import { linkTwins } from '../entities/behaviours/twin';
@@ -17,6 +17,9 @@ const FADE_IN_MS = 300;
 /** Monsters arriving from a spawn marker cannot act or hurt for this long. */
 const SPAWN_GRACE_MS = 500;
 const BOSS_FADE_IN_MS = 700;
+/** Pieces of a split boss pop in quickly and cannot act for a moment. */
+const PIECE_FADE_IN_MS = 200;
+const PIECE_GRACE_MS = 600;
 const MINION_RADIUS = 36;
 const MINION_INSET = 24;
 const EMERGE_OFFSET = 18;
@@ -59,6 +62,9 @@ export class EnemyFactory {
     this.context = { ...context, world: this.world };
   }
 
+  /** Walls and closed doors only (hazard footprints do not count), the test wall-mounted monsters snap to. */
+  isWall = (x: number, y: number): boolean => this.context.isBlocked?.(x, y) ?? false;
+
   living(): Enemy[] {
     return (this.group.getChildren() as Enemy[]).filter((e) => e.alive);
   }
@@ -85,7 +91,8 @@ export class EnemyFactory {
   }
 
   spawnBoss(def: EnemyDef, level: number, x: number, y: number, area: BossArea): Boss {
-    const hooks = {
+    const hooks: BossHooks = {
+      piece: (id, lvl, px, py, hp, family, pieceId) => this.fadeIn(new Boss(this.scene, px, py, getEnemy(id), lvl, this.context, hooks, { family, id: pieceId, hp }), PIECE_FADE_IN_MS, PIECE_GRACE_MS),
       summon: (id: string, lvl: number, sx: number, sy: number) => {
         const at = this.minionSpot(area, sx, sy);
         this.spawn(getEnemy(id), lvl, at.x, at.y);

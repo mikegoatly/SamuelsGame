@@ -96,3 +96,11 @@ export function emberBurst(scene: Phaser.Scene, x: number, y: number, count = 4)
   const embers = shared(scene, 'embers', Tex.star, 9, { speed: { min: 15, max: 55 }, lifespan: 520, scale: { start: 0.035, end: 0 }, gravityY: -30, blendMode: Phaser.BlendModes.ADD });
   emit(embers, x, y, SPARK_TINT, count);
 }
+
+const MIST_TINT = 0x7dd86a;
+
+/** A soft green puff drifting up out of the sewer grate; `count` shrinks when flashes are reduced. */
+export function mistPuff(scene: Phaser.Scene, x: number, y: number, count = 3): void {
+  const mist = shared(scene, 'mist', Tex.smoke, 2, { speed: { min: 4, max: 12 }, lifespan: 1400, scale: { start: 0.04, end: 0.13 }, alpha: { start: 0.35, end: 0 }, gravityY: -14 });
+  emit(mist, x, y, MIST_TINT, count);
+}

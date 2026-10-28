@@ -68,7 +68,7 @@ describe('skill acquisition content', () => {
 
   it('boss loot tables use the boss scroll chance and ordinary ones the default', () => {
     const bossTables = new Set(Object.values(enemies).filter((e) => e.boss).map((e) => e.lootTableId));
-    expect(bossTables).toEqual(new Set(['stoneGuardian', 'sandRat', 'madKing']));
+    expect(bossTables).toEqual(new Set(['stoneGuardian', 'sandRat', 'madKing', 'motherSludge']));
     for (const table of Object.values(lootTables)) {
       expect(table.scrollChance ?? SCROLL_CHANCE.normal, table.id).toBe(bossTables.has(table.id) ? SCROLL_CHANCE.boss : SCROLL_CHANCE.normal);
     }

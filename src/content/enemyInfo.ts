@@ -11,5 +11,6 @@ export function enemyInfo(def: EnemyDef): EnemyInfo {
     cost: def.cost ?? (tank ? 2 : 1),
     role: def.placement ?? (shooter ? 'back' : tank ? 'front' : 'any'),
     eliteOk: !def.boss && def.eliteOk !== false,
+    ...(def.maxPerWave !== undefined ? { maxPerWave: def.maxPerWave } : {}),
   };
 }

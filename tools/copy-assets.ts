@@ -105,6 +105,50 @@ const sfx: Array<[string, string]> = [
 ];
 for (const [src, dest] of sfx) files.push([src, `audio/${dest}`]);
 
+// Sewer level art, fonts and sounds (see docs/assets-sewer.md)
+const rogueDungeon = '2D assets/Roguelike Dungeon Pack';
+const rogueBase = '2D assets/Roguelike Base Pack';
+files.push(
+  [`${rogueDungeon}/Spritesheet/roguelikeDungeon_transparent.png`, 'sewer/roguelike-dungeon.png'],
+  [`${rogueDungeon}/License.txt`, 'sewer/RoguelikeDungeon-License.txt'],
+  [`${rogueBase}/Spritesheet/roguelikeSheet_transparent.png`, 'sewer/roguelike-base.png'],
+  [`${rogueBase}/License.txt`, 'sewer/RoguelikeBase-License.txt'],
+  ['2D assets/Tiny Town/Tilemap/tilemap_packed.png', 'sewer/tiny-town.png'],
+  ['2D assets/Tiny Town/License.txt', 'sewer/TinyTown-License.txt'],
+  ['2D assets/Tiny Battle/Tilemap/tilemap_packed.png', 'sewer/tiny-battle.png'],
+  ['2D assets/Tiny Battle/License.txt', 'sewer/TinyBattle-License.txt'],
+);
+const fontNames = [
+  'Blocks', 'Bold', 'Future Narrow', 'Future Square', 'Future', 'High Square', 'High', 'Mini Square Mono',
+  'Mini Square', 'Mini', 'Pixel Square', 'Pixel', 'Rocket Square', 'Rocket', 'Space', 'Thick',
+];
+for (const name of fontNames) files.push([`Other/Fonts/Kenney ${name}.ttf`, `fonts/Kenney${name.replace(/ /g, '')}.ttf`]);
+// The Fonts pack ships no licence file; Kenney's packs are all CC0, so ship the Tiny Dungeon one beside them.
+files.push(['2D assets/Tiny Dungeon/License.txt', 'fonts/License.txt']);
+
+const foley = 'Audio/Foley Sounds/Audio';
+const retro = 'Audio/Retro Sounds 1/Audio';
+const sewerSfx: Array<[string, string]> = [
+  [`${foley}/Water/sinkWater1.ogg`, 'splash_0.ogg'],
+  [`${foley}/Water/sinkWater2.ogg`, 'splash_1.ogg'],
+  [`${foley}/Water/sinkWater3.ogg`, 'gurgle_0.ogg'],
+  [`${foley}/Water/sinkWater4.ogg`, 'gurgle_1.ogg'],
+  [`${foley}/Water/drip1.ogg`, 'drip_0.ogg'],
+  [`${foley}/Water/drip2.ogg`, 'drip_1.ogg'],
+  [`${impact}/impactSoft_heavy_000.ogg`, 'squelch_0.ogg'],
+  [`${impact}/impactSoft_heavy_001.ogg`, 'squelch_1.ogg'],
+  [`${retro}/creature1.ogg`, 'croak_0.ogg'],
+  [`${retro}/creature2.ogg`, 'croak_1.ogg'],
+  [`${rpg}/chop.ogg`, 'snap_0.ogg'],
+  [`${impact}/impactWood_light_000.ogg`, 'snap_1.ogg'],
+];
+for (const [src, dest] of sewerSfx) files.push([src, `audio/${dest}`]);
+files.push(
+  ['Audio/Foley Sounds/License.txt', 'audio/Foley-License.txt'],
+  ['Audio/Retro Sounds 1/License.txt', 'audio/Retro1-License.txt'],
+  ['Audio/RPG Audio/License.txt', 'audio/RPG-License.txt'],
+);
+
 const musicDir = process.env.MUSIC_DIR ?? 'C:/Users/mikeg/OneDrive/Royalty Free Background Music Pack';
 const music: Array<[string, string]> = [
   ['Relaxing Melody.mp3', 'music/menu.mp3'],

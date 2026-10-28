@@ -11,7 +11,7 @@ export function installRunMap(scene: Phaser.Scene, level: LevelConfig, run: RunM
   const key = runKey(level);
   const cache = scene.cache.tilemap;
   if (cache.exists(key)) cache.remove(key);
-  cache.add(key, { format: Phaser.Tilemaps.Formats.TILED_JSON, data: buildRandomMap(level.id, run.seed) });
+  cache.add(key, { format: Phaser.Tilemaps.Formats.TILED_JSON, data: buildRandomMap(level.id, run.seed, run.side) });
   return key;
 }
 

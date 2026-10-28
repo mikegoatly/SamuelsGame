@@ -2,17 +2,20 @@ import { describe, expect, it } from 'vitest';
 import { desert } from '../src/content/levels/desert';
 import { palace } from '../src/content/levels/palace';
 import { ruins } from '../src/content/levels/ruins';
+import { sewer } from '../src/content/levels/sewer';
+import { SEWER_CURVE, SEWER_ENCOUNTERS, SEWER_POOL } from '../src/content/levels/sewerMonsters';
 import { DWARF_GOLD, NECROMANCER_KILLS, ROGUE_TIME_MS } from '../src/logic/unlocks';
 import { upgradeCost } from '../src/logic/upgrades';
 import { TIER_MULTIPLIER } from '../src/content/upgradeInfo';
 import { totalGems, type Gems } from '../src/logic/gems';
-import { DESERT_THEME, PALACE_THEME, RUINS_THEME } from '../src/logic/map/mapThemes';
+import { DESERT_THEME, PALACE_THEME, RUINS_THEME, SEWER_THEME } from '../src/logic/map/mapThemes';
 import { estimateLevel, estimateRoom, gearedReference, heroicVariant, REFERENCE, type LevelEstimate } from './balanceModel';
 
 const CASES = [
   { level: ruins, theme: RUINS_THEME },
   { level: desert, theme: DESERT_THEME },
   { level: palace, theme: PALACE_THEME },
+  { level: sewer, theme: SEWER_THEME },
 ];
 
 /** Each level entered at its recommended level, and the whole journey with the player carrying their level over. */
@@ -72,6 +75,67 @@ describe('balance model: damage per room for the reference player', () => {
     const tougher = estimateRoom(desert, 4, { ...DESERT_THEME.encounters[3]!, minLevel: 9, maxLevel: 9 }, 7);
     expect(tougher.damage).toBeGreaterThan(room.damage);
     expect(estimateRoom(desert, 4, DESERT_THEME.encounters[3]!, 12).damage).toBeLessThan(room.damage);
+  });
+});
+
+/**
+ * The sewer sits between desert and palace. Its pool, curve and encounters come from `sewerMonsters.ts` (the map theme will carry the same
+ * encounters); the model runs without the map, so the flush and gas hazards and the boss are not counted yet and the targets leave room for them.
+ */
+describe('balance model: the sewer between desert and palace', () => {
+  const level = { ...sewer, enemyPool: SEWER_POOL, curve: SEWER_CURVE };
+  const run = estimateLevel(level, SEWER_ENCOUNTERS, level.recommendedLevel, REFERENCE, SEWER_THEME);
+  const rooms = pcts(run);
+
+  it('has one room per intro monster and starts gentle', () => {
+    expect(rooms).toHaveLength(SEWER_CURVE.intro.length);
+    expect(rooms[0]).toBeLessThan(30);
+    expect(rooms[0]).toBeGreaterThan(18);
+  });
+
+  it('no room is trivial or above 62% of health, and none spikes more than 20 points over the one before', () => {
+    for (const pct of rooms) {
+      expect(pct).toBeGreaterThan(15);
+      expect(pct).toBeLessThan(62);
+    }
+    for (let i = 1; i < rooms.length; i++) expect(rooms[i]! - rooms[i - 1]!, `room ${i + 1}`).toBeLessThanOrEqual(20);
+  });
+
+  it('climbs steadily: no room is easier than 80% of the one before, the last is the hardest and none is over 1.6 times the mean', () => {
+    for (let i = 1; i < rooms.length; i++) expect(rooms[i]!, `room ${i + 1}`).toBeGreaterThanOrEqual(rooms[i - 1]! * 0.8);
+    expect(Math.max(...rooms)).toBe(rooms[rooms.length - 1]);
+    expect(Math.max(...rooms)).toBeLessThanOrEqual(mean(rooms) * 1.6);
+  });
+
+  it('rises: the last rooms cost over 1.25 times the first ones', () => {
+    expect(mean(rooms.slice(-2))).toBeGreaterThan(mean(rooms.slice(0, 2)) * 1.25);
+  });
+
+  it('is about as hard on average as its neighbours (at least 90% of the desert, at most 110% of the palace)', () => {
+    expect(mean(rooms)).toBeGreaterThan(mean(pcts(desertRun!)) * 0.9);
+    expect(mean(rooms)).toBeLessThan(mean(pcts(palaceRun!)) * 1.1);
+  });
+
+  it('levels the hero like the palace does: +2 to +4 levels from the recommended level, and no more xp than the palace pays', () => {
+    expect(run.endLevel - level.recommendedLevel).toBeGreaterThanOrEqual(2);
+    expect(run.endLevel - level.recommendedLevel).toBeLessThanOrEqual(4);
+    const xp = (r: LevelEstimate): number => r.rooms.reduce((sum, room) => sum + room.xp, 0);
+    expect(xp(run)).toBeLessThan(xp(palaceRun!));
+    expect(xp(run)).toBeGreaterThan(xp(palaceRun!) * 0.4);
+  });
+
+  it('is survivable: potions cover over half of the damage taken', () => {
+    expect(run.loot.heal * 0.7).toBeGreaterThan(run.rooms.reduce((sum, r) => sum + r.damage, 0) * 0.5);
+  });
+
+  it('pays between desert and palace once the boss is added (rooms alone: 200-450 gold)', () => {
+    expect(run.loot.gold).toBeGreaterThan(200);
+    expect(run.loot.gold).toBeLessThan(450);
+  });
+
+  it('a full clear of the rooms takes 3-4.5 minutes without the boss', () => {
+    expect(run.runSeconds / 60).toBeGreaterThan(3);
+    expect(run.runSeconds / 60).toBeLessThan(4.5);
   });
 });
 

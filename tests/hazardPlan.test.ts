@@ -43,7 +43,8 @@ describe.each(themes)('escalation of theme %#', (theme, order) => {
     expect(roomLoad(plans, rooms)).toBeGreaterThan(roomLoad(plans, 2));
   });
 
-  it('gives the boss arena a hazard', () => {
-    expect(theme.bossHazard).toBeDefined();
+  it('gives the boss arena a hazard, except the sewer whose boss fight is busy enough', () => {
+    if (theme.id === 'sewer') expect(theme.bossHazard).toBeUndefined();
+    else expect(theme.bossHazard).toBeDefined();
   });
 });

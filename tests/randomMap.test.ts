@@ -1,4 +1,7 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
+
+// 200 seeds per theme per check: heavy when the whole suite runs in parallel, so give each test room.
+vi.setConfig({ testTimeout: 30000 });
 import { floorMask, throneTiles } from '../src/logic/dungeonLayout';
 import { rectArea, rectsOverlap } from '../src/logic/geometry';
 import { hazardCount } from '../src/logic/hazard/plan';

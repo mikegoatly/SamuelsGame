@@ -57,6 +57,7 @@ Touch controls appear after the first touch and hide on mouse, keyboard or gamep
 ## Assets
 
 Kenney CC0 assets are committed in `public/assets`, so the game runs without any script.
+The UI font `SamuelPixel.ttf` is built from Kenney Pixel with redrawn confusable glyphs (l, i, j, t, 0, 8...) by `python tools/make_font.py` (needs `pip install fonttools`).
 To re-copy them from the Kenney collection:
 
 ```

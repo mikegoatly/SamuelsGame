@@ -15,6 +15,7 @@ export const turret: BehaviourFactory = (host) => {
   host.setImmovable(true);
   return {
     act(time) {
+      host.setImmovable(true);
       stand(host);
       const step = stepTurret(state, time, host.armed ? distanceTo(host, host.target) : Infinity, TUNING);
       state = step.state;

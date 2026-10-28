@@ -1,5 +1,6 @@
 import type Phaser from 'phaser';
 import type { Affix } from '../../logic/elites';
+import type { Rect } from '../../logic/geometry';
 import type { Graveyard } from '../../logic/graveyard';
 import type { Enemy } from '../Enemy';
 import type { Projectile } from '../Projectile';
@@ -24,6 +25,8 @@ export interface EnemyWorld {
   clearSpot(p: { x: number; y: number }): { x: number; y: number };
   /** The player's bolt pool (whirlwinds bend these). */
   readonly bolts?: Phaser.Physics.Arcade.Group;
+  /** Sludge channels (world px) in the current room, where sewer gators hide; unset or empty on levels without any. */
+  channels?: () => readonly Rect[];
 }
 
 /** One monster's own AI. `Enemy` handles the shared parts (health, hits, knockback, loot) and hands everything else to this. */

@@ -35,10 +35,24 @@ export interface BossArenaSpec {
 }
 
 export interface HazardSpec {
-  kind: 'quicksand' | 'spikes';
+  kind: 'quicksand' | 'spikes' | 'channel';
   rect: Rect;
   /** Spike traps only: phase shift of the timer, ms. */
   offsetMs?: number;
+  /** Sludge channels only: the room it crosses and the way it flows, degrees. */
+  room?: number;
+  dir?: number;
+}
+
+export type DecorKind = 'moss' | 'bones' | 'drain' | 'puddle';
+
+/** A non-solid decal (sewer): drawn by the map builder, never part of gameplay. */
+export interface DecorSpec {
+  kind: DecorKind;
+  x: number;
+  y: number;
+  /** Frame in the Roguelike sheet for moss and bones. */
+  frame: number;
 }
 
 /** A timed or room-wide hazard run by the HazardDirector; `room` is the room order that wakes it. */
@@ -58,8 +72,11 @@ export interface LevelObjects {
   hazards: HazardSpec[];
   active: ActiveHazardSpec[];
   thrones: Point[];
+  decor: DecorSpec[];
   /** Chest spots in random-map side rooms; empty for classic maps. */
   treasures: Point[];
+  /** Sewer grates in random desert side rooms; empty everywhere else. */
+  grates: Point[];
   exit: Point | null;
 }
 
@@ -85,6 +102,7 @@ function toRoom(object: TiledObject): RoomSpec {
   };
 }
 
+const DECOR_KINDS: readonly string[] = ['moss', 'bones', 'drain', 'puddle'];
 const RESERVED = new Set(['kind', 'room', 'offset']);
 
 function toActiveHazard(object: TiledObject): ActiveHazardSpec[] {
@@ -110,11 +128,17 @@ export function parseLevelObjects(map: TiledMapLike): LevelObjects {
     hazards: ofType('hazard').flatMap((o): HazardSpec[] => {
       const props = propsOf(o);
       if (props.kind === 'quicksand') return [{ kind: 'quicksand', rect: rectOf(o) }];
+      if (props.kind === 'channel') return [{ kind: 'channel', rect: rectOf(o), room: whole(props.room, 0), dir: whole(props.dir, 0) }];
       return props.kind === 'spikes' ? [{ kind: 'spikes', rect: rectOf(o), offsetMs: whole(props.offset, 0) }] : [];
     }),
     active: ofType('hazard').flatMap(toActiveHazard),
     thrones: ofType('throne').map(pointOf),
+    decor: ofType('decor').flatMap((o): DecorSpec[] => {
+      const props = propsOf(o);
+      return DECOR_KINDS.includes(props.kind as DecorKind) ? [{ kind: props.kind as DecorKind, ...pointOf(o), frame: whole(props.frame, 0) }] : [];
+    }),
     treasures: ofType('treasure').map(pointOf),
+    grates: ofType('grate').map(pointOf),
     exit: exit ? pointOf(exit) : null,
   };
 }

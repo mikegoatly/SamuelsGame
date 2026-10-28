@@ -32,6 +32,8 @@ export const weaponUpgradeInfo: Readonly<Record<string, UpgradeInfo>> = {
   hammer: { gem: 'red', tier: 3, twist: 'Slams send a shockwave ring' },
   bow: { gem: 'green', tier: 2, twist: 'Full draws loose 3 arrows' },
   fists: { gem: 'blue', tier: 2, twist: 'The 3rd punch sends a force wave' },
+  sludgeSlinger: { gem: 'green', tier: 2, twist: 'Puddles also poison' },
+  javelin: { gem: 'red', tier: 3, twist: 'The stuck javelin bursts' },
 };
 
 export const TIER_MULTIPLIER: Record<SkillTier, number> = { 1: 1, 2: 1.25, 3: 1.5 };

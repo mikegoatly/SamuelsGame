@@ -13,3 +13,6 @@ export function xpReward(monsterLevel: number, playerLevel: number): number {
   const scale = playerLevel > monsterLevel ? clamp(1 - 0.2 * (playerLevel - monsterLevel), 0.1, 1) : 1;
   return Math.max(1, Math.round(base * scale));
 }
+
+/** The monster level a kill pays xp for: swarm members and split halves pay as if a few levels lower (never below 1). */
+export const payLevel = (monsterLevel: number, levelDrop = 0): number => Math.max(1, monsterLevel - levelDrop);
