@@ -95,6 +95,8 @@ export const spitter: BehaviourFactory = (host) => {
         host.setPosition(anchor.x, anchor.y);
         (host.body as Phaser.Physics.Arcade.Body).reset(anchor.x, anchor.y);
       }
+      // The enemy group resets `immovable` when the monster is added to it, after this behaviour was built.
+      host.setImmovable(true);
       host.setVelocity(0, 0);
       const now = host.clock.now;
       host.setFrame(now < firingUntil ? SewerFrame.spitterFiring : SewerFrame.spitter);
