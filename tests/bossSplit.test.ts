@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   SPLIT,
+  bothInView,
   applyHp,
   barRatio,
   cancelMerge,
@@ -200,7 +201,7 @@ describe('merging', () => {
     expect(only).not.toBeNull();
   });
 
-  it('starting a merge sets a ~1.2s countdown and only one merge runs at a time', () => {
+  it('starting a merge sets a ~2s countdown and only one merge runs at a time', () => {
     const f = four();
     const [a, b] = findMerge(f, 99_000, any)!;
     const started = startMerge(f, a, b, 99_000);
@@ -333,4 +334,17 @@ describe('invariants over a long scripted fight', () => {
     }
     expect(isDead(f)).toBe(true);
   });
+});
+
+describe('merges only start in view', () => {
+  const view = { x: 100, y: 100, w: 400, h: 250 };
+  it.each([
+    { name: 'both well inside', a: { x: 200, y: 200 }, b: { x: 300, y: 250 }, ok: true },
+    { name: 'one just inside the 16px margin', a: { x: 116, y: 116 }, b: { x: 300, y: 250 }, ok: true },
+    { name: 'one inside the margin band', a: { x: 110, y: 200 }, b: { x: 300, y: 250 }, ok: false },
+    { name: 'one off the top of the view', a: { x: 200, y: 90 }, b: { x: 300, y: 250 }, ok: false },
+    { name: 'both off screen', a: { x: 0, y: 0 }, b: { x: 900, y: 900 }, ok: false },
+  ])('$name', ({ a, b, ok }) => expect(bothInView(a, b, view)).toBe(ok));
+
+  it('the countdown is long enough to notice', () => expect(SPLIT.mergeMs).toBeGreaterThanOrEqual(1800));
 });

@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { pickLanding } from '../../logic/landing';
-import { applyHp, completeMerge, findMerge, isDead, mergeDue, newFamily, splitDue, splitPiece, startMerge, totalHp, type Family, type Piece } from '../../logic/bossSplit';
+import { applyHp, bothInView, completeMerge, findMerge, isDead, mergeDue, newFamily, splitDue, splitPiece, startMerge, totalHp, type Family, type Piece } from '../../logic/bossSplit';
 import { feel } from '../../systems/feel';
 import type { GameClock } from '../../systems/GameClock';
 import type { GameEvents } from '../../systems/GameEvents';
@@ -156,10 +156,21 @@ export class BossFamily {
     return undefined;
   }
 
+  private readonly viewRect = { x: 0, y: 0, w: 0, h: 0 };
+
+  private view(): { x: number; y: number; w: number; h: number } {
+    const { worldView } = this.scene.cameras.main;
+    this.viewRect.x = worldView.x;
+    this.viewRect.y = worldView.y;
+    this.viewRect.w = worldView.width;
+    this.viewRect.h = worldView.height;
+    return this.viewRect;
+  }
+
   private readonly pairable = (a: Piece, b: Piece): boolean => {
     const first = this.bossOf(a.id);
     const second = this.bossOf(b.id);
-    return !!first && !!second && first.mergeReady && second.mergeReady && Phaser.Math.Distance.Between(first.x, first.y, second.x, second.y) <= MERGE_RANGE;
+    return !!first && !!second && first.mergeReady && second.mergeReady && bothInView(first, second, this.view()) && Phaser.Math.Distance.Between(first.x, first.y, second.x, second.y) <= MERGE_RANGE;
   };
 
   private scanForMerge(now: number): void {

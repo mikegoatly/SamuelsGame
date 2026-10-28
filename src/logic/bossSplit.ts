@@ -1,3 +1,5 @@
+import { insetRect, rectContains, type Point, type Rect } from './geometry';
+
 /**
  * Mother Sludge's family: one shared health pool seen as several pieces. Pure rules only; the runtime reports each piece's health
  * and acts on what comes back (split, merge, died).
@@ -44,11 +46,18 @@ export const SPLIT = {
   /** Unhit for this long before two pieces start to merge. */
   idleMs: 5000,
   /** Wobble, glow line and slide together before they join. */
-  mergeMs: 1200,
+  mergeMs: 2000,
 } as const;
 
 /** What a merge always produces. */
 export const MERGED_TIER: Tier = 1;
+
+/** Merges only start where the player can see both pieces: inside the camera's world view, inset by `inset` px. */
+export const MERGE_VIEW_INSET = 16;
+export const bothInView = (a: Point, b: Point, view: Rect, inset = MERGE_VIEW_INSET): boolean => {
+  const inner = insetRect(view, inset);
+  return rectContains(inner, a) && rectContains(inner, b);
+};
 
 export function newFamily(motherMax: number, now: number): Family {
   return { motherMax, pieces: [{ id: 1, tier: 0, hp: motherMax, maxHp: motherMax, lastHitAt: now }], merge: null, nextId: 2 };
