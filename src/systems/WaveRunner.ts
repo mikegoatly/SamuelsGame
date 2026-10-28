@@ -17,6 +17,8 @@ import { TILE_SIZE } from '../content/assetKeys';
 const MARKER_CLEARANCE = 26;
 const RELOCATED_MARKER_MS = 500;
 const MOUNT_SEARCH_TILES = 8;
+const MOUNT_ATTEMPTS = 8;
+const MOUNT_GAP = 3 * TILE_SIZE;
 
 export interface WaveRunnerOptions {
   scene: Phaser.Scene;
@@ -33,6 +35,8 @@ export interface WaveRunnerOptions {
 /** Feeds one scheduler from the game clock: announces waves, telegraphs each arrival with a marker, then spawns it. */
 export class WaveRunner {
   private readonly markers: SpawnMarkers;
+  /** Wall spots already given to a pipe spitter, so two never stack. */
+  private readonly mounts: Point[] = [];
   private lastNow?: number;
   private stopped = false;
 
@@ -87,10 +91,19 @@ export class WaveRunner {
 
   /** Wall-mounted monsters (pipe spitters) get their marker on the wall edge they will sit on. */
   private pick(role: SpawnRole | 'behind', size: number, enemyId: string): Point {
-    const at = this.pickOpen(role, size);
+    let at = this.pickOpen(role, size);
     if (getEnemy(enemyId).custom !== 'spitter') return at;
-    const mount = wallMountSpot(at, this.o.isBlocked, TILE_SIZE, MOUNT_SEARCH_TILES);
-    return mount ? { x: mount.x, y: mount.y } : at;
+    for (let attempt = 0; attempt < MOUNT_ATTEMPTS; attempt++) {
+      const mount = wallMountSpot(at, this.o.isBlocked, TILE_SIZE, MOUNT_SEARCH_TILES);
+      if (!mount) return at;
+      const taken = this.mounts.some((m) => Math.hypot(m.x - mount.x, m.y - mount.y) < MOUNT_GAP);
+      if (!taken || attempt === MOUNT_ATTEMPTS - 1) {
+        this.mounts.push(mount);
+        return { x: mount.x, y: mount.y };
+      }
+      at = this.pickOpen(role, size);
+    }
+    return at;
   }
 
   private pickOpen(role: SpawnRole | 'behind', size: number): Point {

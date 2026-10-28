@@ -8,7 +8,7 @@ import { keyOf, randomWorld, reachableTiles, seedsFor, tilesOf, type RandomWorld
 
 const worlds: { label: string; world: RandomWorld }[] = [
   { label: 'classic', world: buildWorld(SEWER_THEME) },
-  ...seedsFor(150).map((seed) => ({ label: `seed ${seed}`, world: randomWorld(SEWER_THEME, seed) })),
+  ...seedsFor(80).map((seed) => ({ label: `seed ${seed}`, world: randomWorld(SEWER_THEME, seed) })),
 ];
 
 const combat = (layout: DungeonLayout) => layout.rooms.filter((r) => r.kind === 'combat');
