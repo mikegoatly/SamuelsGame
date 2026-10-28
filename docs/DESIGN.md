@@ -63,6 +63,9 @@ weights, monster level range, boss id, reward id, unlock requirement (previous l
 Saved on level-up, charm pickup, level clear, quit to menu and death (progress only). Level/XP persist across deaths; coins
 collected during the run are discarded on death and banked on quit/clear.
 
+### Save slots
+Three slots (`logic/saveSlots.ts`, `SaveSystem.switchTo/peek/slotSummaries`). Slot 1 is the original key `samuels-game-save` (existing progress, no migration); slots 2-3 use `-2`/`-3`; the active slot is in `samuels-game-slot` (junk means slot 1). Switching saves the current slot first, never deletes or overwrites another slot, and starts a fresh game in an empty slot (after a press-again confirm). Settings follow the device: the current settings are copied into the slot being loaded and re-applied (`switchSaveSlot`). Switching only happens from the Save slots menu (main menu button). `reset()` clears only the active slot.
+
 ### Menus
 MainMenu -> LevelSelect (2x2 cards, Back) -> Game {levelId}; GameOver (Retry / Level select); Pause overlay (Resume / Quit).
 `ui/MenuList` provides focus navigation for all menus: pointer tap, keyboard (arrows/WASD, Enter/Space, Esc), gamepad

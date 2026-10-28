@@ -92,10 +92,11 @@ export class MainMenuScene extends MenuScene {
 
   private showMenu(cx: number, height: number): void {
     const { progress, coins } = saveSystem.data;
-    menuText(this, cx, height * 0.24 + 46, `Level ${progress.level}   -   ${coins} coins`, 16, '#d8d8e8');
+    menuText(this, cx, height * 0.24 + 46, `Slot ${saveSystem.activeSlot}   -   Level ${progress.level}   -   ${coins} coins`, 16, '#d8d8e8');
     const play = new MenuButton(this, cx, height * 0.55, 200, 36, 'Play', () => this.scene.start('LevelSelect'));
-    const help = new MenuButton(this, cx, height * 0.55 + 44, 200, 36, 'How to play', () => this.scene.start('HowToPlay'));
-    const settings = new MenuButton(this, cx, height * 0.55 + 88, 200, 36, 'Settings', () => this.scene.start('Settings', { back: 'MainMenu' }));
-    this.menu = new MenuList(this, [play, help, settings]);
+    const slots = new MenuButton(this, cx, height * 0.55 + 44, 200, 36, 'Save slots', () => this.scene.start('SaveSlots'));
+    const help = new MenuButton(this, cx, height * 0.55 + 88, 200, 36, 'How to play', () => this.scene.start('HowToPlay'));
+    const settings = new MenuButton(this, cx, height * 0.55 + 132, 200, 36, 'Settings', () => this.scene.start('Settings', { back: 'MainMenu' }));
+    this.menu = new MenuList(this, [play, slots, help, settings]);
   }
 }
