@@ -38,6 +38,8 @@ const SWITCH_HINT = { keyboard: 'Tab or H: switch Normal / Heroic', gamepad: 'Y 
 export class LevelSelectScene extends MenuScene {
   private cards: LevelCard[] = [];
   private hint?: Phaser.GameObjects.Text;
+  /** The crowded layout keeps the switch hint on screen (its footer has room and focus then never hides it). */
+  private hintAlways = false;
   private focusLevelId?: string;
 
   constructor() {
@@ -50,7 +52,7 @@ export class LevelSelectScene extends MenuScene {
 
   override update(time = 0, delta = 0): void {
     super.update(time, delta);
-    this.hint?.setVisible(this.cards[this.menu?.focusIndex ?? -1]?.hasSwitch === true);
+    this.hint?.setVisible(this.hintAlways || this.cards[this.menu?.focusIndex ?? -1]?.hasSwitch === true);
   }
 
   protected build(): void {
@@ -68,6 +70,7 @@ export class LevelSelectScene extends MenuScene {
 
     const cardWidth = Math.min(280, (width - 3 * GAP - 20) / COLUMNS);
     this.hint = undefined;
+    this.hintAlways = crowded;
     const rows = Math.ceil(shown.length / COLUMNS);
     const gap = crowded ? 5 : GAP;
     const header = crowded ? 50 : HEADER;
