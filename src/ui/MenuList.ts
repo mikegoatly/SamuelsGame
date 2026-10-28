@@ -85,6 +85,11 @@ export class MenuList {
     if (now.toggle && !before.toggle) this.toggle();
   }
 
+  /** Drops a pending pointer press so the release doesn't activate (e.g. the touch became a scroll drag). */
+  cancelPress(): void {
+    this.pressed = -1;
+  }
+
   destroy(): void {
     this.scene.input.keyboard?.off('keydown', this.onKey);
     for (const item of this.items) item.area.off('pointerover').off('pointerdown').off('pointerup').off('pointerout');

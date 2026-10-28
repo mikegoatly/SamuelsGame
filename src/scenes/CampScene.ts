@@ -9,6 +9,7 @@ import { menuText } from '../ui/menuText';
 import { MenuScene } from '../ui/MenuScene';
 import { TabBar } from '../ui/TabBar';
 import { drawCounts, walletEntries } from '../ui/Wallet';
+import { clampIntoWindow, dragOffset, isDrag } from '../logic/listScroll';
 import { celebrate } from '../systems/fx';
 import { musicOf } from '../systems/MusicPlayer';
 import { saveSystem } from '../systems/SaveSystem';
@@ -52,6 +53,8 @@ export class CampScene extends MenuScene {
   private lastBuyAt = -Infinity;
   private padBumpers = [false, false];
   private celebration?: { index: number; offer: Offer };
+  private listBounds = new Phaser.Geom.Rectangle();
+  private drag?: { pointerId: number; x: number; y: number; offset: number; scrolling: boolean };
 
   constructor() {
     super('Camp');
@@ -71,10 +74,23 @@ export class CampScene extends MenuScene {
       const step = TAB_KEYS[event.code];
       if (step && this.menu && this.menu.focusIndex !== TAB_ITEM) this.stepTab(step);
     };
+    const onDown = (pointer: Phaser.Input.Pointer): void => this.startDrag(pointer);
+    const onMove = (pointer: Phaser.Input.Pointer): void => this.moveDrag(pointer);
+    const onUp = (pointer: Phaser.Input.Pointer): void => {
+      if (pointer.id === this.drag?.pointerId) this.drag = undefined;
+    };
     this.input.on('wheel', onWheel);
+    this.input.on('pointerdown', onDown);
+    this.input.on('pointermove', onMove);
+    this.input.on('pointerup', onUp);
+    this.input.on('pointerupoutside', onUp);
     this.input.keyboard?.on('keydown', onKey);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.input.off('wheel', onWheel);
+      this.input.off('pointerdown', onDown);
+      this.input.off('pointermove', onMove);
+      this.input.off('pointerup', onUp);
+      this.input.off('pointerupoutside', onUp);
       this.input.keyboard?.off('keydown', onKey);
     });
   }
@@ -99,6 +115,8 @@ export class CampScene extends MenuScene {
     this.panel = this.add.container(cx - listWidth / 2 + 10, panelY - PANEL_HEIGHT / 2 + 6);
     this.arrows = this.add.graphics();
     this.rowsX = cx + listWidth / 2 - 8;
+    this.listBounds.setTo(cx - listWidth / 2, LIST_TOP - 14, listWidth, this.visibleRows * ROW_PITCH + 24);
+    this.drag = undefined;
 
     this.menu = new MenuList(this, [back, tabs, ...this.rows], { initialFocus: TAB_ITEM, onBack: () => this.goBack() });
     this.layoutRows();
@@ -133,6 +151,27 @@ export class CampScene extends MenuScene {
     if (!menu || step === 0 || menu.focusIndex < 2) return;
     const next = Phaser.Math.Clamp(menu.focusIndex + step, 2, this.rows.length + 1);
     menu.setFocus(next);
+  }
+
+  /** Touch (or mouse) drag on the list scrolls it; a drag never counts as a tap-to-buy. */
+  private startDrag(pointer: Phaser.Input.Pointer): void {
+    if (this.drag || this.rows.length <= this.visibleRows || !this.listBounds.contains(pointer.x, pointer.y)) return;
+    this.drag = { pointerId: pointer.id, x: pointer.x, y: pointer.y, offset: this.offset, scrolling: false };
+  }
+
+  private moveDrag(pointer: Phaser.Input.Pointer): void {
+    const drag = this.drag;
+    if (!drag || pointer.id !== drag.pointerId || !pointer.isDown) return;
+    const dy = pointer.y - drag.y;
+    if (!drag.scrolling && !isDrag(pointer.x - drag.x, dy)) return;
+    if (!drag.scrolling) this.menu?.cancelPress();
+    drag.scrolling = true;
+    const next = dragOffset(drag.offset, dy, ROW_PITCH, this.rows.length - this.visibleRows);
+    if (next === this.offset) return;
+    this.offset = next;
+    this.layoutRows();
+    const menu = this.menu;
+    if (menu && menu.focusIndex >= 2) menu.setFocus(2 + clampIntoWindow(menu.focusIndex - 2, this.offset, this.visibleRows));
   }
 
   private showPanel(offer: Offer | undefined): void {
