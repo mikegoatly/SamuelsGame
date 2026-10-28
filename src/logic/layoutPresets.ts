@@ -73,6 +73,23 @@ export const PALACE_PRESET: LayoutPreset = {
   ],
 };
 
+/** 6x2 grid of medium junction chambers joined by long tunnels; the boss chamber spans cells 3-4 of the bottom row and is rounded off by its moat. */
+export const SEWER_PRESET: LayoutPreset = {
+  gridCols: 6,
+  gridRows: 2,
+  cover: { base: 1, divisor: 150 },
+  plan: [
+    { kind: 'start', col: 0, row: 0, span: 1, w: [9, 11], h: [8, 10] },
+    { kind: 'combat', col: 1, row: 0, span: 1, w: [14, 17], h: [11, 13] },
+    { kind: 'combat', col: 2, row: 0, span: 1, w: [14, 18], h: [11, 14] },
+    { kind: 'combat', col: 3, row: 0, span: 1, w: [15, 18], h: [11, 14] },
+    { kind: 'combat', col: 4, row: 0, span: 1, w: [15, 18], h: [12, 14] },
+    { kind: 'combat', col: 5, row: 0, span: 1, w: [15, 19], h: [12, 14] },
+    { kind: 'combat', col: 5, row: 1, span: 1, w: [16, 19], h: [12, 14] },
+    { kind: 'boss', col: 3, row: 1, span: 2, w: [40, 42], h: [16, 16] },
+  ],
+};
+
 export type RoomShape = 'plain' | 'ell' | 'pillared' | 'split';
 
 /** How the random generator reuses a preset's room plan: a bigger grid, a shape pool for combat rooms and the side-room odds. */
@@ -83,4 +100,10 @@ export interface RandomPlan {
   shapes: RoomShape[];
   /** Chance (0-1) of one dead-end treasure room off a combat room. */
   sideChance: number;
+}
+
+/** What a random map's side room must be: `force` guarantees one exists, `grate` makes it a sewer grate instead of a treasure chest. */
+export interface SidePlan {
+  force: boolean;
+  grate: boolean;
 }

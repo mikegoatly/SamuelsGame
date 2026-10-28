@@ -15,6 +15,8 @@ export interface EnemyInfo {
   /** Where in the room it appears relative to the player. */
   role: 'front' | 'back' | 'any';
   eliteOk: boolean;
+  /** At most this many of it in one wave (default no limit). */
+  maxPerWave?: number;
 }
 
 export interface LevelCurve {
@@ -78,7 +80,7 @@ export function planWave(pool: readonly PoolEntry[], curve: LevelCurve, ctx: Wav
     remaining -= info(featured).cost;
   }
   while (remaining > 0) {
-    const affordable = available.filter((e) => info(e.enemyId).cost <= remaining);
+    const affordable = available.filter((e) => info(e.enemyId).cost <= remaining && ids.filter((p) => p.id === e.enemyId).length < (info(e.enemyId).maxPerWave ?? Infinity));
     const pick = pickWeighted(affordable, rng);
     if (!pick) break;
     ids.push({ id: pick.enemyId, featured: false });

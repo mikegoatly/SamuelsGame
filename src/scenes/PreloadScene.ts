@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { gameText } from '../ui/gameText';
 import { Frame, MUSIC_FILES, SHEET_COLS, SKILL_ICON_SOURCES, TILE_SIZE, Tex } from '../content/assetKeys';
+import { ROGUE_SPACING } from '../content/sewerFrames';
 import { PROMPT_SIZE } from '../content/inputGlyphs';
 import { skillList } from '../content/skills';
 import { SFX_DEFS, sfxKey, type SfxId } from '../content/sfxDefs';
@@ -24,7 +25,10 @@ export class PreloadScene extends Phaser.Scene {
     });
     this.load.image(Tex.weaponsExtra, 'extra/weapons-extra.png');
     this.load.spritesheet(Tex.monsters, 'extra/monsters-extra.png', { frameWidth: TILE_SIZE, frameHeight: TILE_SIZE });
+    this.load.spritesheet(Tex.sewer, 'extra/sewer-extra.png', { frameWidth: TILE_SIZE, frameHeight: TILE_SIZE });
+    this.load.spritesheet(Tex.rogue, 'sewer/roguelike-dungeon.png', { frameWidth: TILE_SIZE, frameHeight: TILE_SIZE, spacing: ROGUE_SPACING });
     this.load.spritesheet(Tex.accessories, 'extra/accessories-extra.png', { frameWidth: TILE_SIZE, frameHeight: TILE_SIZE });
+    this.load.spritesheet(Tex.props, 'extra/props-extra.png', { frameWidth: TILE_SIZE, frameHeight: TILE_SIZE });
     this.load.atlasXML(Tex.controls, 'controls/flat-dark.png', 'controls/flat-dark.xml');
     this.load.spritesheet(Tex.prompts, 'controls/prompts.png', { frameWidth: PROMPT_SIZE, frameHeight: PROMPT_SIZE });
     for (const [id, file] of Object.entries(SKILL_ICON_SOURCES)) this.load.image(`skill-src-${id}`, file);

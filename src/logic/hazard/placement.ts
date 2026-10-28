@@ -31,6 +31,8 @@ interface Spot {
   used: Rect[];
   /** Placed hazard footprints, treated as walls when checking the room stays open. */
   walls: Rect[];
+  /** Ground (sludge) that footprints must not cover, with no margin. */
+  ground: readonly Rect[];
 }
 
 const expand = (r: Rect, by: number): Rect => ({ x: r.x - by, y: r.y - by, w: r.w + 2 * by, h: r.h + 2 * by });
@@ -43,7 +45,7 @@ function fits(s: Spot, r: Rect, inset = 1, ring = 0, lane = LANE): boolean {
   for (let y = r.y; y < r.y + r.h; y++) if (Math.abs(y - room.cy) <= lane) return false;
   for (let x = r.x; x < r.x + r.w; x++) if (Math.abs(x - room.cx) <= lane) return false;
   for (let y = r.y - ring; y < r.y + r.h + ring; y++) for (let x = r.x - ring; x < r.x + r.w + ring; x++) if (s.solid.has(`${x},${y}`)) return false;
-  return !s.used.some((u) => rectsOverlap(expand(u, 1), r)) && !sealsOff(s, r);
+  return !s.used.some((u) => rectsOverlap(expand(u, 1), r)) && !s.ground.some((g) => rectsOverlap(g, r)) && !sealsOff(s, r);
 }
 
 /** Floor tiles reachable from the room centre with cover, placed hazards and `extra` as walls. */
@@ -142,6 +144,28 @@ function placePlate(s: Spot): PlacedHazard | null {
   return plate;
 }
 
+/** A wall pipe's puff box (a 3x3 off the wall), the wall tile the pipe sits on, and the direction it breathes in degrees. */
+function pipeAt(room: LayoutRoom, side: number, along: number): { rect: Rect; wall: { x: number; y: number }; dir: number } {
+  const { rect } = room;
+  if (side === 0) return { rect: { x: along - 1, y: rect.y, w: 3, h: 3 }, wall: { x: along, y: rect.y - 1 }, dir: 90 };
+  if (side === 1) return { rect: { x: along - 1, y: rect.y + rect.h - 3, w: 3, h: 3 }, wall: { x: along, y: rect.y + rect.h }, dir: 270 };
+  if (side === 2) return { rect: { x: rect.x, y: along - 1, w: 3, h: 3 }, wall: { x: rect.x - 1, y: along }, dir: 0 };
+  return { rect: { x: rect.x + rect.w - 3, y: along - 1, w: 3, h: 3 }, wall: { x: rect.x + rect.w, y: along }, dir: 180 };
+}
+
+/** A sewer pipe in the wall (any side) whose puff box clears the lanes, cover and bridges. */
+function placePipe(s: Spot): PlacedHazard | null {
+  const { rect } = s.room;
+  for (let attempt = 0; attempt < ATTEMPTS; attempt++) {
+    const side = randInt(s.rng, 0, 3);
+    const along = side < 2 ? randInt(s.rng, rect.x + 1, rect.x + rect.w - 2) : randInt(s.rng, rect.y + 1, rect.y + rect.h - 2);
+    const pipe = pipeAt(s.room, side, along);
+    if (!fits(s, pipe.rect, 0)) continue;
+    return make(s, 'gasPipe', pipe.rect, { radius: 26, dir: pipe.dir, pipeX: pipe.wall.x * TILE_SIZE + TILE_SIZE / 2, pipeY: pipe.wall.y * TILE_SIZE + TILE_SIZE / 2 });
+  }
+  return null;
+}
+
 function placeKind(s: Spot, kind: ActiveHazardKind): PlacedHazard | null {
   switch (kind) {
     case 'crackedFloor':
@@ -150,6 +174,8 @@ function placeKind(s: Spot, kind: ActiveHazardKind): PlacedHazard | null {
       return placeBox(s, kind, [2, 3], [2, 3], 1, 0);
     case 'gasVent':
       return placeBox(s, kind, [3, 3], [3, 3], 1, 0, { radius: 26 });
+    case 'gasPipe':
+      return placePipe(s);
     case 'pendulum':
       return placePendulum(s);
     case 'flameJet':
@@ -171,7 +197,7 @@ function areaHazard(s: Spot, kind: ActiveHazardKind, level: number): PlacedHazar
 
 const isArea = (kind: ActiveHazardKind): boolean => kind === 'rubble' || kind === 'wind' || kind === 'sandstorm';
 /** Big footprints first, so they find room before the small ones. */
-const ORDER: ActiveHazardKind[] = ['pendulum', 'gasVent', 'crackedFloor', 'firePit', 'arrowWall', 'flameJet'];
+const ORDER: ActiveHazardKind[] = ['pendulum', 'gasVent', 'gasPipe', 'crackedFloor', 'firePit', 'arrowWall', 'flameJet'];
 
 function fill(s: Spot, kind: ActiveHazardKind, count: number): PlacedHazard[] {
   if (count <= 0) return [];
@@ -203,12 +229,12 @@ function bossJets(s: Spot, count: number): PlacedHazard[] {
 }
 
 /** Places every planned hazard of every combat room, then the boss arena's one kind; `taken` are rects already used (quicksand, spikes). Never touches the start room. */
-export function placeActiveHazards(layout: DungeonLayout, rng: () => number, plan: HazardPlan, taken: Rect[], boss?: BossHazard): PlacedHazard[] {
+export function placeActiveHazards(layout: DungeonLayout, rng: () => number, plan: HazardPlan, taken: Rect[], boss?: BossHazard, ground: readonly Rect[] = []): PlacedHazard[] {
   const solid = solidTiles(layout);
   const used = [...taken];
   const placed: PlacedHazard[] = [];
   for (const room of layout.rooms) {
-    const s: Spot = { room, rng, solid, used, walls: [] };
+    const s: Spot = { room, rng, solid, used, walls: [], ground };
     if (room.kind === 'combat') {
       for (const kind of [...ORDER, ...ACTIVE_HAZARD_KINDS.filter(isArea)]) placed.push(...fill(s, kind, hazardCount(plan, kind, room.index)));
     } else if (room.kind === 'boss' && boss) {

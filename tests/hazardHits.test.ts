@@ -8,7 +8,7 @@ const damaging = Object.entries(HAZARD_HITS);
 
 describe('hazard hits', () => {
   it('covers every damaging hazard', () => {
-    const kinds = ACTIVE_HAZARD_KINDS.filter((k) => k !== 'wind' && k !== 'sandstorm');
+    const kinds = ACTIVE_HAZARD_KINDS.filter((k) => k !== 'wind' && k !== 'sandstorm' && k !== 'flush');
     for (const kind of kinds) expect(HAZARD_HITS, kind).toHaveProperty(kind);
     expect(HAZARD_HITS.spikes.fraction).toBe(SPIKE_DAMAGE_FRACTION);
   });

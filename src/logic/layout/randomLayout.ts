@@ -12,7 +12,7 @@ import {
   type LayoutRoom,
   type Pillar,
 } from '../dungeonLayout';
-import type { CellPlan, LayoutPreset, RandomPlan } from '../layoutPresets';
+import type { CellPlan, LayoutPreset, RandomPlan, SidePlan } from '../layoutPresets';
 import { randInt } from '../rng';
 import { planRoute, type Cell, type Route } from './route';
 import { shapeTiles } from './shapes';
@@ -53,8 +53,8 @@ function furnish(rng: () => number, preset: LayoutPreset, random: RandomPlan, ro
   return { blocks: tiles.blocks, cover };
 }
 
-/** The preset's rooms (same sizes, count, order and cover budget) laid along a random route through a bigger grid, with shaped combat rooms and an optional side room. */
-export function generateRandomLayout(rng: () => number, preset: LayoutPreset, random: RandomPlan): DungeonLayout {
+/** The preset's rooms (same sizes, count, order and cover budget) laid along a random route through a bigger grid, with shaped combat rooms and an optional side room (`side` can force it and make it a sewer grate). */
+export function generateRandomLayout(rng: () => number, preset: LayoutPreset, random: RandomPlan, side?: SidePlan): DungeonLayout {
   const route = planRoute(rng, random.gridCols, random.gridRows, preset.plan.length - 2);
   const plans: CellPlan[] = preset.plan.map((p, i) => {
     const cell = route.cells[i] ?? route.boss;
@@ -67,7 +67,7 @@ export function generateRandomLayout(rng: () => number, preset: LayoutPreset, ra
 
   let sideRoom: LayoutRoom | null = null;
   const candidates = sideCandidates(route, random);
-  if (candidates.length > 0 && rng() < random.sideChance) {
+  if (candidates.length > 0 && (rng() < random.sideChance || side?.force)) {
     const { cell, from } = candidates[randInt(rng, 0, candidates.length - 1)]!;
     sideRoom = placeSideRoom(rng, rooms.length, cell);
     const link = connect(rooms[from]!, sideRoom);
@@ -86,5 +86,5 @@ export function generateRandomLayout(rng: () => number, preset: LayoutPreset, ra
       pillars.push(...(preset.symmetric ? colonnade(room) : bossPillars(room)));
     }
   }
-  return { cols: random.gridCols * CELL_W, rows: random.gridRows * CELL_H, rooms, corridors, doors, pillars, blocks, sideRoom };
+  return { cols: random.gridCols * CELL_W, rows: random.gridRows * CELL_H, rooms, corridors, doors, pillars, blocks, sideRoom, ...(sideRoom && side?.grate ? { grate: true } : {}) };
 }

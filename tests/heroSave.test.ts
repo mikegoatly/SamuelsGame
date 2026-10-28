@@ -73,6 +73,22 @@ describe('selectHero', () => {
     expect(selectHero(save, 'knight').heroes.selected).toBe('knight');
     expect(selectHero(save, 'rogue')).toBe(save);
   });
+
+  const owning = (selected: string, owned: string[], weapon = 'apprenticeStaff') =>
+    aSave({ heroes: { unlocked: ['wizard', 'knight', 'dwarf'], selected }, weapons: { owned, levels: {} }, loadout: { ...defaultSave().loadout, weapon } });
+
+  it.each([
+    ['switching to a hero equips their owned signature weapon', 'wizard', 'knight', ['apprenticeStaff', 'goldenSword'], 'apprenticeStaff', 'goldenSword'],
+    ['a signature weapon that is not owned changes nothing', 'wizard', 'dwarf', ['apprenticeStaff'], 'apprenticeStaff', 'apprenticeStaff'],
+    ['re-selecting the same hero keeps a weapon chosen in the loadout', 'knight', 'knight', ['apprenticeStaff', 'goldenSword'], 'apprenticeStaff', 'apprenticeStaff'],
+  ])('%s', (_, from, to, owned, weapon, expected) => {
+    expect(selectHero(owning(from, owned, weapon), to, kitOf).loadout.weapon).toBe(expected);
+  });
+
+  it('does not equip anything for a locked hero', () => {
+    const save = owning('wizard', ['apprenticeStaff', 'hammer']);
+    expect(selectHero(save, 'rogue', () => ({ weaponId: 'hammer' }))).toBe(save);
+  });
 });
 
 describe('unlockHeroes', () => {

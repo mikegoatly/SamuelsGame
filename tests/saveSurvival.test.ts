@@ -5,14 +5,14 @@ import { aSave } from './builders';
 const parse = (raw: object): SaveData => parseSave(JSON.stringify(raw));
 
 describe('migration to version 10', () => {
-  it('is version 10', () => {
-    expect(SAVE_VERSION).toBe(10);
+  it('arrived in version 10', () => {
+    expect(SAVE_VERSION).toBeGreaterThanOrEqual(10);
     expect(defaultSave().survival).toEqual({ bestMs: 0 });
   });
 
   it.each([1, 8, 9])('a v%i save keeps its data and gains an empty survival record', (version) => {
     const migrated = parse({ version, coins: 9, levels: { cleared: ['ruins'] } });
-    expect(migrated.version).toBe(10);
+    expect(migrated.version).toBe(SAVE_VERSION);
     expect(migrated.coins).toBe(9);
     expect(migrated.survival).toEqual({ bestMs: 0 });
   });

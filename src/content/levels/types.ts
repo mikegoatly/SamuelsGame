@@ -1,7 +1,7 @@
 import type { LevelRange } from '../../logic/waves';
 import type { LevelCurve } from '../../logic/waveMix';
 
-export type Environment = 'ruins' | 'desert' | 'palace' | 'arena' | 'unknown';
+export type Environment = 'ruins' | 'desert' | 'palace' | 'sewer' | 'arena' | 'unknown';
 
 export interface LevelConfig {
   id: string;
@@ -15,6 +15,8 @@ export interface LevelConfig {
   bossId?: string;
   bossLevel?: number;
   rewardWeaponId?: string;
+  /** False: the reward weapon is only granted, never swapped in over the player's current weapon (the sewer's Javelin). */
+  rewardEquips?: boolean;
   rewardSkillIds?: readonly string[];
   unlockedBy?: string;
   /** Tilemap cache key; levels without one fall back to the generated arena room. */
@@ -25,6 +27,8 @@ export interface LevelConfig {
   survival?: boolean;
   /** Teaser levels are listed but cannot be entered. */
   comingSoon?: boolean;
+  /** Not listed at all until the player has found it (`secrets.sewerFound`): no card, no hint. */
+  hiddenUntilFound?: boolean;
   /** Card subtitle for teaser levels. */
   tagline?: string;
 }

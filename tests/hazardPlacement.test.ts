@@ -37,8 +37,10 @@ describe.each(THEMES.map((theme) => [theme.id, theme] as const))('hazard placeme
 
   it('puts exactly one kind in the boss arena and nothing in the rooms past the plan', () => {
     const boss = active.filter((h) => h.room === bossRoom.index);
-    expect(boss.length).toBeGreaterThan(0);
-    expect(new Set(boss.map((h) => h.kind))).toEqual(new Set([theme.bossHazard!.kind]));
+    if (theme.bossHazard) {
+      expect(boss.length).toBeGreaterThan(0);
+      expect(new Set(boss.map((h) => h.kind))).toEqual(new Set([theme.bossHazard.kind]));
+    } else expect(boss).toEqual([]);
     expect(active.every((h) => h.room >= 1)).toBe(true);
   });
 

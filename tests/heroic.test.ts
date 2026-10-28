@@ -56,3 +56,15 @@ describe('normalBossLevel', () => {
     expect(normalBossLevel(level)).toBe(expected);
   });
 });
+
+describe('the sewer curve in Heroic', () => {
+  it.each([
+    [10, [8, 11], [8, 11]],
+    [20, [8, 11], [19, 21]],
+    [40, [8, 11], [39, 41]],
+  ])('hero %i: monsters 8-11 become %j', (hero, normal, expected) => {
+    const range: LevelRange = [normal[0]!, normal[1]!];
+    expect(heroicLevelRange(range, hero)).toEqual(expected);
+    expect(heroicRoomRange([8, 9], range, hero)[1]).toBeGreaterThanOrEqual(Math.max(9, hero - 1));
+  });
+});

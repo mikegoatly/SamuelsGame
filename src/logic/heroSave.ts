@@ -11,8 +11,13 @@ const NOTICE_PREFIX = 'hero:';
 
 export const heroNoticeId = (heroId: string): string => `${NOTICE_PREFIX}${heroId}`;
 
-export const selectHero = (save: SaveData, heroId: string): SaveData =>
-  save.heroes.unlocked.includes(heroId) ? { ...save, heroes: { ...save.heroes, selected: heroId } } : save;
+/** Selects an unlocked hero. Switching to a different hero also equips their signature weapon when it is owned (the loadout screen can still change it). */
+export function selectHero(save: SaveData, heroId: string, kitOf: (heroId: string) => HeroKit | undefined = () => undefined): SaveData {
+  if (!save.heroes.unlocked.includes(heroId)) return save;
+  const weaponId = save.heroes.selected !== heroId ? kitOf(heroId)?.weaponId : undefined;
+  const loadout = weaponId && save.weapons.owned.includes(weaponId) ? { ...save.loadout, weapon: weaponId } : save.loadout;
+  return { ...save, loadout, heroes: { ...save.heroes, selected: heroId } };
+}
 
 /** Unlocks heroes (once), owns their kit at level 1 without changing the equipped weapon, and queues a reveal card for each. */
 export function unlockHeroes(save: SaveData, heroIds: readonly string[], kitOf: (heroId: string) => HeroKit | undefined): SaveData {

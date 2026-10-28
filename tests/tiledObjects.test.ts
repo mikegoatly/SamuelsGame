@@ -95,3 +95,15 @@ describe('active hazards in Tiled objects', () => {
     }
   });
 });
+
+describe('grates', () => {
+  it('reads grate points beside treasures', () => {
+    const parsed = parseLevelObjects(aTiledMap(aTiledObject('playerStart', 0, 0), aTiledObject('grate', 30, 40), aTiledObject('treasure', 5, 6)));
+    expect(parsed.grates).toEqual([{ x: 30, y: 40 }]);
+    expect(parsed.treasures).toEqual([{ x: 5, y: 6 }]);
+  });
+
+  it('is empty when the map has none', () => {
+    expect(parseLevelObjects(aTiledMap(aTiledObject('playerStart', 0, 0))).grates).toEqual([]);
+  });
+});
