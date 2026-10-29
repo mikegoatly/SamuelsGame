@@ -193,9 +193,10 @@ describe('survival unlock', () => {
 });
 
 describe('survival level', () => {
-  it('sits after the palace, before the ultimate teaser, with no map and no boss', () => {
+  it('sits after the palace (and the hidden mines that follow it), before the ultimate teaser, with no map and no boss', () => {
     const ids = levels.map((l) => l.id);
-    expect(ids.indexOf('survival')).toBe(ids.indexOf('palace') + 1);
+    expect(ids.indexOf('survival')).toBe(ids.indexOf('mines') + 1);
+    expect(ids.indexOf('mines')).toBe(ids.indexOf('palace') + 1);
     expect(ids.indexOf('survival')).toBeLessThan(ids.indexOf('ultimate'));
     expect(survival).toMatchObject({ environment: 'arena', survival: true, recommendedLevel: 20 });
     expect(survival.mapKey).toBeUndefined();

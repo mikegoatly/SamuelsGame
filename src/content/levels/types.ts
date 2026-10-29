@@ -1,7 +1,8 @@
 import type { LevelRange } from '../../logic/waves';
 import type { LevelCurve } from '../../logic/waveMix';
+import type { SecretId } from '../../logic/secrets';
 
-export type Environment = 'ruins' | 'desert' | 'palace' | 'sewer' | 'arena' | 'unknown';
+export type Environment = 'ruins' | 'desert' | 'palace' | 'sewer' | 'mines' | 'arena' | 'unknown';
 
 export interface LevelConfig {
   id: string;
@@ -27,8 +28,8 @@ export interface LevelConfig {
   survival?: boolean;
   /** Teaser levels are listed but cannot be entered. */
   comingSoon?: boolean;
-  /** Not listed at all until the player has found it (`secrets.sewerFound`): no card, no hint. */
-  hiddenUntilFound?: boolean;
+  /** Not listed at all until the player has found this secret (`secrets.sewerFound`, `secrets.minesFound`): no card, no hint. */
+  hiddenUntilFound?: SecretId;
   /** Card subtitle for teaser levels. */
   tagline?: string;
 }

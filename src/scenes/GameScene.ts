@@ -6,7 +6,7 @@ import { getEnemy } from '../content/enemies';
 import { rewardsOf } from '../content/rewards';
 import { newRewards } from '../logic/heroicSwitch';
 import { getAccessory } from '../content/accessories';
-import { getWeapon, weaponAtLevel } from '../content/weapons';
+import { getWeapon, weaponAtLevel, weaponFor } from '../content/weapons';
 import { EnemyProjectiles, type EnemyProjectile } from '../entities/EnemyProjectile';
 import type { Enemy } from '../entities/Enemy';
 import { Player } from '../entities/Player';
@@ -55,13 +55,17 @@ import { installRunMap, removeRunMap } from './runMap';
 import { TreasureSystem } from '../systems/TreasureSystem';
 import { chooseRunMap, parseSeed, type RunMap } from '../logic/runSeed';
 import { hasRandomMap } from '../logic/map';
-import { FORCE_GRATE } from '../debug';
+import { FORCE_GRATE, FORCE_NAB } from '../debug';
 import { getHero, heroKit } from '../content/heroes';
-import { sewerCard } from '../content/cards';
+import { minesCard, sewerCard } from '../content/cards';
 import { GrateSystem } from '../systems/GrateSystem';
 import { isLevelPlayable } from '../logic/levelRules';
 import { countsForPity } from '../logic/grate';
-import { discoverSewer, queueSewerNotice, recordGrateRun, SEWER_NOTICE } from '../logic/secrets';
+import { discoverMines, discoverSewer, MINES_NOTICE, queueMinesNotice, queueSewerNotice, recordGrateRun, recordNabRun, SEWER_NOTICE, type SecretId } from '../logic/secrets';
+import { chooseNabPlan, countsForNabPity } from '../logic/nab';
+import { NabSystem } from '../systems/NabSystem';
+import { ScepterSystem } from '../systems/ScepterSystem';
+import { SnatchSystem } from '../systems/SnatchSystem';
 
 export interface GameSceneData {
   levelId: string;
@@ -73,8 +77,8 @@ export interface GameSceneData {
 
 const devSeed = (): number | undefined => (import.meta.env.DEV ? parseSeed(new URLSearchParams(window.location.search).get('seed')) : undefined);
 
-/** Where Climb down leads: the sewer on Normal with the same hero and loadout (its Level Select card if it is ever a teaser again). */
-const SEWER_ID = 'sewer';
+/** Where Climb down / Follow lead: the secret level on Normal with the same hero and loadout, or its Level Select card while it is a teaser (the mines in C1). */
+const SECRET_LEVEL: Record<SecretId, string> = { sewer: 'sewer', mines: 'mines' };
 const BUTTON_START = 9;
 const REWARD_FADE_MS = 600;
 const BOSS_XP_BONUS = 100;
@@ -98,6 +102,7 @@ export class GameScene extends Phaser.Scene {
   private survival = false;
   private director?: LevelDirector;
   private controls!: InputController;
+  private nab?: NabSystem;
 
   constructor() {
     super('Game');
@@ -131,7 +136,8 @@ export class GameScene extends Phaser.Scene {
     const { walls, playerStart } = map;
     const projectiles = createProjectilePool(this);
     const shots = new EnemyProjectiles(this);
-    const weapon = weaponAtLevel(getWeapon(save.loadout.weapon), weaponLevel(save, save.loadout.weapon));
+    const weaponId = weaponFor(save.loadout.weapon, save.heroes.selected, save.weapons.owned);
+    const weapon = weaponAtLevel(getWeapon(weaponId), weaponLevel(save, weaponId));
     const controls = (this.controls = new InputController(this));
     this.cards = new CardPresenter({ scene: this.scene, isEnding: () => this.ending, onClosed: () => controls.swallowUntilReleased() }, saveSystem);
     const player = new Player(
@@ -182,7 +188,9 @@ export class GameScene extends Phaser.Scene {
     if (map.world && map.world.active.length > 0) new HazardDirector({ scene: this, player, enemies, clock: this.clock, isSolid, burn }, map.world, events);
 
     this.addColliders(map, player, enemies, projectiles, shots);
-    registerBoltHits(this, projectiles, enemies, player);
+    const scepter = player.weapon.scepter ? new ScepterSystem({ scene: this, player, enemies, shots, clock: this.clock, isSolid }) : undefined;
+    registerBoltHits(this, projectiles, enemies, player, scepter && ((bolt, enemy) => scepter.onBolt(bolt, enemy)));
+    if (player.effects.snatch) new SnatchSystem({ scene: this, player, enemies, shots, clock: this.clock, isSolid }, loot);
     this.physics.add.overlap(player, shots.group, (_, boltObj) => {
       const bolt = boltObj as EnemyProjectile;
       if (!bolt.active) return;
@@ -205,6 +213,7 @@ export class GameScene extends Phaser.Scene {
       pityPending = false;
       saveSystem.update((s) => recordGrateRun(s, (map.world?.grates.length ?? 0) > 0));
     });
+    this.nab = this.setUpNab(map, events, factory, loot, isSolid, data.runMap !== undefined);
     events.on('player-died', () => this.endRun(director));
     events.on('pause-requested', () => this.pauseGame());
     this.input.keyboard?.on('keydown-ESC', () => this.pauseGame());
@@ -214,7 +223,7 @@ export class GameScene extends Phaser.Scene {
     this.startMusic(events);
     this.setUpReward(map, player, events);
     if (map.world && map.world.treasures.length > 0) new TreasureSystem(this, player, loot, this.level, map.world.treasures);
-    if (map.world && map.world.grates.length > 0) new GrateSystem(this, player, this.clock, map.world.grates, () => this.canPromptGrate(), () => this.openGratePrompt());
+    if (map.world && map.world.grates.length > 0) new GrateSystem(this, player, this.clock, map.world.grates, () => this.canPromptSecret(), () => this.openSecretPrompt('sewer'));
 
     this.physics.world.setBounds(0, 0, walls.width, walls.height);
     const camera = this.cameras.main;
@@ -266,34 +275,65 @@ export class GameScene extends Phaser.Scene {
     this.bankRun();
     if (this.director?.elapsedMs !== undefined) this.recordSurvivalRun(this.director);
     this.scene.stop('Pause');
-    this.scene.stop('GratePrompt');
+    this.scene.stop('SecretPrompt');
     this.scene.start(next, data);
   }
 
-  private canPromptGrate(): boolean {
+  /** Nab the thief, when this run rolled him (eligible Desert/Palace random maps from Lv 11, or `?debug=nab`); also moves his pity counter. */
+  private setUpNab(map: LevelMap, events: GameEvents, factory: EnemyFactory, loot: LootSystem, isSolid: (x: number, y: number) => boolean, retry: boolean): NabSystem | undefined {
+    const rooms = map.world?.rooms ?? [];
+    if (rooms.length === 0) return undefined;
+    const { secrets } = saveSystem.data;
+    const plan = chooseNabPlan({ levelId: this.level.id, classic: this.runMap.classic, heroLevel: this.progression.level, minesFound: secrets.minesFound, runsWithoutNab: secrets.nabPity, rooms: FORCE_NAB ? 1 : rooms.length, rng: Math.random, force: FORCE_NAB });
+    let pityPending = countsForNabPity({ retry, eligible: plan !== undefined, dev: FORCE_NAB || devSeed() !== undefined }) && plan?.room === undefined;
+    events.on('room-started', () => {
+      if (!pityPending) return;
+      pityPending = false;
+      saveSystem.update((s) => recordNabRun(s, false));
+    });
+    if (plan?.room === undefined) return undefined;
+    return new NabSystem({
+      scene: this,
+      player: this.player,
+      clock: this.clock,
+      events,
+      factory,
+      loot,
+      room: plan.room,
+      roomRect: (order) => rooms.find((r) => r.order === order)?.rect,
+      isBlocked: isSolid,
+      canPrompt: () => this.canPromptSecret(),
+      onAppear: () => saveSystem.update((s) => recordNabRun(s, true)),
+      onGate: () => this.openSecretPrompt('mines'),
+    });
+  }
+
+  private canPromptSecret(): boolean {
     return !this.ending && !this.scene.isPaused() && !this.scene.isActive('Pause');
   }
 
-  private openGratePrompt(): void {
+  private openSecretPrompt(secret: SecretId): void {
     feel.thaw();
     this.scene.pause();
     this.scene.pause('Hud');
-    this.scene.launch('GratePrompt');
+    this.scene.launch('SecretPrompt', { secret });
   }
 
-  /** The grate prompt's answer. Either way the sewer is discovered (Gloop unlocks); Climb down then leaves the desert like a quit. */
-  resolveGrate(climb: boolean): void {
-    this.scene.stop('GratePrompt');
-    const first = !saveSystem.data.secrets.sewerFound;
-    saveSystem.update((save) => discoverSewer(save, heroKit));
-    if (climb) {
-      if (first) saveSystem.update(queueSewerNotice);
-      const sewer = getLevel(SEWER_ID);
-      if (isLevelPlayable(sewer)) this.leaveRun('Game', { levelId: sewer.id, heroic: false });
-      else this.leaveRun('LevelSelect', { focusLevelId: sewer.id });
+  /** The secret prompt's answer. Either way the secret is discovered (its hero unlocks); going in then leaves the run like a quit. */
+  resolveSecret(secret: SecretId, go: boolean): void {
+    this.scene.stop('SecretPrompt');
+    const sewer = secret === 'sewer';
+    const first = sewer ? !saveSystem.data.secrets.sewerFound : !saveSystem.data.secrets.minesFound;
+    saveSystem.update((save) => (sewer ? discoverSewer(save, heroKit) : discoverMines(save, heroKit)));
+    if (go) {
+      if (first) saveSystem.update(sewer ? queueSewerNotice : queueMinesNotice);
+      const level = getLevel(SECRET_LEVEL[secret]);
+      if (isLevelPlayable(level)) this.leaveRun('Game', { levelId: level.id, heroic: false });
+      else this.leaveRun('LevelSelect', { focusLevelId: level.id });
       return;
     }
-    if (first) this.cards.request(SEWER_NOTICE, sewerCard);
+    if (!sewer) this.nab?.close();
+    if (first) this.cards.request(sewer ? SEWER_NOTICE : MINES_NOTICE, sewer ? sewerCard : minesCard);
     this.controls.swallowUntilReleased();
     this.resumeGame();
     this.time.delayedCall(0, () => this.cards.flush());

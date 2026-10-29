@@ -8,7 +8,7 @@ const parse = (raw: object): SaveData => parseSave(JSON.stringify(raw), {}, () =
 
 describe('migration to version 12 (heroes own their signature weapon)', () => {
   it('is version 12', () => {
-    expect(SAVE_VERSION).toBe(12);
+    expect(SAVE_VERSION).toBeGreaterThanOrEqual(12);
   });
 
   it('a knight who owns and equips the Golden Sword keeps it, levels included, and also gains the Iron Sword', () => {

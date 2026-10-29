@@ -86,12 +86,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   private readonly draw = new BowDraw();
   private drawWeapon: WeaponDef | undefined;
   private readonly onScenePause = (): void => this.cancelDraw();
-  private readonly timers = new PlayerTimers({
-    dashMs: Player.DASH_MS,
-    dashCooldownMs: Player.DASH_COOLDOWN_MS,
-    iframesMs: Player.IFRAMES_MS,
-    knockbackMs: Player.KNOCKBACK_MS,
-  });
+  private readonly timers: PlayerTimers;
 
   constructor(
     scene: Phaser.Scene,
@@ -108,6 +103,12 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     super(scene, x, y, Tex.tiles, hero.frame);
     if (hero.tint !== null) this.setTint(hero.tint);
     this.effects = passiveEffects(hero.passive.id);
+    this.timers = new PlayerTimers({
+      dashMs: Player.DASH_MS * this.effects.dashScale,
+      dashCooldownMs: Player.DASH_COOLDOWN_MS,
+      iframesMs: Player.IFRAMES_MS,
+      knockbackMs: Player.KNOCKBACK_MS,
+    });
     this.strikes = new Strikes(this.effects);
     this.knockouts = new KnockoutRules(this.effects.secondBlob);
     this.weapon = weapon;

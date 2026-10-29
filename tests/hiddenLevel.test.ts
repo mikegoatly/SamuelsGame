@@ -6,9 +6,9 @@ import { isLevelPlayable, isLevelUnlocked, visibleLevels } from '../src/logic/le
 
 describe('the hidden sewer card', () => {
   const desert = { id: 'desert', unlockedBy: 'ruins' };
-  const sewer = { id: 'sewer', unlockedBy: 'desert', comingSoon: true, hiddenUntilFound: true };
+  const sewer = { id: 'sewer', unlockedBy: 'desert', comingSoon: true, hiddenUntilFound: 'sewer' as const };
   const palace = { id: 'palace', unlockedBy: 'desert' };
-  const ids = (found: boolean, cleared: string[]): string[] => visibleLevels([desert, sewer, palace], cleared, found).map((l) => l.id);
+  const ids = (found: boolean, cleared: string[]): string[] => visibleLevels([desert, sewer, palace], cleared, found ? ['sewer'] : []).map((l) => l.id);
 
   it.each([
     [false, [], ['desert', 'palace']],
@@ -35,16 +35,34 @@ describe('the released sewer', () => {
   it('is listed right after the desert, hidden until found, playable and rewards the Javelin', () => {
     const ids = levels.map((l) => l.id);
     expect(ids.indexOf('sewer')).toBe(ids.indexOf('desert') + 1);
-    expect(sewer).toMatchObject({ name: 'Sunken Sewer', recommendedLevel: 9, monsterLevelRange: [8, 11], hiddenUntilFound: true, rewardWeaponId: 'javelin' });
+    expect(sewer).toMatchObject({ name: 'Sunken Sewer', recommendedLevel: 9, monsterLevelRange: [8, 11], hiddenUntilFound: 'sewer', rewardWeaponId: 'javelin' });
     expect(sewer.comingSoon).toBeUndefined();
     expect(isLevelPlayable(sewer)).toBe(true);
   });
 
   it('shows no card until found, is open once found (cleared or not), and offers Heroic only after its own clear', () => {
     expect(visibleLevels(levels, ['ruins', 'desert', 'palace']).map((l) => l.id)).not.toContain('sewer');
-    expect(visibleLevels(levels, [], true).map((l) => l.id)).toContain('sewer');
+    expect(visibleLevels(levels, [], ['sewer']).map((l) => l.id)).toContain('sewer');
     expect(isLevelUnlocked(sewer, [])).toBe(true);
     expect(offersHeroic({ ...sewer }, ['desert'])).toBe(false);
     expect(offersHeroic({ ...sewer }, ['desert', 'sewer'])).toBe(true);
+  });
+});
+
+describe('the hidden mines card', () => {
+  it('is listed after the palace only once the mines are found, independent of the sewer', () => {
+    const ids = (found: ('sewer' | 'mines')[]): string[] => visibleLevels(levels, ['ruins', 'desert', 'palace'], found).map((l) => l.id);
+    expect(ids([])).not.toContain('mines');
+    expect(ids(['sewer'])).not.toContain('mines');
+    expect(ids(['mines'])).toContain('mines');
+    expect(ids(['mines'])).not.toContain('sewer');
+    const all = ids(['sewer', 'mines']);
+    expect(all.indexOf('mines')).toBe(all.indexOf('palace') + 1);
+  });
+
+  it('is a stub for now: listed once found, but not yet playable, with the mines music', () => {
+    const mines = levels.find((l) => l.id === 'mines')!;
+    expect(mines).toMatchObject({ name: 'Crystal Mines', hiddenUntilFound: 'mines', recommendedLevel: 14, monsterLevelRange: [13, 16], music: 'music-mines' });
+    expect(isLevelPlayable(mines)).toBe(false);
   });
 });

@@ -10,6 +10,10 @@ export const PERF_OVERLAY = flags.includes('perf');
 export const FORCE_GRATE = flags.includes('grate');
 /** Dev-only (`?debug=sewer`): the Sunken Sewer shows on Level Select without finding the grate first. */
 export const SEWER_DEBUG = flags.includes('sewer');
+/** Dev-only (`?debug=nab`): Nab the thief turns up as the first room of any run clears (any level, map or hero level). */
+export const FORCE_NAB = flags.includes('nab');
+/** Dev-only (`?debug=mines`): the Crystal Mines show on Level Select without following Nab first. */
+export const MINES_DEBUG = flags.includes('mines');
 export const GOD_DAMAGE_MULTIPLIER = 10;
 
 export function exposeForDebug(game: Phaser.Game): void {

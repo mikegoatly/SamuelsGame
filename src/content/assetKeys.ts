@@ -50,6 +50,7 @@ export const Music = {
   palace: 'music-palace',
   bossPalace: 'music-boss-palace',
   boss: 'music-boss',
+  mines: 'music-mines',
 } as const;
 
 export const MapKey = {
@@ -67,6 +68,7 @@ export const MUSIC_FILES: Record<string, string> = {
   [Music.palace]: 'music/palace.mp3',
   [Music.bossPalace]: 'music/boss-palace.mp3',
   [Music.boss]: 'music/boss.mp3',
+  [Music.mines]: 'music/mines.mp3',
 };
 
 /** Pixel explosion atlas frames (Kenney Explosion Pack). */
@@ -110,6 +112,8 @@ export const Frame = {
   slinger: 135,
   blob: 136,
   javelin: 137,
+  /** Placeholder Crystal Scepter: the blue-gem staff of the stock sheet (tinted per weapon). */
+  scepter: 130,
   wolf: 124,
   coin: 102,
   ring: 101,

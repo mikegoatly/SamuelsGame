@@ -3,6 +3,7 @@ import type { PassiveId } from '../logic/passives';
 import type { HeroStatMods } from '../logic/stats';
 import { WIZARD } from '../logic/unlocks';
 import { Frame } from './assetKeys';
+import { MinesFrame } from './minesFrames';
 
 export interface HeroDef {
   id: string;
@@ -157,7 +158,22 @@ export const gloop: HeroDef = {
   hidden: true,
 };
 
-export const heroList: readonly HeroDef[] = [wizard, knight, rogue, dwarf, ranger, monk, necromancer, secret, gloop];
+export const nab: HeroDef = {
+  id: 'nab',
+  className: 'Thief',
+  name: 'Nab the Thief',
+  frame: MinesFrame.nab,
+  tint: MinesFrame.nabTint,
+  color: '#8fe8ff',
+  bio: 'A gem-thief goblin. Sorry about the scepter.',
+  stats: mods(RATING.low, RATING.high, RATING.mid),
+  passive: { id: 'snatch', name: 'Snatch', text: 'Dashing through a monster steals a coin from it (once each). His dash goes further.' },
+  signatureWeaponId: 'crystalScepter',
+  hint: 'Catch the thief.',
+  hidden: true,
+};
+
+export const heroList: readonly HeroDef[] = [wizard, knight, rogue, dwarf, ranger, monk, necromancer, secret, gloop, nab];
 
 export const heroes: Record<string, HeroDef> = Object.fromEntries(heroList.map((hero) => [hero.id, hero]));
 

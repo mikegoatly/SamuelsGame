@@ -16,6 +16,7 @@ const HEAD_OFFSETS: Record<string, HeadOffset> = {
   necromancer: { x: 0, y: -1 },
   secret: { x: 0, y: -1 },
   gloop: { x: 0, y: 0 },
+  nab: { x: 0, y: -1 },
 };
 const DEFAULT_OFFSET: HeadOffset = { x: 0, y: -1 };
 

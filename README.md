@@ -90,6 +90,8 @@ the level: Broken Wand granted and equipped, Lost Desert unlocked. Music (`publi
 from the royalty-free pack (`MUSIC_DIR` overrides the path).
 
 Dev only: `npm run dev` then `?debug=godmode` makes the player invulnerable with 10x damage and exposes `window.__game`.
+Other dev flags (combine with commas): `grate` forces a sewer grate room, `sewer` / `mines` list the hidden levels,
+`nab` brings Nab the thief as room 1 clears.
 
 ## Level 2: Lost Desert
 

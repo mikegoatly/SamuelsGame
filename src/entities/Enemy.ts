@@ -439,11 +439,11 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     return slowFactor(this.slow, this.clock.now) < 1;
   }
 
-  /** Walks toward the player, round walls and pillars when a straight line would snag (skipped by `usePath = false`). */
-  chase(time: number, speed = this.def.speed, usePath = true): void {
+  /** Walks toward the player (or `to`), round walls and pillars when a straight line would snag (skipped by `usePath = false`). */
+  chase(time: number, speed = this.def.speed, usePath = true, to: { x: number; y: number } = this.target): void {
     const walks = usePath && this.def.behaviour !== 'erratic';
     speed *= this.speedFactor;
-    const goal = this.navigator && walks ? this.navigator.aim(time, this, this.target, this.bodyRadius(), speed) : this.target;
+    const goal = this.navigator && walks ? this.navigator.aim(time, this, to, this.bodyRadius(), speed) : to;
     this.desired.set(goal.x - this.x, goal.y - this.y);
     if (this.desired.lengthSq() < 1) return;
     this.desired.normalize();

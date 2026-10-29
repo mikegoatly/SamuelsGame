@@ -6,7 +6,7 @@ import { getHero } from '../content/heroes';
 import { getLevel } from '../content/levels';
 import { cooldownText } from '../content/cards';
 import { getSkill, knownSkillIds } from '../content/skills';
-import { getWeapon, knownWeapons, weaponAtLevel } from '../content/weapons';
+import { getWeapon, usableWeapons, weaponAtLevel, weaponFor } from '../content/weapons';
 import { cycleSlotSkill, SLOT_COUNT, type Slots } from '../logic/loadout';
 import { cycleWorn } from '../logic/accessoryWear';
 import { setLoadout, skillLevel, weaponLevel, wearAccessory } from '../logic/save';
@@ -47,8 +47,8 @@ export class LoadoutScene extends MenuScene {
   init(data: Partial<LoadoutData>): void {
     this.levelId = data.levelId ?? 'arena';
     this.heroic = data.heroic === true;
-    const { loadout, weapons } = saveSystem.data;
-    this.weapon = knownWeapons(weapons.owned).includes(loadout.weapon) ? loadout.weapon : knownWeapons(weapons.owned)[0] ?? loadout.weapon;
+    const { loadout, weapons, heroes } = saveSystem.data;
+    this.weapon = weaponFor(loadout.weapon, heroes.selected, weapons.owned);
     this.slots = loadout.slots.map((id) => (id && getSkill(id) ? id : null));
   }
 
@@ -84,7 +84,7 @@ export class LoadoutScene extends MenuScene {
   }
 
   private weaponRow(x: number, y: number, width: number): ChoiceRow {
-    const owned = (): string[] => knownWeapons(saveSystem.data.weapons.owned);
+    const owned = (): string[] => usableWeapons(saveSystem.data.weapons.owned, saveSystem.data.heroes.selected);
     const view = (): ChoiceView => {
       const weapon = getWeapon(this.weapon);
       return { label: weapon.name, detail: `Lv${weaponLevel(saveSystem.data, weapon.id)} ${weapon.kind === 'melee' ? 'melee' : 'ranged'}`, icon: { texture: Tex.tiles, frame: weapon.frame, tint: weapon.tint }, color: '#ffffff', glyph: Prompt.mouseLeft };
@@ -143,7 +143,7 @@ export class LoadoutScene extends MenuScene {
       text(56, `Damage ${weapon.baseDamage}`);
       text(74, weapon.kind === 'melee' ? `${(1000 / weapon.fireRateMs).toFixed(1)} swings/s, hits an arc` : `${(1000 / weapon.fireRateMs).toFixed(1)} shots/s, range ${weapon.range}`);
       if (weapon.description) text(92, weapon.description, '#9a9ab8');
-      text(110, knownWeapons(saveSystem.data.weapons.owned).length > 1 ? 'Left/Right or tap to change' : 'Win more weapons from bosses', '#9a9ab8');
+      text(110, usableWeapons(saveSystem.data.weapons.owned, saveSystem.data.heroes.selected).length > 1 ? 'Left/Right or tap to change' : 'Win more weapons from bosses', '#9a9ab8');
       return;
     }
     if (index === SLOT_COUNT + 1) {

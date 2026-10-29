@@ -7,7 +7,7 @@ const parse = (raw: object, isKnownHero?: (id: string) => boolean): SaveData => 
 describe('migration to version 11', () => {
   it('is version 11 with nothing found yet', () => {
     expect(SAVE_VERSION).toBeGreaterThanOrEqual(11);
-    expect(defaultSave().secrets).toEqual({ sewerFound: false, desertRunsWithoutGrate: 0 });
+    expect(defaultSave().secrets).toEqual({ sewerFound: false, desertRunsWithoutGrate: 0, minesFound: false, nabPity: 0 });
   });
 
   it.each([1, 6, 9, 10])('a v%i save keeps its data and gains empty secrets', (version) => {
@@ -16,24 +16,24 @@ describe('migration to version 11', () => {
     expect(migrated.coins).toBe(9);
     expect(migrated.levels.cleared).toEqual(['ruins', 'desert']);
     expect(migrated.survival).toEqual({ bestMs: 70000 });
-    expect(migrated.secrets).toEqual({ sewerFound: false, desertRunsWithoutGrate: 0 });
+    expect(migrated.secrets).toEqual({ sewerFound: false, desertRunsWithoutGrate: 0, minesFound: false, nabPity: 0 });
   });
 
   it('round-trips found secrets', () => {
-    const save = aSave({ secrets: { sewerFound: true, desertRunsWithoutGrate: 2 } });
+    const save = aSave({ secrets: { sewerFound: true, desertRunsWithoutGrate: 2, minesFound: false, nabPity: 0 } });
     expect(parseSave(serialize(save))).toEqual(save);
   });
 
   it.each([
-    [5, { sewerFound: false, desertRunsWithoutGrate: 0 }],
-    ['x', { sewerFound: false, desertRunsWithoutGrate: 0 }],
-    [null, { sewerFound: false, desertRunsWithoutGrate: 0 }],
-    [[], { sewerFound: false, desertRunsWithoutGrate: 0 }],
-    [{ sewerFound: 'yes', desertRunsWithoutGrate: 'x' }, { sewerFound: false, desertRunsWithoutGrate: 0 }],
-    [{ sewerFound: 1, desertRunsWithoutGrate: -3 }, { sewerFound: false, desertRunsWithoutGrate: 0 }],
-    [{ sewerFound: true, desertRunsWithoutGrate: 'x' }, { sewerFound: true, desertRunsWithoutGrate: 0 }],
-    [{ sewerFound: 'no', desertRunsWithoutGrate: 2.9 }, { sewerFound: false, desertRunsWithoutGrate: 2 }],
-    [{ sewerFound: true, desertRunsWithoutGrate: NaN }, { sewerFound: true, desertRunsWithoutGrate: 0 }],
+    [5, { sewerFound: false, desertRunsWithoutGrate: 0, minesFound: false, nabPity: 0 }],
+    ['x', { sewerFound: false, desertRunsWithoutGrate: 0, minesFound: false, nabPity: 0 }],
+    [null, { sewerFound: false, desertRunsWithoutGrate: 0, minesFound: false, nabPity: 0 }],
+    [[], { sewerFound: false, desertRunsWithoutGrate: 0, minesFound: false, nabPity: 0 }],
+    [{ sewerFound: 'yes', desertRunsWithoutGrate: 'x', minesFound: false, nabPity: 0 }, { sewerFound: false, desertRunsWithoutGrate: 0, minesFound: false, nabPity: 0 }],
+    [{ sewerFound: 1, desertRunsWithoutGrate: -3, minesFound: false, nabPity: 0 }, { sewerFound: false, desertRunsWithoutGrate: 0, minesFound: false, nabPity: 0 }],
+    [{ sewerFound: true, desertRunsWithoutGrate: 'x', minesFound: false, nabPity: 0 }, { sewerFound: true, desertRunsWithoutGrate: 0, minesFound: false, nabPity: 0 }],
+    [{ sewerFound: 'no', desertRunsWithoutGrate: 2.9, minesFound: false, nabPity: 0 }, { sewerFound: false, desertRunsWithoutGrate: 2, minesFound: false, nabPity: 0 }],
+    [{ sewerFound: true, desertRunsWithoutGrate: NaN, minesFound: false, nabPity: 0 }, { sewerFound: true, desertRunsWithoutGrate: 0, minesFound: false, nabPity: 0 }],
   ])('junk secrets %j is repaired field by field', (junk, expected) => {
     expect(parse({ version: 11, secrets: junk }).secrets).toEqual(expected);
   });

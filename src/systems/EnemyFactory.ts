@@ -73,6 +73,11 @@ export class EnemyFactory {
     return this.fadeIn(new Enemy(this.scene, x, y, def, level, this.context, extras), FADE_IN_MS, graceMs);
   }
 
+  /** Spawns a special monster class (Nab the thief) with the shared context and the usual fade-in. */
+  spawnWith<T extends Enemy>(create: (context: EnemyContext) => T): T {
+    return this.fadeIn(create(this.context), FADE_IN_MS);
+  }
+
   /** Spawns a def as a whole encounter: single monsters as themselves, packs as their members around the point (a houndmaster brings his hounds). */
   spawnGroup(def: EnemyDef, level: number, x: number, y: number, affix?: Affix): Enemy[] {
     const { pack } = def;

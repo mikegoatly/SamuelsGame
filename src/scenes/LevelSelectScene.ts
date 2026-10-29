@@ -9,9 +9,9 @@ import { musicOf } from '../systems/MusicPlayer';
 import { CHARMS_NOTICE, levelMode, setLevelMode } from '../logic/save';
 import { revealNextHero } from './heroReveal';
 import { CHARMS_CARD } from './NoticeScene';
-import { sewerCard } from '../content/cards';
+import { minesCard, sewerCard } from '../content/cards';
 import type { CardData } from '../logic/itemCards';
-import { SEWER_NOTICE } from '../logic/secrets';
+import { foundSecrets, MINES_NOTICE, SEWER_NOTICE } from '../logic/secrets';
 import { lastInputDevice } from '../systems/inputDevice';
 import { saveSystem } from '../systems/SaveSystem';
 import { LevelCard } from '../ui/LevelCard';
@@ -32,6 +32,7 @@ export const CROWDED_CARDS = 6;
 const NOTICES: readonly [id: string, card: CardData][] = [
   [CHARMS_NOTICE, CHARMS_CARD],
   [SEWER_NOTICE, sewerCard],
+  [MINES_NOTICE, minesCard],
 ];
 const SWITCH_HINT = { keyboard: 'Tab or H: switch Normal / Heroic', gamepad: 'Y or X: switch Normal / Heroic', touch: 'Tap the Normal / Heroic tag to switch' } as const;
 
@@ -60,7 +61,7 @@ export class LevelSelectScene extends MenuScene {
     const { progress, coins, gems, levels: levelSave } = saveSystem.data;
     const cx = width / 2;
     musicOf(this.game).crossfadeTo(Music.menu);
-    const shown = visibleLevels(levels, levelSave.cleared, saveSystem.data.secrets.sewerFound);
+    const shown = visibleLevels(levels, levelSave.cleared, foundSecrets(saveSystem.data.secrets));
     const crowded = shown.length > CROWDED_CARDS;
     const titleY = crowded ? 13 : 20;
     const walletY = crowded ? 36 : 44;

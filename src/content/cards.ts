@@ -1,5 +1,6 @@
 import { RARITY_COLOR, type ItemDef } from './items';
 import { Frame } from './assetKeys';
+import { MinesFrame } from './minesFrames';
 import { playerMaxHp } from '../logic/combat';
 import { gemCardText, type CardData } from '../logic/itemCards';
 import { skillCooldown, type SkillDef } from './skills';
@@ -28,6 +29,15 @@ export const sewerCard: CardData = {
   frame: Frame.slime,
   tint: 0x7dd86a,
   lines: ['A new level now waits on the level select screen.', 'Someone down there wants to meet you.'],
+};
+
+export const minesCard: CardData = {
+  title: 'Crystal Mines',
+  subtitle: 'Crystal Mines discovered!',
+  color: '#8fe8ff',
+  frame: MinesFrame.crystal,
+  tint: MinesFrame.crystalTint,
+  lines: ['A new level now waits on the level select screen.', 'Nab the thief is your friend now (sort of).'],
 };
 
 export const levelUpCard = (level: number): CardData => ({

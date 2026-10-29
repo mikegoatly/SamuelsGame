@@ -8,8 +8,8 @@ import { getAccessory, crownFor, type AccessorySlot } from '../content/accessori
 import { isHeroicUnlocked, type LevelMode } from './heroic';
 import { emptySlots, equipInSlot, firstEmptySlot, sanitizeSlots, type Loadout } from './loadout';
 
-/** v12: unlocked heroes own their signature weapon (the Knight's Iron Sword, the Necromancer's Bone Staff); nothing is removed, so a Golden Sword stays owned and equipped. v11: `secrets`. v10: `survival`. v9: `levels.heroic`, `levels.mode`, `accessories`. v8: `heroes` + `stats`. v7: `gems` replace `charms`; `potions`, `revive`, `shop`, `weapons.levels` added. v6: `skills` + `loadout` replace `powers` and `weapons.equipped`. v5: `seen` + `itemCards`; v4: volumes + reduceShake; v2: `settings`. Older saves load through the same tolerant parse. */
-export const SAVE_VERSION = 12;
+/** v13: `secrets.minesFound` and `secrets.nabPity` (the Crystal Mines, Nab). v12: unlocked heroes own their signature weapon (the Knight's Iron Sword, the Necromancer's Bone Staff); nothing is removed, so a Golden Sword stays owned and equipped. v11: `secrets`. v10: `survival`. v9: `levels.heroic`, `levels.mode`, `accessories`. v8: `heroes` + `stats`. v7: `gems` replace `charms`; `potions`, `revive`, `shop`, `weapons.levels` added. v6: `skills` + `loadout` replace `powers` and `weapons.equipped`. v5: `seen` + `itemCards`; v4: volumes + reduceShake; v2: `settings`. Older saves load through the same tolerant parse. */
+export const SAVE_VERSION = 13;
 /** First version where every unlocked hero already owns their signature weapon. */
 const KIT_WEAPONS_VERSION = 12;
 /** Gems a level's first Heroic clear pays: one full 3-to-4 item upgrade of every colour. */
@@ -19,7 +19,8 @@ const GEMS_VERSION = 7;
 /** First version whose skills and loadout need no conversion from powers. */
 const SKILLS_VERSION = 6;
 export const MAX_SKILL_LEVEL = 5;
-const MAX_GRATE_RUNS = 99;
+const MAX_PITY_RUNS = 99;
+export const MAX_PITY = MAX_PITY_RUNS;
 export const MAX_POTIONS = 3;
 export const CHARMS_NOTICE = 'charmsToGems';
 export const STARTING_WEAPON = 'apprenticeStaff';
@@ -47,6 +48,9 @@ export interface Secrets {
   sewerFound: boolean;
   /** Pity counter: random desert runs in a row that had no grate room. */
   desertRunsWithoutGrate: number;
+  minesFound: boolean;
+  /** Pity counter: eligible runs in a row on which Nab never turned up. */
+  nabPity: number;
 }
 
 export interface SaveData {
@@ -98,7 +102,7 @@ export function defaultSave(): SaveData {
     survival: { bestMs: 0 },
     heroes: { unlocked: [WIZARD], selected: WIZARD },
     stats: { totalKills: 0, goldPeak: 0, bossKillsByHero: {} },
-    secrets: { sewerFound: false, desertRunsWithoutGrate: 0 },
+    secrets: { sewerFound: false, desertRunsWithoutGrate: 0, minesFound: false, nabPity: 0 },
     settings: defaultSettings(),
     seen: [],
   };
@@ -193,7 +197,12 @@ function parseSurvival(value: unknown): SaveData['survival'] {
 
 function parseSecrets(value: unknown): Secrets {
   const raw = isRecord(value) ? value : {};
-  return { sewerFound: raw.sewerFound === true, desertRunsWithoutGrate: wholeNumber(raw.desertRunsWithoutGrate, 0, 0, MAX_GRATE_RUNS) };
+  return {
+    sewerFound: raw.sewerFound === true,
+    desertRunsWithoutGrate: wholeNumber(raw.desertRunsWithoutGrate, 0, 0, MAX_PITY_RUNS),
+    minesFound: raw.minesFound === true,
+    nabPity: wholeNumber(raw.nabPity, 0, 0, MAX_PITY_RUNS),
+  };
 }
 
 function parseWeaponLevels(value: unknown, owned: readonly string[]): Record<string, number> {

@@ -17,7 +17,7 @@ export const sewer: LevelConfig = {
   curve: SEWER_CURVE,
   bossId: 'motherSludge',
   bossLevel: 12,
-  hiddenUntilFound: !SEWER_DEBUG,
+  hiddenUntilFound: SEWER_DEBUG ? undefined : 'sewer',
   rewardWeaponId: 'javelin',
   rewardEquips: false,
   mapKey: MapKey.sewer,

@@ -41,6 +41,7 @@ conclusion does not depend on them (see the ablation).
 | Fists | Monk | 40.6 | 0.85 | 0.90 | ok |
 | Bow | Ranger | 44 | 0.82 | 0.91 | ok |
 | Javelin | — | 28.6 | 1.17 | 1.23 | ok (edge) |
+| Crystal Scepter | Nab | 40 | 1.03 | 1.00 | ok (shatter averaged; freeze and spray not modelled) |
 | Sludge Slinger | Gloop | 25 | **1.84** | **1.44** | too weak* |
 | Apprentice Staff | Wizard, Necromancer | 18.8 | **3.10** | **2.02** | too weak* |
 

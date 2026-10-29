@@ -136,7 +136,7 @@ describe('sewer gas pipes', () => {
 
 describe('sewer level config', () => {
   it('is the level 8-11 sewer, playable once found, with its map and a reused track', () => {
-    expect(sewer).toMatchObject({ id: 'sewer', recommendedLevel: 9, monsterLevelRange: [8, 11], mapKey: 'sewer', hiddenUntilFound: true });
+    expect(sewer).toMatchObject({ id: 'sewer', recommendedLevel: 9, monsterLevelRange: [8, 11], mapKey: 'sewer', hiddenUntilFound: 'sewer' });
     expect(isLevelPlayable(sewer)).toBe(true);
     expect(sewer.music).toBeDefined();
   });

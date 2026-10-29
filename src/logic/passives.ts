@@ -2,7 +2,7 @@ import type { Point } from './geometry';
 import { isFrontal, shieldedDamage } from './shield';
 import type { DamageSource } from './unlocks';
 
-export type PassiveId = 'quickCasting' | 'frontGuard' | 'daggerTrap' | 'prospector' | 'longShot' | 'stunStreak' | 'risenDead' | 'fortune' | 'secondBlob';
+export type PassiveId = 'quickCasting' | 'frontGuard' | 'daggerTrap' | 'prospector' | 'longShot' | 'stunStreak' | 'risenDead' | 'fortune' | 'secondBlob' | 'snatch';
 
 export interface PassiveEffects {
   /** Fraction of damage taken from the front that is blocked. */
@@ -25,6 +25,10 @@ export interface PassiveEffects {
   secondBlob: boolean;
   /** Gloop: a harmless green trail while he walks. */
   trail: boolean;
+  /** Nab: dashing through a monster steals a coin from it (once per monster). */
+  snatch: boolean;
+  /** Multiplier on how long a dash lasts (so how far it goes). */
+  dashScale: number;
 }
 
 /** Live risen skeletons at most. */
@@ -44,6 +48,8 @@ const NEUTRAL: PassiveEffects = {
   luck: 0,
   secondBlob: false,
   trail: false,
+  snatch: false,
+  dashScale: 1,
 };
 
 const EFFECTS: Record<PassiveId, Partial<PassiveEffects>> = {
@@ -56,6 +62,7 @@ const EFFECTS: Record<PassiveId, Partial<PassiveEffects>> = {
   risenDead: { riseChance: 0.15 },
   fortune: { luck: 0.5 },
   secondBlob: { secondBlob: true, trail: true },
+  snatch: { snatch: true, dashScale: 1.3 },
 };
 
 export const passiveEffects = (id: PassiveId): PassiveEffects => ({ ...NEUTRAL, ...EFFECTS[id] });
