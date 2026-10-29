@@ -23,10 +23,12 @@ const IDLE_STROKE = 0x5a5280;
 const FOCUS_STROKE = 0xffe066;
 const PIP = 8;
 
-/** One list line in the Camp: icon, name, level pips and the price; tapping or confirming buys. */
+/** One list line in the Camp: icon, name, level pips and the price. Tapping selects it; only keyboard/pad confirm buys. */
 export class CampRow implements MenuItem {
   readonly area: Phaser.GameObjects.Rectangle;
   private readonly box: Phaser.GameObjects.Container;
+  private focused = false;
+  private selected = false;
 
   constructor(
     scene: Phaser.Scene,
@@ -78,11 +80,23 @@ export class CampRow implements MenuItem {
   }
 
   setFocused(focused: boolean): void {
-    this.area.setFillStyle(focused ? FOCUS_FILL : IDLE_FILL).setStrokeStyle(2, focused ? FOCUS_STROKE : IDLE_STROKE);
+    this.focused = focused;
+    this.paint();
     if (focused) this.onFocus();
   }
 
-  activate(): void {
-    this.onActivate();
+  /** The row the info panel (and its Upgrade/Buy button) is showing, kept outlined while focus is elsewhere. */
+  setSelected(selected: boolean): void {
+    this.selected = selected;
+    this.paint();
+  }
+
+  private paint(): void {
+    this.area.setFillStyle(this.focused ? FOCUS_FILL : IDLE_FILL).setStrokeStyle(2, this.focused || this.selected ? FOCUS_STROKE : IDLE_STROKE);
+  }
+
+  /** A tap (`pointerX` set) only selects, so touch players can read the panel without buying by accident. */
+  activate(pointerX?: number): void {
+    if (pointerX === undefined) this.onActivate();
   }
 }

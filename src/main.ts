@@ -19,9 +19,11 @@ import { SaveSlotsScene } from './scenes/SaveSlotsScene';
 import { SettingsScene } from './scenes/SettingsScene';
 import { GratePromptScene } from './scenes/GratePromptScene';
 import { SkillSwapScene } from './scenes/SkillSwapScene';
+import { FullscreenScene } from './scenes/FullscreenScene';
 import { installDeviceTracker } from './systems/inputDevice';
 import { applySavedMute, installMuteHotkey } from './systems/audioSettings';
 import { exposeForDebug } from './debug';
+import { installViewportWatch } from './systems/viewportWatch';
 
 const game = new Phaser.Game({
   type: Phaser.AUTO,
@@ -34,10 +36,11 @@ const game = new Phaser.Game({
   input: { gamepad: true },
   physics: { default: 'arcade', arcade: { gravity: { x: 0, y: 0 } } },
   scale: { mode: Phaser.Scale.EXPAND, autoCenter: Phaser.Scale.CENTER_BOTH },
-  scene: [BootScene, PreloadScene, MainMenuScene, HowToPlayScene, SettingsScene, SaveSlotsScene, LevelSelectScene, CampScene, HeroSelectScene, LoadoutScene, GameScene, HudScene, PauseScene, ItemCardScene, NoticeScene, GratePromptScene, SkillSwapScene, LevelCompleteScene, GameOverScene],
+  scene: [BootScene, PreloadScene, MainMenuScene, HowToPlayScene, SettingsScene, SaveSlotsScene, LevelSelectScene, CampScene, HeroSelectScene, LoadoutScene, GameScene, HudScene, PauseScene, ItemCardScene, NoticeScene, GratePromptScene, SkillSwapScene, LevelCompleteScene, GameOverScene, FullscreenScene],
 });
 
 applySavedMute(game);
 installMuteHotkey(game);
 installDeviceTracker(game);
+installViewportWatch(game);
 exposeForDebug(game);

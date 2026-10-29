@@ -9,7 +9,7 @@ import { menuText } from '../ui/menuText';
 import { MenuScene } from '../ui/MenuScene';
 import { TabBar } from '../ui/TabBar';
 import { drawCounts, walletEntries } from '../ui/Wallet';
-import { clampIntoWindow, dragOffset, isDrag } from '../logic/listScroll';
+import { dragOffset, isDrag } from '../logic/listScroll';
 import { celebrate } from '../systems/fx';
 import { musicOf } from '../systems/MusicPlayer';
 import { saveSystem } from '../systems/SaveSystem';
@@ -35,6 +35,9 @@ const ROW_PITCH = 28;
 const PANEL_HEIGHT = 74;
 const BOTTOM_MARGIN = 6;
 const MAX_WIDTH = 520;
+const BUY_WIDTH = 88;
+const BUY_HEIGHT = 30;
+const BUY_LABEL: Record<CampTab, string> = { upgrades: 'Upgrade', shop: 'Buy' };
 const EMPTY_HINT: Record<CampTab, string> = {
   upgrades: 'Nothing to upgrade yet.',
   shop: 'The shop is empty.',
@@ -44,6 +47,9 @@ const EMPTY_HINT: Record<CampTab, string> = {
 export class CampScene extends MenuScene {
   private tab: CampTab = 'upgrades';
   private offset = 0;
+  /** Offer shown in the panel; the Upgrade/Buy button buys this one. */
+  private selected = 0;
+  private buyButton?: MenuButton;
   private offers: Offer[] = [];
   private rows: CampRow[] = [];
   private visibleRows = 4;
@@ -63,6 +69,7 @@ export class CampScene extends MenuScene {
   init(data: CampData): void {
     this.tab = data.tab ?? 'upgrades';
     this.offset = 0;
+    this.selected = 0;
     this.celebration = undefined;
   }
 
@@ -100,7 +107,7 @@ export class CampScene extends MenuScene {
     const cx = width / 2;
     const save = saveSystem.data;
     const listWidth = Math.min(MAX_WIDTH, width - 24);
-    this.wrap = listWidth - 20;
+    this.wrap = listWidth - 20 - BUY_WIDTH - 8;
     menuText(this, cx, 16, 'Camp', 24, '#b48cff');
     drawCounts(this, cx, 42, walletEntries(save.coins, save.gems));
     const back = new MenuButton(this, 56, 18, 88, 24, 'Back', () => this.goBack());
@@ -113,24 +120,37 @@ export class CampScene extends MenuScene {
     if (this.offers.length === 0) menuText(this, cx, LIST_TOP + 20, EMPTY_HINT[this.tab], 16, '#9a9ab8');
     this.add.rectangle(cx, panelY, listWidth, PANEL_HEIGHT, 0x201c33).setStrokeStyle(2, 0x4a4468);
     this.panel = this.add.container(cx - listWidth / 2 + 10, panelY - PANEL_HEIGHT / 2 + 6);
+    this.buyButton = this.offers.length > 0
+      ? new MenuButton(this, cx + listWidth / 2 - 10 - BUY_WIDTH / 2, panelY, BUY_WIDTH, BUY_HEIGHT, BUY_LABEL[this.tab], () => this.attempt(this.selected))
+      : undefined;
     this.arrows = this.add.graphics();
     this.rowsX = cx + listWidth / 2 - 8;
     this.listBounds.setTo(cx - listWidth / 2, LIST_TOP - 14, listWidth, this.visibleRows * ROW_PITCH + 24);
     this.drag = undefined;
 
-    this.menu = new MenuList(this, [back, tabs, ...this.rows], { initialFocus: TAB_ITEM, onBack: () => this.goBack() });
+    const items = this.buyButton ? [back, tabs, ...this.rows, this.buyButton] : [back, tabs];
+    this.menu = new MenuList(this, items, { initialFocus: TAB_ITEM, onBack: () => this.goBack(), focusOnHover: false });
     this.layoutRows();
+    this.select(Math.min(this.selected, this.offers.length - 1));
     this.finishCelebration();
   }
 
   private rowsX = 0;
 
-  /** Keeps the focused row inside the visible window. */
+  /** Keeps the focused row inside the visible window and shows it in the panel. */
   private focusRow(index: number): void {
     if (index < this.offset) this.offset = index;
     else if (index >= this.offset + this.visibleRows) this.offset = index - this.visibleRows + 1;
     this.layoutRows();
-    this.showPanel(this.offers[index]);
+    this.select(index);
+  }
+
+  private select(index: number): void {
+    this.selected = Math.max(0, index);
+    this.rows.forEach((row, i) => row.setSelected(i === this.selected));
+    const offer = this.offers[this.selected];
+    this.showPanel(offer);
+    this.buyButton?.setEnabled(offer?.buy(saveSystem.data).ok ?? false);
   }
 
   private layoutRows(): void {
@@ -148,12 +168,12 @@ export class CampScene extends MenuScene {
 
   private nudgeFocus(step: number): void {
     const menu = this.menu;
-    if (!menu || step === 0 || menu.focusIndex < 2) return;
+    if (!menu || step === 0 || menu.focusIndex < 2 || menu.focusIndex > this.rows.length + 1) return;
     const next = Phaser.Math.Clamp(menu.focusIndex + step, 2, this.rows.length + 1);
     menu.setFocus(next);
   }
 
-  /** Touch (or mouse) drag on the list scrolls it; a drag never counts as a tap-to-buy. */
+  /** Touch (or mouse) drag on the list scrolls it without changing the selection. */
   private startDrag(pointer: Phaser.Input.Pointer): void {
     if (this.drag || this.rows.length <= this.visibleRows || !this.listBounds.contains(pointer.x, pointer.y)) return;
     this.drag = { pointerId: pointer.id, x: pointer.x, y: pointer.y, offset: this.offset, scrolling: false };
@@ -170,8 +190,6 @@ export class CampScene extends MenuScene {
     if (next === this.offset) return;
     this.offset = next;
     this.layoutRows();
-    const menu = this.menu;
-    if (menu && menu.focusIndex >= 2) menu.setFocus(2 + clampIntoWindow(menu.focusIndex - 2, this.offset, this.visibleRows));
   }
 
   private showPanel(offer: Offer | undefined): void {

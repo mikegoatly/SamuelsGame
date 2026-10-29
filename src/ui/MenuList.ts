@@ -21,6 +21,8 @@ export interface MenuListOptions {
   initialFocus?: number;
   /** Esc / B / Start. */
   onBack?: () => void;
+  /** False: the mouse only focuses on click, so hovering past items on the way to a button doesn't change the selection. */
+  focusOnHover?: boolean;
 }
 
 const BUTTON_A = 0;
@@ -97,7 +99,7 @@ export class MenuList {
 
   private wirePointer(item: MenuItem, index: number): void {
     item.area.setInteractive({ useHandCursor: true });
-    item.area.on('pointerover', () => this.setFocus(index));
+    if (this.options.focusOnHover !== false) item.area.on('pointerover', () => this.setFocus(index));
     item.area.on('pointerdown', () => {
       this.pressed = index;
       this.setFocus(index);

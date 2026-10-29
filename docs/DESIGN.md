@@ -87,7 +87,7 @@ MainMenu -> LevelSelect (2x2 cards, Back) -> Game {levelId}; GameOver (Retry / L
 | Pause | Esc | Button (top right) | Start |
 
 Touch (`TouchSource`): floating twin sticks. A touch starting in the left half spawns the move stick, the right half the
-aim stick (radius ~50 game px at 640x360, scaled with screen). Dash and the three skill buttons fan out on the right edge (skill icon + cooldown pie); touches starting on them (or the fullscreen button) never spawn a stick. Controls show only after a touch and
+aim stick (radius ~50 game px at 640x360, scaled with screen). Dash and the three skill buttons fan out on the right edge (skill icon + cooldown pie); touches starting on them (or the fullscreen button, which lives in the always-on-top `FullscreenScene` so it also works in menus) never spawn a stick. Controls show only after a touch and
 hide on mouse/keyboard/gamepad use. Layout maths is pure (`logic/virtualStick.ts`); `HudScene` renders the `TouchState`
 read from the scene registry. Scaling is `Phaser.Scale.EXPAND` from a 640x360 base (no letterbox; HUD anchors to edges
 and re-lays out on resize); portrait touch devices get a CSS "Rotate your device" overlay.
@@ -239,7 +239,7 @@ tests/                    Vitest specs for logic/
 
 Pure logic: `logic/upgrades.ts` (costs, weapon tables, stat diff lines), `shop.ts` (seeded stock, prices), `campPurchases.ts` (upgrade, buy skill/potion/revive on a save),
 `potions.ts`, `weaponTwists.ts` (pierce counting, split angles), `gems.ts`. Content: `content/upgradeInfo.ts` (gem colour, tier and twist per skill/weapon id), `campOffers.ts`
-(rows and panel text from a save), `upgradePreview.ts`. UI: `CampScene` with `CampRow`, `TabBar`, `Wallet`. In level: `PotionSystem`, `BoltHits` (player bolt damage, pierce, split),
+(rows and panel text from a save), `upgradePreview.ts`. UI: `CampScene` with `CampRow`, `TabBar`, `Wallet`; tapping a row only selects it, the panel's Upgrade/Buy button (or Enter / pad A on a row) buys. In level: `PotionSystem`, `BoltHits` (player bolt damage, pierce, split),
 sword wave through `MeleeSystem`. Boss tables use `gemBurst`.
 
 ## Balance (v2 phase 5)

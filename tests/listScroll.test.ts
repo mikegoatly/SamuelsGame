@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { clampIntoWindow, dragOffset, isDrag } from '../src/logic/listScroll';
+import { dragOffset, isDrag } from '../src/logic/listScroll';
 
 describe('listScroll', () => {
   it.each([
@@ -23,16 +23,5 @@ describe('listScroll', () => {
     [0, -50, 28, 0, 0],
   ])('dragOffset(start %d, dy %d, pitch %d, max %d) = %d', (start, dy, pitch, max, expected) => {
     expect(dragOffset(start, dy, pitch, max)).toBe(expected);
-  });
-
-  it.each([
-    // index, offset, visible, expected
-    [0, 0, 4, 0],
-    [3, 0, 4, 3],
-    [0, 2, 4, 2],
-    [9, 2, 4, 5],
-    [4, 2, 4, 4],
-  ])('clampIntoWindow(%d, offset %d, visible %d) = %d', (index, offset, visible, expected) => {
-    expect(clampIntoWindow(index, offset, visible)).toBe(expected);
   });
 });

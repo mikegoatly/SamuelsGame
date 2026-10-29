@@ -75,7 +75,6 @@ export class KeyboardMouseSource implements InputSource {
 
   /** True when the pointer is over an interactive HUD object (pause/fullscreen buttons), so the click is not a shot. */
   private isOverHud(scene: Phaser.Scene, pointer: Phaser.Input.Pointer): boolean {
-    const hud = scene.scene.get('Hud');
-    return (hud?.input?.hitTestPointer(pointer).length ?? 0) > 0;
+    return ['Hud', 'Fullscreen'].some((key) => (scene.scene.get(key)?.input?.hitTestPointer(pointer).length ?? 0) > 0);
   }
 }

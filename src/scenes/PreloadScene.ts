@@ -49,6 +49,7 @@ export class PreloadScene extends Phaser.Scene {
       this.makeVignetteTexture();
       this.makeSkillIcons();
     }
+    this.scene.launch('Fullscreen');
     this.scene.start('MainMenu');
   }
 

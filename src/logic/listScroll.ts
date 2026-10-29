@@ -10,8 +10,3 @@ export function dragOffset(startOffset: number, dy: number, pitch: number, maxOf
   const next = startOffset - Math.round(dy / pitch);
   return Math.max(0, Math.min(Math.max(0, maxOffset), next));
 }
-
-/** Nearest row index that sits inside the visible window. */
-export function clampIntoWindow(index: number, offset: number, visible: number): number {
-  return Math.max(offset, Math.min(offset + visible - 1, index));
-}

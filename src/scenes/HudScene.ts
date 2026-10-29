@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { ControlFrame, Frame, Tex } from '../content/assetKeys';
+import { Frame, Tex } from '../content/assetKeys';
 import { items } from '../content/items';
 import { formatTime } from '../logic/format';
 import { GEM_COLOURS, gemItemId, type Gems } from '../logic/gems';
@@ -40,8 +40,9 @@ export interface HudData {
 
 const BAR_X = 10;
 const BAR_WIDTH = 140;
-const FULLSCREEN_SIZE = 28;
-const FULLSCREEN_MARGIN = 8;
+/** The full-screen toggle (FullscreenScene) sits top-right; the pause button goes under it. */
+const CORNER_BUTTON_SIZE = 28;
+const CORNER_MARGIN = 8;
 const PAUSE_Y = 58;
 const WAVE_BAR = { width: 90, height: 6, y: 25 };
 const SURVIVAL_BAR_Y = 56;
@@ -67,7 +68,6 @@ export class HudScene extends Phaser.Scene {
   private boss: { hp: number; max: number } | null = null;
   private bossTicks: readonly number[] = [0.5];
   private hp = { value: 1, max: 1 };
-  private fullscreenButton!: Phaser.GameObjects.Image;
   private pauseButton!: Phaser.GameObjects.Container;
   private coinText!: Phaser.GameObjects.Text;
   private gemIcons!: Phaser.GameObjects.Container;
@@ -109,7 +109,6 @@ export class HudScene extends Phaser.Scene {
     this.bossBar = this.add.graphics();
     this.bossName = this.makeText(0, 4, '#ffd0a0', 12).setOrigin(0.5, 0).setVisible(false);
     this.muteText = this.makeText(BAR_X, 0, '#b0b0c8', 10).setOrigin(0, 1).setText('Sound off (M)').setVisible(saveSystem.data.settings.muted);
-    this.createFullscreenButton();
     this.createPauseButton(events);
     this.add.image(BAR_X + 5, 58, Tex.tiles, Frame.coin).setTint(0xffd84a);
     this.coinText = this.makeText(BAR_X + 16, 58, '#ffe066', 16).setOrigin(0, 0.5);
@@ -186,13 +185,13 @@ export class HudScene extends Phaser.Scene {
   }
 
   private layout(): void {
-    const half = FULLSCREEN_SIZE / 2;
-    this.fullscreenButton.setPosition(this.scale.width - FULLSCREEN_MARGIN - half, FULLSCREEN_MARGIN + half);
-    this.waveText.setX(this.fullscreenButton.x - half - 6);
+    const half = CORNER_BUTTON_SIZE / 2;
+    const cornerX = this.scale.width - CORNER_MARGIN - half;
+    this.waveText.setX(cornerX - half - 6);
     this.heroicText?.setX(this.waveText.x);
     this.timerText?.setX(this.waveText.x);
     this.bestText?.setX(this.waveText.x);
-    this.pauseButton.setPosition(this.fullscreenButton.x, PAUSE_Y);
+    this.pauseButton.setPosition(cornerX, PAUSE_Y);
     this.muteText.setY(this.scale.height - 6);
     this.weaponIcon.setPosition(BAR_X + 8, this.scale.height - 30);
     this.weaponText.setPosition(BAR_X + 22, this.scale.height - 30);
@@ -253,25 +252,8 @@ export class HudScene extends Phaser.Scene {
     for (const tick of this.bossTicks) this.bossBar.fillStyle(0xffffff, 0.25).fillRect(x + Math.round(width * tick) - 1, y, 2, 12);
   }
 
-  private createFullscreenButton(): void {
-    this.fullscreenButton = this.add
-      .image(0, 0, Tex.controls, ControlFrame.fullscreen)
-      .setDisplaySize(FULLSCREEN_SIZE, FULLSCREEN_SIZE)
-      .setAlpha(0.6)
-      .setVisible(this.scale.fullscreen.available)
-      .setInteractive({ useHandCursor: true });
-    this.fullscreenButton.on('pointerdown', () => {
-      try {
-        if (this.scale.isFullscreen) this.scale.stopFullscreen();
-        else this.scale.startFullscreen();
-      } catch {
-        /* unsupported */
-      }
-    });
-  }
-
   private createPauseButton(events: GameEvents): void {
-    const bg = this.add.circle(0, 0, FULLSCREEN_SIZE / 2, 0x14121c, 0.6).setStrokeStyle(2, 0xd8d8e8, 0.8);
+    const bg = this.add.circle(0, 0, CORNER_BUTTON_SIZE / 2, 0x14121c, 0.6).setStrokeStyle(2, 0xd8d8e8, 0.8);
     const bars = this.add.graphics().fillStyle(0xd8d8e8, 1).fillRect(-5, -6, 3, 12).fillRect(2, -6, 3, 12);
     this.pauseButton = this.add.container(0, PAUSE_Y, [bg, bars]).setAlpha(0.7);
     bg.setInteractive({ useHandCursor: true });

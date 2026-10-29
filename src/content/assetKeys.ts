@@ -164,5 +164,4 @@ export const ControlFrame = {
   stickKnob: 'flatDark00.png',
   dash: 'flatDark24.png',
   skill: 'flatDark27.png',
-  fullscreen: 'flatDark29.png',
 } as const;

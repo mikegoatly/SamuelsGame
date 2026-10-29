@@ -33,6 +33,12 @@ export class MenuButton implements MenuItem {
     this.label.setText(text);
   }
 
+  /** Greys the button out; it still takes focus and taps so the scene can explain why. */
+  setEnabled(enabled: boolean): void {
+    this.area.setAlpha(enabled ? 1 : 0.45);
+    this.label.setAlpha(enabled ? 1 : 0.45);
+  }
+
   activate(): void {
     this.onActivate();
   }
