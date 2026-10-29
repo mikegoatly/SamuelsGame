@@ -60,7 +60,8 @@ export class LevelSelectScene extends MenuScene {
     const { progress, coins, gems, levels: levelSave } = saveSystem.data;
     const cx = width / 2;
     musicOf(this.game).crossfadeTo(Music.menu);
-    const shown = visibleLevels(levels, levelSave.cleared, saveSystem.data.secrets.sewerFound);
+    // TODO(C1): add 'mines' to this list when `saveSystem.data.secrets.minesFound` once the Nab discovery lands.
+    const shown = visibleLevels(levels, levelSave.cleared, saveSystem.data.secrets.sewerFound ? ['sewer'] : []);
     const crowded = shown.length > CROWDED_CARDS;
     const titleY = crowded ? 13 : 20;
     const walletY = crowded ? 36 : 44;

@@ -6,9 +6,9 @@ import { isLevelPlayable, isLevelUnlocked, visibleLevels } from '../src/logic/le
 
 describe('the hidden sewer card', () => {
   const desert = { id: 'desert', unlockedBy: 'ruins' };
-  const sewer = { id: 'sewer', unlockedBy: 'desert', comingSoon: true, hiddenUntilFound: true };
+  const sewer = { id: 'sewer', unlockedBy: 'desert', comingSoon: true, hiddenUntilFound: 'sewer' as const };
   const palace = { id: 'palace', unlockedBy: 'desert' };
-  const ids = (found: boolean, cleared: string[]): string[] => visibleLevels([desert, sewer, palace], cleared, found).map((l) => l.id);
+  const ids = (found: boolean, cleared: string[]): string[] => visibleLevels([desert, sewer, palace], cleared, found ? ['sewer'] : []).map((l) => l.id);
 
   it.each([
     [false, [], ['desert', 'palace']],
@@ -35,14 +35,14 @@ describe('the released sewer', () => {
   it('is listed right after the desert, hidden until found, playable and rewards the Javelin', () => {
     const ids = levels.map((l) => l.id);
     expect(ids.indexOf('sewer')).toBe(ids.indexOf('desert') + 1);
-    expect(sewer).toMatchObject({ name: 'Sunken Sewer', recommendedLevel: 9, monsterLevelRange: [8, 11], hiddenUntilFound: true, rewardWeaponId: 'javelin' });
+    expect(sewer).toMatchObject({ name: 'Sunken Sewer', recommendedLevel: 9, monsterLevelRange: [8, 11], hiddenUntilFound: 'sewer', rewardWeaponId: 'javelin' });
     expect(sewer.comingSoon).toBeUndefined();
     expect(isLevelPlayable(sewer)).toBe(true);
   });
 
   it('shows no card until found, is open once found (cleared or not), and offers Heroic only after its own clear', () => {
     expect(visibleLevels(levels, ['ruins', 'desert', 'palace']).map((l) => l.id)).not.toContain('sewer');
-    expect(visibleLevels(levels, [], true).map((l) => l.id)).toContain('sewer');
+    expect(visibleLevels(levels, [], ['sewer']).map((l) => l.id)).toContain('sewer');
     expect(isLevelUnlocked(sewer, [])).toBe(true);
     expect(offersHeroic({ ...sewer }, ['desert'])).toBe(false);
     expect(offersHeroic({ ...sewer }, ['desert', 'sewer'])).toBe(true);

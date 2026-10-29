@@ -29,6 +29,8 @@ export interface LevelCompleteData {
   /** The crown went straight onto the hero (the Head slot was empty). */
   crownWorn?: boolean;
   levelName?: string;
+  /** A gentle closing line under the results (Bert's ending). */
+  epilogue?: string;
 }
 
 const INPUT_DELAY_MS = 700;
@@ -85,10 +87,17 @@ export class LevelCompleteScene extends MenuScene {
       this.showReward(cx, rewardY, reward);
       rewardY += reward.note ? 46 : 26;
     }
+    if (this.result.epilogue) this.showEpilogue(cx, rewardY, width, height * 0.88 - 17, this.result.epilogue);
     if (seed !== undefined) menuText(this, cx, height * 0.16 + 26, `Map #${seed}`, 16, '#6c6c88');
     const next = new MenuButton(this, cx - 104, height * 0.88, 200, 34, 'Continue', () => this.leave());
     const camp = new MenuButton(this, cx + 104, height * 0.88, 200, 34, 'Visit Camp', () => this.inputReady(INPUT_DELAY_MS) && this.scene.start('Camp'));
     this.menu = new MenuList(this, [next, camp], { columns: 2, onBack: () => this.leave() });
+  }
+
+  /** A closing line just below the last reward, wrapped to the screen and kept clear of the buttons. */
+  private showEpilogue(cx: number, y: number, width: number, buttonTop: number, line: string): void {
+    const text = menuText(this, cx, y, line, 16, '#a8d8ff').setOrigin(0.5, 0).setWordWrapWidth(width - 48).setAlign('center');
+    text.y = Math.min(y, buttonTop - 6 - text.height);
   }
 
   /** Icon plus headline for a weapon or skill this level handed out. */

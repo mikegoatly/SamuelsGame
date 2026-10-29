@@ -36,6 +36,12 @@ export const monsterLoot: LootTable[] = [
   table('bloatToad', [common('coin', 200), common('coinPile', 280), common('goldPile', 60), rare('healthPotionSmall', 140), rare('healthPotionLarge', 40), ...gems(70, 'green')]),
   table('sewerGator', [common('coinPile', 320), common('goldPile', 160), rare('healthPotionSmall', 120), rare('healthPotionLarge', 110), ...gems(100, 'red')]),
   table('moldShroom', [common('coinPile', 310), common('goldPile', 130), rare('healthPotionSmall', 120), rare('healthPotionLarge', 120), ...gems(100, 'red')]),
+  table('caveBat', [common('coin', 200), ...gems(20, 'red')]),
+  table('goblinMiner', [common('coinPile', 300), common('goldPile', 260), rare('healthPotionSmall', 100), rare('healthPotionLarge', 160), ...gems(130, 'red')]),
+  table('crystalBeetle', [common('coinPile', 290), common('goldPile', 280), rare('healthPotionSmall', 90), rare('healthPotionLarge', 180), ...gems(140, 'red')]),
+  table('rockMole', [common('coinPile', 300), common('goldPile', 270), rare('healthPotionSmall', 100), rare('healthPotionLarge', 170), ...gems(140, 'red')]),
+  table('shardWisp', [common('coin', 120), common('coinPile', 300), common('goldPile', 200), rare('healthPotionSmall', 110), rare('healthPotionLarge', 140), ...gems(110, 'red')]),
+  table('hookjawSpider', [common('coinPile', 280), common('goldPile', 300), rare('healthPotionSmall', 90), rare('healthPotionLarge', 190), ...gems(150, 'red')]),
   motherSludgeLoot(),
   table('houndmaster', [common('coinPile', 300), common('goldPile', 280), rare('healthPotionSmall', 100), rare('healthPotionLarge', 160), ...gems(130, 'red')]),
 ];

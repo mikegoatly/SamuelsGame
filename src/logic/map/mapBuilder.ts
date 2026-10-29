@@ -4,6 +4,7 @@ import type { SidePlan } from '../layoutPresets';
 import { channelTiles, clearChannels, placeChannels, type Channel } from '../layout/channels';
 import { placeDecor, type Decor } from '../layout/decor';
 import { generateRandomLayout } from '../layout/randomLayout';
+import { roundBossRoom } from '../layout/roundRoom';
 import { floorMask, generateLayout, placeHazards, placeSpikeTraps, throneTiles, type DungeonLayout, type LayoutRoom } from '../dungeonLayout';
 import type { Rect } from '../geometry';
 import { placeActiveHazards, type PlacedHazard } from '../hazard/placement';
@@ -171,7 +172,8 @@ function paintSludge(layout: DungeonLayout, channels: readonly Channel[], theme:
   return data;
 }
 
-function assemble(theme: MapTheme, seed: number, rng: () => number, base: DungeonLayout) {
+function assemble(theme: MapTheme, seed: number, rng: () => number, unshaped: DungeonLayout) {
+  const base = theme.roundBoss ? roundBossRoom(unshaped) : unshaped;
   const channels = theme.channels ? placeChannels(base, mulberry32(seed ^ CHANNEL_SEED_MIX), theme.channels) : [];
   const layout = channels.length > 0 ? clearChannels(base, channels) : base;
   const floor = floorMask(layout);
@@ -182,7 +184,7 @@ function assemble(theme: MapTheme, seed: number, rng: () => number, base: Dungeo
   const bridges = channels.flatMap((c) => c.bridges);
   const placed = placeActiveHazards(layout, mulberry32(seed ^ HAZARD_SEED_MIX), theme.hazards ?? {}, [...hazards, ...spikes, ...bridges], theme.bossHazard, channels.flatMap((c) => c.segments));
   const active = [...placed, ...flushHazards(channels, mulberry32(seed ^ FLUSH_SEED_MIX))];
-  const footprints = [...hazards, ...spikes, ...placed.flatMap((h) => (h.kind === 'gasPipe' ? [h.rect] : h.blocks))];
+  const footprints = [...hazards, ...spikes, ...placed.flatMap((h) => (h.kind === 'gasPipe' || h.kind === 'minecart' ? [h.rect] : h.blocks))];
   const decor = theme.decor ? placeDecor(layout, channels, footprints, mulberry32(seed ^ DECOR_SEED_MIX), theme.decor) : [];
   return { layout, ground, walls, quicksand: hazards, spikes, active, channels, decor, sludge: paintSludge(layout, channels, theme) };
 }

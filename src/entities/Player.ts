@@ -49,6 +49,8 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   slowZones: Rect[] = [];
   /** Extra velocity from wind gusts (px/s), added to walking. */
   windPush = { x: 0, y: 0 };
+  /** While true walking input is ignored (a spider's silk reels the player in); dashing still breaks free. */
+  moveLocked = false;
   /** Called each frame a skill slot button is pressed; the skill system decides whether anything happens. */
   skillHandler?: (slot: number, x: number, y: number, aim: Phaser.Math.Vector2) => void;
   /** Soaks up incoming damage (Arcane Shield): returns how much still gets through. */
@@ -196,7 +198,8 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this.handleDash(now);
     if (!this.timers.isDashing(now) && !this.timers.inKnockback(now)) {
       const speed = this.stats.moveSpeed * speedFactorAt(this, this.slowZones);
-      this.setVelocity(this.controls.moveVector.x * speed + this.windPush.x, this.controls.moveVector.y * speed + this.windPush.y);
+      const [mx, my] = this.moveLocked ? [0, 0] : [this.controls.moveVector.x, this.controls.moveVector.y];
+      this.setVelocity(mx * speed + this.windPush.x, my * speed + this.windPush.y);
     }
 
     if (!this.actionsLocked && this.controls.potion) this.potionHandler?.();

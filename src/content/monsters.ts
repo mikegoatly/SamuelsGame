@@ -1,4 +1,4 @@
-import { Frame, MonsterFrame, SewerFrame, Tex } from './assetKeys';
+import { Frame, MinesFrame, MonsterFrame, SewerFrame, Tex } from './assetKeys';
 import type { EnemyDef } from './enemies';
 
 /** Hand-drawn sprite from the extra monster sheet. */
@@ -6,6 +6,9 @@ const drawn = (frame: number): Pick<EnemyDef, 'texture' | 'textureFrame' | 'fram
 
 /** Hand-drawn sprite from the sewer sheet. */
 const sewerDrawn = (frame: number): Pick<EnemyDef, 'texture' | 'textureFrame' | 'frame'> => ({ texture: Tex.sewer, textureFrame: frame, frame: 0 });
+
+/** Hand-drawn sprite from the Crystal Mines sheet. */
+const minesDrawn = (frame: number): Pick<EnemyDef, 'texture' | 'textureFrame' | 'frame'> => ({ texture: Tex.mines, textureFrame: frame, frame: 0 });
 
 // Ruins
 export const rat: EnemyDef = {
@@ -356,10 +359,108 @@ export const moldShroom: EnemyDef = {
   maxPerWave: 1,
 };
 
+// Crystal Mines
+export const caveBat: EnemyDef = {
+  id: 'caveBat',
+  name: 'Cave Bat',
+  frame: Frame.bat,
+  tint: 0xa898ff,
+  baseHp: 12,
+  baseDamage: 7,
+  speed: 78,
+  behaviour: 'erratic',
+  lootTableId: 'caveBat',
+  raisable: false,
+  eliteOk: false,
+  xpLevelDrop: 3,
+};
+export const caveBatSwarm: EnemyDef = {
+  ...caveBat,
+  id: 'caveBatSwarm',
+  name: 'Cave Bat Swarm',
+  cost: 2,
+  pack: { member: 'caveBat', count: [5, 7], levelDrop: 0 },
+  tip: 'A flapping swarm. They zigzag, so stay moving!',
+};
+export const goblinMiner: EnemyDef = {
+  id: 'goblinMiner',
+  name: 'Goblin Miner',
+  ...minesDrawn(MinesFrame.miner),
+  baseHp: 34,
+  baseDamage: 12,
+  speed: 38,
+  behaviour: 'custom',
+  custom: 'miner',
+  lootTableId: 'goblinMiner',
+  cost: 1,
+  placement: 'back',
+  tip: 'Throws a pickaxe that comes back like a boomerang.',
+};
+export const crystalBeetle: EnemyDef = {
+  id: 'crystalBeetle',
+  name: 'Crystal Beetle',
+  ...minesDrawn(MinesFrame.beetle),
+  baseHp: 46,
+  baseDamage: 11,
+  speed: 32,
+  behaviour: 'chaser',
+  lootTableId: 'crystalBeetle',
+  cost: 2,
+  raisable: false,
+  shield: { arc: 2.6, reduction: 0.8, turnRate: 1.2 },
+  shieldGlint: MinesFrame.beetleGlint,
+  tip: 'Its shell blocks shots from the front. Hit it from the side!',
+};
+export const rockMole: EnemyDef = {
+  id: 'rockMole',
+  name: 'Rock Mole',
+  ...minesDrawn(MinesFrame.mole),
+  baseHp: 44,
+  baseDamage: 17,
+  speed: 62,
+  behaviour: 'custom',
+  custom: 'mole',
+  lootTableId: 'rockMole',
+  cost: 2,
+  raisable: false,
+  tip: 'Digs under you. Move when the dirt mound shakes!',
+  maxPerWave: 2,
+};
+export const shardWisp: EnemyDef = {
+  id: 'shardWisp',
+  name: 'Shard Wisp',
+  ...minesDrawn(MinesFrame.wisp),
+  baseHp: 19,
+  baseDamage: 7,
+  speed: 50,
+  behaviour: 'custom',
+  custom: 'shard',
+  lootTableId: 'shardWisp',
+  raisable: false,
+  tip: 'Bursts into flying shards when it pops. Shoot it from far away!',
+};
+export const hookjawSpider: EnemyDef = {
+  id: 'hookjawSpider',
+  name: 'Hookjaw Spider',
+  ...minesDrawn(MinesFrame.spider),
+  baseHp: 48,
+  baseDamage: 14,
+  speed: 46,
+  behaviour: 'custom',
+  custom: 'spider',
+  lootTableId: 'hookjawSpider',
+  cost: 2,
+  raisable: false,
+  tip: 'Shoots a silk line to reel you in. Step aside or dash to break free!',
+  maxPerWave: 2,
+  maxAlive: 2,
+};
+
 export const ruinsMonsters = [ratSwarm, bombBeetle, skeletonArcher, wisp, necromancer];
 export const desertMonsters = [fireImp, cactusTurret, mummyPriest, sandShark, dustDevil];
 export const palaceMonsters = [jester, mirrorKnight, houndmaster, gargoyle, twinMages];
 export const sewerMonsters = [sewerRatSwarm, sludgeBlob, pipeSpitter, bloatToad, sewerGator, moldShroom];
+export const minesMonsters = [caveBatSwarm, goblinMiner, crystalBeetle, rockMole, shardWisp, hookjawSpider];
 
 /** Every new monster def, including pack members that are not in any level pool. */
-export const newMonsters: EnemyDef[] = [rat, ...ruinsMonsters, ...desertMonsters, ...palaceMonsters, twinMage, hound, ...sewerMonsters, sewerRat, sludgeBlobSmall];
+export const newMonsters: EnemyDef[] = [rat, ...ruinsMonsters, ...desertMonsters, ...palaceMonsters, twinMage, hound, ...sewerMonsters, sewerRat, sludgeBlobSmall, ...minesMonsters, caveBat];

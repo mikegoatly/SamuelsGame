@@ -1,3 +1,4 @@
+import { strikeAt } from '../strikes';
 import type { NovaSkill } from '../../content/skills';
 import { novaVictims } from '../../logic/frostNova';
 import { lineClear } from '../../logic/lineOfSight';
@@ -26,6 +27,7 @@ export class FrostNovaCaster implements SkillCaster<NovaSkill> {
       if (params.twist) enemy.stun(FREEZE_MS);
       sparkBurst(scene, enemy.x, enemy.y, FROST, 5, 40);
     }
+    strikeAt(scene, x, y, params.radius);
     ringBurst(scene, x, y, params.radius, FROST);
     ringBurst(scene, x, y, params.radius * 0.7, 0xffffff, 260);
     sparkBurst(scene, x, y, FROST, 16, params.radius * 1.4);

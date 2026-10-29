@@ -42,9 +42,17 @@ export const DEATH_TINTS: Record<string, number> = {
   bloatToad: 0x9a9a40,
   sewerGator: 0x60a85a,
   moldShroom: 0xd84a3a,
+  caveBat: 0xa898ff,
+  caveBatSwarm: 0xa898ff,
+  goblinMiner: 0x8ab04a,
+  crystalBeetle: 0x6ab8ff,
+  rockMole: 0x9a7a5a,
+  shardWisp: 0x7ae8ff,
+  hookjawSpider: 0xc050e0,
   motherSludge: 0x4fb8a8,
   sludgeling: 0x4fb8a8,
   sludgelet: 0x4fb8a8,
+  bert: 0x9ab8e8,
 };
 
 export const deathTint = (id: string, tint?: number): number => tint ?? DEATH_TINTS[id] ?? 0xd8d8e8;

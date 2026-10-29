@@ -9,8 +9,8 @@ import { FIREBALL } from '../src/logic/fireball';
 import { SCROLL_CHANCE } from '../src/logic/skillScroll';
 
 describe('skill definitions', () => {
-  it('has ten skills with unique ids, keyed by id, and a description and icon each', () => {
-    expect(skillIds).toEqual(['fireball', 'frostNova', 'chainLightning', 'boomerangBlade', 'arcaneShield', 'poisonCloud', 'spiritWolf', 'blinkStrike', 'meteor', 'gravityWell']);
+  it('has eleven skills with unique ids, keyed by id, and a description and icon each', () => {
+    expect(skillIds).toEqual(['fireball', 'frostNova', 'chainLightning', 'boomerangBlade', 'arcaneShield', 'poisonCloud', 'spiritWolf', 'blinkStrike', 'meteor', 'gravityWell', 'bertsPebble']);
     for (const skill of skillList) {
       expect(skills[skill.id]).toBe(skill);
       expect(skill.description.length).toBeGreaterThan(10);
@@ -53,7 +53,7 @@ describe('skill definitions', () => {
 describe('skill acquisition content', () => {
   it('level rewards: Stone Guardian gives Arcane Shield, Sand Rat Fireball, Mad King Chain Lightning', () => {
     const rewards = Object.fromEntries(levels.filter((l) => l.rewardSkillIds).map((l) => [l.id, l.rewardSkillIds]));
-    expect(rewards).toEqual({ ruins: ['arcaneShield'], desert: ['fireball'], palace: ['chainLightning'] });
+    expect(rewards).toEqual({ ruins: ['arcaneShield'], desert: ['fireball'], palace: ['chainLightning'], mines: ['bertsPebble'] });
   });
 
   it('Frost Nova and Blink Strike are only obtainable from scrolls', () => {
@@ -68,7 +68,7 @@ describe('skill acquisition content', () => {
 
   it('boss loot tables use the boss scroll chance and ordinary ones the default', () => {
     const bossTables = new Set(Object.values(enemies).filter((e) => e.boss).map((e) => e.lootTableId));
-    expect(bossTables).toEqual(new Set(['stoneGuardian', 'sandRat', 'madKing', 'motherSludge']));
+    expect(bossTables).toEqual(new Set(['stoneGuardian', 'sandRat', 'madKing', 'motherSludge', 'bert']));
     for (const table of Object.values(lootTables)) {
       expect(table.scrollChance ?? SCROLL_CHANCE.normal, table.id).toBe(bossTables.has(table.id) ? SCROLL_CHANCE.boss : SCROLL_CHANCE.normal);
     }

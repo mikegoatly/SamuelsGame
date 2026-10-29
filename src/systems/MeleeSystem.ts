@@ -15,6 +15,7 @@ import { BowSystem } from './BowSystem';
 import { feel } from './feel';
 import { punchFx, ringFx, slashFx, sparkFx } from './MeleeFx';
 import { playSfx } from './sfx';
+import { strikeAt } from './strikes';
 
 const DEFLECT_PADDING = 6;
 const OPENING: ComboStep = { step: 0, last: false };
@@ -63,6 +64,7 @@ export class MeleeSystem {
     const { scene } = this.o;
     const origin = { x, y };
     const combo = this.comboFor(weapon);
+    strikeAt(scene, x + Math.cos(aim) * melee.reach * 0.6, y + Math.sin(aim) * melee.reach * 0.6, melee.reach * 0.5 + 6);
     const finisher = combo.last ? melee.finisher : undefined;
     const cone: MeleeCone = { arc: melee.arc, reach: melee.reach };
     const targets = (this.o.enemies.getChildren() as Enemy[]).filter((e) => e.active && e.alive && e.targetable && lineClear(origin, e, this.o.isSolid));

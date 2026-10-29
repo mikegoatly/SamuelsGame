@@ -1,3 +1,4 @@
+import { strikeAt } from '../strikes';
 import Phaser from 'phaser';
 import { Frame, Tex } from '../../content/assetKeys';
 import type { BoomerangSkill } from '../../content/skills';
@@ -69,6 +70,7 @@ export class BoomerangCaster implements SkillCaster<BoomerangSkill> {
 
   private cut(flight: Flight): void {
     const { blade, params } = flight;
+    strikeAt(this.world.scene, blade.x, blade.y, HIT_REACH);
     for (const enemy of liveEnemies(this.world.enemies)) {
       if (Phaser.Math.Distance.Between(blade.x, blade.y, enemy.x, enemy.y) > enemy.displayWidth / 2 + HIT_REACH || !lineClear(blade, enemy, this.world.isSolid) || !flight.hits.claim(blade.phase, enemy)) continue;
       hurtEnemy(this.world, enemy, params.damage, blade.x, blade.y, 1, 0.8);

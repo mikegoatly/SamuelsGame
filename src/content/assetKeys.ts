@@ -45,6 +45,7 @@ export const SKILL_ICON_SOURCES: Record<string, string> = {
   spiritWolf: 'fx/skill-wolf.png',
   meteor: 'fx/skill-meteor.png',
   gravityWell: 'fx/skill-gravity.png',
+  bertsPebble: 'fx/star.png',
 };
 
 export const Music = {
@@ -54,6 +55,7 @@ export const Music = {
   palace: 'music-palace',
   bossPalace: 'music-boss-palace',
   boss: 'music-boss',
+  mines: 'music-mines',
 } as const;
 
 export const MapKey = {
@@ -61,6 +63,7 @@ export const MapKey = {
   desert: 'desert',
   palace: 'palace',
   sewer: 'sewer',
+  mines: 'mines',
 } as const;
 
 /** Music cache key -> file under assets/. */
@@ -71,6 +74,7 @@ export const MUSIC_FILES: Record<string, string> = {
   [Music.palace]: 'music/palace.mp3',
   [Music.bossPalace]: 'music/boss-palace.mp3',
   [Music.boss]: 'music/boss.mp3',
+  [Music.mines]: 'music/mines.mp3',
 };
 
 /** Pixel explosion atlas frames (Kenney Explosion Pack). */

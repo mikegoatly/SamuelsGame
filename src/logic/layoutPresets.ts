@@ -90,6 +90,23 @@ export const SEWER_PRESET: LayoutPreset = {
   ],
 };
 
+/** 6x2 grid like the sewer, with bigger caves for the minecart rails to cross; the round boss cavern spans cells 3-4 of the bottom row. */
+export const MINES_PRESET: LayoutPreset = {
+  gridCols: 6,
+  gridRows: 2,
+  cover: { base: 2, divisor: 150 },
+  plan: [
+    { kind: 'start', col: 0, row: 0, span: 1, w: [9, 11], h: [8, 10] },
+    { kind: 'combat', col: 1, row: 0, span: 1, w: [15, 18], h: [12, 14] },
+    { kind: 'combat', col: 2, row: 0, span: 1, w: [16, 19], h: [12, 14] },
+    { kind: 'combat', col: 3, row: 0, span: 1, w: [16, 20], h: [12, 15] },
+    { kind: 'combat', col: 4, row: 0, span: 1, w: [17, 20], h: [13, 15] },
+    { kind: 'combat', col: 5, row: 0, span: 1, w: [17, 20], h: [13, 15] },
+    { kind: 'combat', col: 5, row: 1, span: 1, w: [17, 20], h: [13, 16] },
+    { kind: 'boss', col: 3, row: 1, span: 2, w: [40, 42], h: [16, 16] },
+  ],
+};
+
 export type RoomShape = 'plain' | 'ell' | 'pillared' | 'split';
 
 /** How the random generator reuses a preset's room plan: a bigger grid, a shape pool for combat rooms and the side-room odds. */

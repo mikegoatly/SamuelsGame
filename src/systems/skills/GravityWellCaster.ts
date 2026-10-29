@@ -1,3 +1,4 @@
+import { strikeAt } from '../strikes';
 import Phaser from 'phaser';
 import type { WellSkill } from '../../content/skills';
 import { aimPoint } from '../../logic/aimPoint';
@@ -47,6 +48,7 @@ export class GravityWellCaster implements SkillCaster<WellSkill> {
       .setDepth(3)
       .setDisplaySize(params.radius * 1.8, params.radius * 1.8);
     this.wells.add({ ...at, zone: newZone(clock.now, params.durationMs, params.tickMs), params, disc, swirl });
+    strikeAt(scene, at.x, at.y, params.radius);
     ringBurst(scene, at.x, at.y, params.radius, VOID, 300);
     playSfx(scene, 'gravity');
     return true;

@@ -80,6 +80,14 @@ export interface WellParams extends Twisted {
   collapseDamage: number;
 }
 
+export interface PebbleParams extends Twisted {
+  durationMs: number;
+  /** After blocking a shot, a pebble needs this long before it can block again. */
+  rechargeMs: number;
+  /** Pebbles orbiting at once. */
+  count: number;
+}
+
 interface SkillBase {
   id: string;
   name: string;
@@ -102,8 +110,9 @@ export type CloudSkill = SkillBase & { kind: 'cloud'; params: PerLevel<CloudPara
 export type WolfSkill = SkillBase & { kind: 'wolf'; params: PerLevel<WolfParams> };
 export type MeteorSkill = SkillBase & { kind: 'meteor'; params: PerLevel<MeteorParams> };
 export type WellSkill = SkillBase & { kind: 'well'; params: PerLevel<WellParams> };
+export type PebbleSkill = SkillBase & { kind: 'pebble'; params: PerLevel<PebbleParams> };
 /** Skills cast by `skills/extraCasters` (everything beyond the original five). */
-export type ExtraSkill = BoomerangSkill | CloudSkill | WolfSkill | MeteorSkill | WellSkill;
+export type ExtraSkill = BoomerangSkill | CloudSkill | WolfSkill | MeteorSkill | WellSkill | PebbleSkill;
 export type SkillDef = FireballSkill | NovaSkill | ChainSkill | ShieldSkill | BlinkSkill | ExtraSkill;
 
 const levels = <T>(make: (index: number) => T): PerLevel<T> => [make(0), make(1), make(2), make(3), make(4)];
@@ -234,8 +243,20 @@ export const gravityWell: WellSkill = {
   params: levels((i) => ({ radius: grow(70, 0.08)(i), durationMs: 2000, pullSpeed: grow(70, 0.08)(i), damagePerTick: grow(3, 0.2)(i), tickMs: 500, range: 90, collapseDamage: grow(35, 0.2)(i), twist: twist(i) })),
 };
 
+export const bertsPebble: PebbleSkill = {
+  id: 'bertsPebble',
+  name: "Bert's Pebble",
+  description: 'A little rock friend orbits you for 10 seconds and blocks one enemy shot every few seconds.',
+  icon: 'skill-bertsPebble',
+  color: 0x9ab8e8,
+  kind: 'pebble',
+  maxLevel: MAX_SKILL_LEVEL,
+  cooldownMs: levels(grow(16000, -0.06)),
+  params: levels((i) => ({ durationMs: grow(10000, 0.05)(i), rechargeMs: grow(5000, -0.08)(i), count: twist(i) ? 2 : 1, twist: twist(i) })),
+};
+
 /** In scroll-drop and menu order. */
-export const skillList: readonly SkillDef[] = [fireball, frostNova, chainLightning, boomerangBlade, arcaneShield, poisonCloud, spiritWolf, blinkStrike, meteor, gravityWell];
+export const skillList: readonly SkillDef[] = [fireball, frostNova, chainLightning, boomerangBlade, arcaneShield, poisonCloud, spiritWolf, blinkStrike, meteor, gravityWell, bertsPebble];
 
 export const skills: Readonly<Record<string, SkillDef>> = Object.fromEntries(skillList.map((skill) => [skill.id, skill]));
 

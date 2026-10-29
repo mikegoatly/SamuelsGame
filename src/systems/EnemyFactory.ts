@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { getEnemy, type EnemyDef } from '../content/enemies';
+import { Bert } from '../entities/Bert';
 import { Boss, type BossHooks } from '../entities/Boss';
 import { Enemy, type EnemyContext, type EnemyExtras } from '../entities/Enemy';
 import { assignHound } from '../entities/behaviours/hounds';
@@ -90,7 +91,8 @@ export class EnemyFactory {
     return leader ? [leader, ...members] : members;
   }
 
-  spawnBoss(def: EnemyDef, level: number, x: number, y: number, area: BossArea): Boss {
+  spawnBoss(def: EnemyDef, level: number, x: number, y: number, area: BossArea): Enemy {
+    if (def.id === 'bert') return this.fadeIn(new Bert(this.scene, x, y, def, level, this.context, area.rect), BOSS_FADE_IN_MS);
     const hooks: BossHooks = {
       piece: (id, lvl, px, py, hp, family, pieceId) => this.fadeIn(new Boss(this.scene, px, py, getEnemy(id), lvl, this.context, hooks, { family, id: pieceId, hp }), PIECE_FADE_IN_MS, PIECE_GRACE_MS),
       summon: (id: string, lvl: number, sx: number, sy: number) => {

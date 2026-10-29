@@ -20,6 +20,8 @@ export const HAZARD_HITS = {
   firePit: { fraction: 0.02, gapMs: 750, duty: 1 },
   flameJet: { fraction: 0.1, gapMs: 1000, duty: 1000 / 4200 },
   pendulum: { fraction: 0.08, gapMs: 1400, duty: 1 },
+  minecart: once(0.1),
+  stalactite: once(0.1),
 } satisfies Record<string, HazardHit>;
 
 /** Fraction of max health lost per second by someone who refuses to leave. */

@@ -12,6 +12,8 @@ export interface HazardWorld {
   isSolid: (x: number, y: number) => boolean;
   /** Fire pits light whoever stands in them; absent in unit tests. */
   burn?: BurnSystem;
+  /** The player's bolt pool: resonating crystals ring when one reaches them; absent in unit tests. */
+  bolts?: Phaser.Physics.Arcade.Group;
 }
 
 /** One placed hazard. Dormant until its room is entered, calm once the room is cleared, halted for good when the run ends. */

@@ -21,6 +21,10 @@ export interface DecorPlan {
   perRoom: readonly [min: number, max: number];
   moss: readonly number[];
   bones: readonly number[];
+  /** Odds per kind; the sewer mix when absent. */
+  kinds?: readonly (readonly [DecorKind, number])[];
+  /** Frames in the Crystal Mines sheet for crystal decals. */
+  crystals?: readonly number[];
 }
 
 const MIN_GAP = 2;
@@ -33,13 +37,13 @@ const KINDS: readonly [DecorKind, number][] = [
   ['drain', 0.12],
 ];
 
-function rollKind(rng: () => number): DecorKind {
+function rollKind(rng: () => number, kinds: readonly (readonly [DecorKind, number])[]): DecorKind {
   let roll = rng();
-  for (const [kind, chance] of KINDS) {
+  for (const [kind, chance] of kinds) {
     if (roll < chance) return kind;
     roll -= chance;
   }
-  return 'puddle';
+  return kinds[kinds.length - 1]![0];
 }
 
 /** Decals on open room floor: off the corridor lanes, cover, interior walls, sludge, bridges and every `taken` footprint. Moss and bones cling to the walls. */
@@ -65,11 +69,11 @@ export function placeDecor(layout: DungeonLayout, channels: readonly Channel[], 
     const want = randInt(rng, plan.perRoom[0], plan.perRoom[1]) * (room.kind === 'boss' ? 2 : 1);
     const mine: Decor[] = [];
     for (let attempt = 0; attempt < want * 12 && mine.length < want && open.length > 0; attempt++) {
-      const kind = rollKind(rng);
-      const pool = kind === 'moss' || kind === 'bones' ? open.filter((o) => o.edge) : open;
+      const kind = rollKind(rng, plan.kinds ?? KINDS);
+      const pool = kind === 'moss' || kind === 'bones' || kind === 'crystal' ? open.filter((o) => o.edge) : open;
       const spot = (pool.length > 0 ? pool : open)[randInt(rng, 0, (pool.length > 0 ? pool : open).length - 1)]!;
       if (mine.some((d) => Math.max(Math.abs(d.x - spot.x), Math.abs(d.y - spot.y)) < MIN_GAP)) continue;
-      const frames = kind === 'moss' ? plan.moss : kind === 'bones' ? plan.bones : [0];
+      const frames = kind === 'moss' ? plan.moss : kind === 'bones' ? plan.bones : kind === 'crystal' ? (plan.crystals ?? [0]) : [0];
       mine.push({ room: room.index, kind, x: spot.x, y: spot.y, frame: frames[randInt(rng, 0, frames.length - 1)]! });
     }
     out.push(...mine);

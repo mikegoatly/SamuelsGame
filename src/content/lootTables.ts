@@ -158,6 +158,16 @@ export const madKingLoot: LootTable = {
   entries: [common('coinPile', 250), common('goldPile', 400), rare('healthPotionSmall', 40), rare('healthPotionLarge', 310)],
 };
 
+/** Bert the Crystal Golem: the richest boss shower (leaning blue, his Pebble's colour) on top of big rolls. */
+export const bertLoot: LootTable = {
+  id: 'bert',
+  scrollChance: SCROLL_CHANCE.boss,
+  gemBurst: { min: 4, max: 6, weights: [1, 1, 2] },
+  rolls: 6,
+  nothingWeight: 0,
+  entries: [common('coinPile', 200), common('goldPile', 450), rare('healthPotionSmall', 30), rare('healthPotionLarge', 320)],
+};
+
 export const lootTables: Record<string, LootTable> = Object.fromEntries(
-  [slimeLoot, batLoot, cyclopsLoot, ghostLoot, stoneGuardianLoot, scorpionLoot, banditLoot, mummyLoot, vultureLoot, sandRatLoot, palaceGuardLoot, royalArcherLoot, darkMageLoot, assassinLoot, madKingLoot, ...monsterLoot].map((table) => [table.id, scaleGemDrops(table, GEM_DROP_SCALE)]),
+  [slimeLoot, batLoot, cyclopsLoot, ghostLoot, stoneGuardianLoot, scorpionLoot, banditLoot, mummyLoot, vultureLoot, sandRatLoot, palaceGuardLoot, royalArcherLoot, darkMageLoot, assassinLoot, madKingLoot, bertLoot, ...monsterLoot].map((table) => [table.id, scaleGemDrops(table, GEM_DROP_SCALE)]),
 );

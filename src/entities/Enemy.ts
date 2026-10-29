@@ -149,10 +149,10 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     this.nextShotAt = context.clock.now + 700 + Math.random() * 700;
 
     const gap = level - this.target.level;
-    this.baseTint = def.tint ?? (gap >= LEVEL_GAP_TINT ? 0xff8080 : gap <= -LEVEL_GAP_TINT ? 0x9a9a9a : null);
+    this.baseTint = def.tint ?? (!this.showsLevelGap ? null : gap >= LEVEL_GAP_TINT ? 0xff8080 : gap <= -LEVEL_GAP_TINT ? 0x9a9a9a : null);
     this.applyBaseTint();
 
-    if (def.shield) this.shieldImage = scene.add.image(x, y, Tex.tiles, Frame.shield).setDepth(6).setTint(SHIELD_TINT).setScale(0.9);
+    if (def.shield && def.shieldGlint === undefined) this.shieldImage = scene.add.image(x, y, Tex.tiles, Frame.shield).setDepth(6).setTint(SHIELD_TINT).setScale(0.9);
 
     this.label = gameText(scene, x, y, `Lv${level}`, 8, { color: '#d8d8e8', world: true })
       .setOrigin(0.5)
@@ -161,6 +161,11 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
 
     this.mods = new EnemyMods(this, def.boss ? undefined : extras.affix, context.world);
     if (def.custom && context.world) this.behaviour = createBehaviour(def.custom, this, context.world);
+  }
+
+  /** Tinted red or grey when the hero is far below or above its level; a boss whose colours matter (Bert's plates) turns it off. */
+  protected get showsLevelGap(): boolean {
+    return true;
   }
 
   /** False while the enemy cannot be hurt (e.g. a boss under the sand); bolts pass through. */
@@ -237,8 +242,10 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
   /** The shield swings slowly toward the player, so circling round the back works. */
   private updateShield(delta: number): void {
     const { shield } = this.def;
-    if (!shield || !this.shieldImage) return;
+    if (!shield) return;
     this.facing = steerToward(this.facing, Math.atan2(this.target.y - this.y, this.target.x - this.x), (shield.turnRate * delta) / 1000);
+    if (this.def.shieldGlint !== undefined) this.setFlipX(Math.cos(this.facing) < 0);
+    if (!this.shieldImage) return;
     this.shieldImage
       .setPosition(this.x + Math.cos(this.facing) * 9, this.y + Math.sin(this.facing) * 9 + 1)
       .setRotation(this.facing)
@@ -303,6 +310,12 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
   }
 
   flashShield(): void {
+    const glint = this.def.shieldGlint;
+    if (glint !== undefined) {
+      this.setFrame(glint);
+      this.scene.time.delayedCall(120, () => this.alive && this.setFrame(this.def.textureFrame ?? 0));
+      return;
+    }
     if (!this.shieldImage) return;
     this.shieldImage.setTint(0xffffff);
     this.scene.time.delayedCall(90, () => this.shieldImage?.active && this.shieldImage.setTint(SHIELD_TINT));

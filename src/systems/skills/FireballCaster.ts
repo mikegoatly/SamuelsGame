@@ -1,3 +1,4 @@
+import { strikeAt } from '../strikes';
 import Phaser from 'phaser';
 import type { FireballSkill } from '../../content/skills';
 import { GOD_DAMAGE_MULTIPLIER, GOD_MODE } from '../../debug';
@@ -78,6 +79,7 @@ export class FireballCaster implements SkillCaster<FireballSkill> {
       enemy.takeHit(Math.max(1, Math.round(raw * multiplier)) * (GOD_MODE ? GOD_DAMAGE_MULTIPLIER : 1), enemy.x - x, enemy.y - y, 1, 'skill');
     }
     this.showBlast(x, y, params.radius);
+    strikeAt(this.world.scene, x, y, params.radius);
     if (params.twist && !item.mini) this.split({ x, y }, heading, params);
   }
 

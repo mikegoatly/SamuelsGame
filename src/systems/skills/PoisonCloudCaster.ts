@@ -1,3 +1,4 @@
+import { strikeAt } from '../strikes';
 import Phaser from 'phaser';
 import type { CloudSkill } from '../../content/skills';
 import type { Enemy } from '../../entities/Enemy';
@@ -36,6 +37,7 @@ export class PoisonCloudCaster implements SkillCaster<CloudSkill> {
       follow: params.twist,
       onTick: (enemy) => this.poison.apply(enemy, clock.now, LINGER_MS, params.tickMs),
     });
+    strikeAt(scene, centre.x, centre.y, params.radius);
     playSfx(scene, 'poison');
     return true;
   }

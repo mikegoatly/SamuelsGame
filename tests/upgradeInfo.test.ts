@@ -20,7 +20,7 @@ describe('upgrade info', () => {
     expect(skillUpgradeInfo.blinkStrike!.gem).toBe('green');
     expect(skillUpgradeInfo.arcaneShield!.gem).toBe('blue');
     expect(Object.keys(skillUpgradeInfo).sort()).toEqual(
-      ['arcaneShield', 'blinkStrike', 'boomerangBlade', 'chainLightning', 'fireball', 'frostNova', 'gravityWell', 'meteor', 'poisonCloud', 'spiritWolf'],
+      ['arcaneShield', 'bertsPebble', 'blinkStrike', 'boomerangBlade', 'chainLightning', 'fireball', 'frostNova', 'gravityWell', 'meteor', 'poisonCloud', 'spiritWolf'],
     );
   });
 

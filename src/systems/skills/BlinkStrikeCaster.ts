@@ -1,3 +1,4 @@
+import { strikeAt } from '../strikes';
 import { Tex } from '../../content/assetKeys';
 import type { BlinkSkill } from '../../content/skills';
 import { blinkDestination, pathVictims } from '../../logic/blinkStrike';
@@ -33,6 +34,7 @@ export class BlinkStrikeCaster implements SkillCaster<BlinkSkill> {
     }
     this.afterimages(from, to);
     if (params.twist) this.leaveImage(from, params.damage);
+    strikeAt(scene, to.x, to.y, BODY_RADIUS + 8);
     player.blinkTo(to.x, to.y, params.iframesMs);
     sparkBurst(scene, from.x, from.y, BLINK, 10, 60);
     sparkBurst(scene, to.x, to.y, BLINK, 10, 60);

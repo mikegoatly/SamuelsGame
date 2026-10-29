@@ -1,3 +1,4 @@
+import { strikeAt } from '../strikes';
 import Phaser from 'phaser';
 import { Tex } from '../../content/assetKeys';
 import type { MeteorSkill } from '../../content/skills';
@@ -75,6 +76,7 @@ export class MeteorCaster implements SkillCaster<MeteorSkill> {
       const enemy = enemies[index]!;
       if (lineClear({ x, y }, enemy, isSolid)) hurtEnemy(this.world, enemy, params.damage, x, y, multiplier, 1.6);
     }
+    strikeAt(scene, x, y, params.radius);
     explosionBlast(scene, x, y, params.radius * 1.2);
     sparkBurst(scene, x, y, FIRE, 18, params.radius * 2);
     feel.shake(260, 0.012);

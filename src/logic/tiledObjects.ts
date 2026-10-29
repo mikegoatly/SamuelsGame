@@ -44,7 +44,7 @@ export interface HazardSpec {
   dir?: number;
 }
 
-export type DecorKind = 'moss' | 'bones' | 'drain' | 'puddle';
+export type DecorKind = 'moss' | 'bones' | 'drain' | 'puddle' | 'crystal';
 
 /** A non-solid decal (sewer): drawn by the map builder, never part of gameplay. */
 export interface DecorSpec {
@@ -102,7 +102,7 @@ function toRoom(object: TiledObject): RoomSpec {
   };
 }
 
-const DECOR_KINDS: readonly string[] = ['moss', 'bones', 'drain', 'puddle'];
+const DECOR_KINDS: readonly string[] = ['moss', 'bones', 'drain', 'puddle', 'crystal'];
 const RESERVED = new Set(['kind', 'room', 'offset']);
 
 function toActiveHazard(object: TiledObject): ActiveHazardSpec[] {

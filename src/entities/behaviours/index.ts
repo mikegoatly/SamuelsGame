@@ -9,11 +9,15 @@ import { gator } from './gator';
 import { hound, houndmaster } from './hounds';
 import { imp } from './imp';
 import { jester } from './jester';
+import { miner } from './miner';
+import { mole } from './mole';
 import { necromancer } from './necromancer';
 import { priest } from './priest';
 import { rat } from './rat';
+import { shard } from './shard';
 import { shark } from './shark';
 import { shroom } from './shroom';
+import { spider } from './spider';
 import { spitter } from './spitter';
 import { toad } from './toad';
 import { turret } from './turret';
@@ -21,6 +25,6 @@ import { twin } from './twin';
 import type { Behaviour, BehaviourFactory, EnemyWorld } from './types';
 import { wisp } from './wisp';
 
-const factories: Record<CustomKind, BehaviourFactory> = { beetle, archer, wisp, rat, necromancer, shark, imp, turret, devil, priest, jester, gargoyle, twin, houndmaster, hound, blob, spitter, toad, gator, shroom };
+const factories: Record<CustomKind, BehaviourFactory> = { beetle, archer, wisp, rat, necromancer, shark, imp, turret, devil, priest, jester, gargoyle, twin, houndmaster, hound, blob, spitter, toad, gator, shroom, miner, mole, shard, spider };
 
 export const createBehaviour = (kind: CustomKind, host: Enemy, world: EnemyWorld): Behaviour => factories[kind](host, world);

@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { Frame, Tex } from '../../content/assetKeys';
+import { Frame, MinesFrame, Tex } from '../../content/assetKeys';
 import type { Point } from '../../logic/geometry';
 import { pickRubbleTarget, rockHits, rubblePhase, RUBBLE_RADIUS } from '../../logic/hazard/rubble';
 import type { ActiveHazardSpec } from '../../logic/tiledObjects';
@@ -11,7 +11,6 @@ import type { Hazard, HazardWorld } from './types';
 import { enemyRadius, hazardTargets, hurtEnemy, hurtPlayer, PLAYER_RADIUS, playerAlive } from './victims';
 import { HAZARD_HITS } from '../../logic/hazard/hits';
 
-const PLAYER_HIT = HAZARD_HITS.rubble.fraction;
 const ENEMY_HIT = 0.3;
 const CYCLE_MS = 1900 + 1000 + 280;
 const FALL_FROM = 150;
@@ -28,16 +27,21 @@ interface Slot {
 /** Rocks drop at random spots, often near you: a shadow circle tightens for a second, then the rock lands and hurts everyone under it. */
 export class Rubble extends HazardBase {
   private readonly slots: Slot[];
+  private readonly playerHit: number;
 
   constructor(world: HazardWorld, spec: ActiveHazardSpec) {
     super(world, spec, 0.65);
+    const stalactites = spec.kind === 'stalactite';
+    this.playerHit = HAZARD_HITS[stalactites ? 'stalactite' : 'rubble'].fraction;
     const count = Math.max(1, spec.params.rocks ?? 1);
     this.slots = Array.from({ length: count }, (_, i) => ({
       offset: spec.offsetMs + Math.round((i * CYCLE_MS) / count),
       cycle: -1,
       target: { x: 0, y: 0 },
       landed: true,
-      rock: world.scene.add.image(0, 0, Tex.tiles, Frame.rocks).setScale(1.5).setTint(0xb0a898).setDepth(9).setVisible(false),
+      rock: stalactites
+        ? world.scene.add.image(0, 0, Tex.mines, MinesFrame.stalactite).setScale(1.6).setDepth(9).setVisible(false)
+        : world.scene.add.image(0, 0, Tex.tiles, Frame.rocks).setScale(1.5).setTint(0xb0a898).setDepth(9).setVisible(false),
     }));
   }
 
@@ -83,7 +87,7 @@ export class Rubble extends HazardBase {
     debrisBurst(scene, x, y);
     playSfx(scene, 'rubbleHit');
     if (Math.hypot(player.x - x, player.y - y) < SHAKE_RANGE) feel.shake(90, 0.003);
-    if (playerAlive(this.world) && rockHits(slot.target, RUBBLE_RADIUS, player, PLAYER_RADIUS)) hurtPlayer(this.world, PLAYER_HIT, x, y);
+    if (playerAlive(this.world) && rockHits(slot.target, RUBBLE_RADIUS, player, PLAYER_RADIUS)) hurtPlayer(this.world, this.playerHit, x, y);
     for (const enemy of hazardTargets(this.world)) if (rockHits(slot.target, RUBBLE_RADIUS, enemy, enemyRadius(enemy))) hurtEnemy(enemy, ENEMY_HIT, x, y);
   }
 
@@ -94,3 +98,6 @@ export class Rubble extends HazardBase {
 }
 
 export const rubble = (world: HazardWorld, spec: ActiveHazardSpec): Hazard => new Rubble(world, spec);
+
+/** The mines' stalactites: the same shadow-then-drop, with a pointed rock. */
+export const stalactite = rubble;

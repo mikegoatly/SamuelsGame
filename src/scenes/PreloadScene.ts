@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { gameText } from '../ui/gameText';
-import { Frame, SHEET_COLS, SKILL_ICON_SOURCES, TILE_SIZE, Tex } from '../content/assetKeys';
+import { Frame, MinesFrame, SHEET_COLS, SKILL_ICON_SOURCES, TILE_SIZE, Tex } from '../content/assetKeys';
 import { ROGUE_SPACING } from '../content/sewerFrames';
 import { PROMPT_SIZE } from '../content/inputGlyphs';
 import { skillList } from '../content/skills';
@@ -122,6 +122,7 @@ export class PreloadScene extends Phaser.Scene {
       ctx.drawImage(glyph, 0, 0);
       ctx.globalAlpha = 0.8;
       ctx.drawImage(source, 8, 8, size - 16, size - 16);
+      if (skill.id === 'bertsPebble') canvas.drawFrame(Tex.mines, MinesFrame.pebble, 8, 8);
       canvas.refresh();
     }
   }

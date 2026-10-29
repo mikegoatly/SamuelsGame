@@ -3,6 +3,8 @@ import { Frame, Music } from '../content/assetKeys';
 import { CAMERA_ZOOM } from '../content/config';
 import { getLevel, type LevelConfig } from '../content/levels';
 import { getEnemy } from '../content/enemies';
+import { bossDefeatedLine, bossEpilogue } from '../content/bert';
+import { withDebugBoss } from '../content/debugBoss';
 import { rewardsOf } from '../content/rewards';
 import { newRewards } from '../logic/heroicSwitch';
 import { getAccessory } from '../content/accessories';
@@ -48,7 +50,7 @@ import { SpawnSystem } from '../systems/SpawnSystem';
 import { SpikeSystem } from '../systems/SpikeSystem';
 import { SurvivalDirector } from '../systems/SurvivalDirector';
 import { exposePerfOverlay } from '../systems/PerfOverlay';
-import { exposeSpawner } from '../systems/debugSpawn';
+import { exposeBossSpawner, exposeSpawner } from '../systems/debugSpawn';
 import { blockedByRects, spawnAvoidRects } from '../logic/spawnAvoid';
 import { buildLevelMap, type LevelMap } from './RoomBuilder';
 import { installRunMap, removeRunMap } from './runMap';
@@ -106,7 +108,7 @@ export class GameScene extends Phaser.Scene {
   create(data: Partial<GameSceneData>): void {
     this.ending = false;
     this.kills = 0;
-    this.level = getLevel(data.levelId ?? 'arena');
+    this.level = withDebugBoss(getLevel(data.levelId ?? 'arena'));
     this.survival = this.level.survival === true;
     this.heroic = data.heroic === true && this.level.mapKey !== undefined;
     this.run = newRun();
@@ -164,6 +166,7 @@ export class GameScene extends Phaser.Scene {
       factory.world.channels = () => sludge.filter((h) => h.room === room).map((h) => h.rect);
     }
     exposeSpawner(factory, player);
+    exposeBossSpawner(factory, player);
     exposePerfOverlay(this, factory, projectiles, shots);
     const director = (this.director = this.createDirector(map, player, factory, events, blockedByRects(avoid, isSolid)));
     const skills = new SkillSystem({ scene: this, player, enemies, shots, clock: this.clock, isSolid, save: saveSystem, events });
@@ -179,7 +182,7 @@ export class GameScene extends Phaser.Scene {
     new MeleeSystem({ scene: this, player, enemies, shots, projectiles, isSolid });
     if (map.spikes.length > 0) new SpikeSystem(this, player, this.clock, map.spikes);
     if (map.channels.length > 0) new ChannelSystem(this, player, enemies, this.clock, map.channels);
-    if (map.world && map.world.active.length > 0) new HazardDirector({ scene: this, player, enemies, clock: this.clock, isSolid, burn }, map.world, events);
+    if (map.world && map.world.active.length > 0) new HazardDirector({ scene: this, player, enemies, clock: this.clock, isSolid, burn, bolts: projectiles }, map.world, events);
 
     this.addColliders(map, player, enemies, projectiles, shots);
     registerBoltHits(this, projectiles, enemies, player);
@@ -222,6 +225,7 @@ export class GameScene extends Phaser.Scene {
     camera.setZoom(CAMERA_ZOOM);
     camera.startFollow(player, true, 0.15, 0.15);
     camera.fadeIn(250);
+    if (this.level.environment === 'mines') feel.cave();
 
     this.scene.launch('Hud', { events, progression, player, director, loot, skills, roomTotal: map.world?.rooms.length, heroic: this.heroic, survivalBestMs: this.survival ? save.survival.bestMs : undefined, bossName: this.level.bossId ? getEnemy(this.level.bossId).name : undefined, bossTagline: this.level.bossId ? getEnemy(this.level.bossId).tip : undefined, bossTicks: this.level.bossId ? getEnemy(this.level.bossId).barTicks : undefined });
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
@@ -343,6 +347,7 @@ export class GameScene extends Phaser.Scene {
         heroic,
         heroicReward,
         crownWorn,
+        epilogue: bossEpilogue(this.level.bossId, this.player.hero.id),
         levelName: this.level.name,
       }),
     );
@@ -406,7 +411,7 @@ export class GameScene extends Phaser.Scene {
       const { x, y } = rectCenter(arena.rect);
       const prize = rewardsOf(this.level)[0];
       const reward = new RewardPickup(this, x, y, prize?.frame ?? Frame.glowChest, prize?.tint ?? null);
-      floatText(this, x, y - 28, `${getEnemy(this.level.bossId ?? '').name ?? 'Boss'} defeated!`, '#ffe066', 16, 16, 1800);
+      floatText(this, x, y - 28, bossDefeatedLine(this.level.bossId, getEnemy(this.level.bossId ?? '').name), '#ffe066', 16, 16, 1800);
       let armed = false;
       this.time.delayedCall(REWARD_ARM_MS, () => (armed = true));
       this.physics.add.overlap(player, reward, () => {

@@ -2,13 +2,15 @@ import { describe, expect, it } from 'vitest';
 import { desert } from '../src/content/levels/desert';
 import { palace } from '../src/content/levels/palace';
 import { ruins } from '../src/content/levels/ruins';
+import { mines } from '../src/content/levels/mines';
+import { MINES_CURVE, MINES_ENCOUNTERS, MINES_POOL } from '../src/content/levels/minesMonsters';
 import { sewer } from '../src/content/levels/sewer';
 import { SEWER_CURVE, SEWER_ENCOUNTERS, SEWER_POOL } from '../src/content/levels/sewerMonsters';
 import { DWARF_GOLD, NECROMANCER_KILLS, ROGUE_TIME_MS } from '../src/logic/unlocks';
 import { upgradeCost } from '../src/logic/upgrades';
 import { TIER_MULTIPLIER } from '../src/content/upgradeInfo';
 import { totalGems, type Gems } from '../src/logic/gems';
-import { DESERT_THEME, PALACE_THEME, RUINS_THEME, SEWER_THEME } from '../src/logic/map/mapThemes';
+import { DESERT_THEME, MINES_THEME, PALACE_THEME, RUINS_THEME, SEWER_THEME } from '../src/logic/map/mapThemes';
 import { estimateLevel, estimateRoom, gearedReference, heroicVariant, REFERENCE, type LevelEstimate } from './balanceModel';
 
 const CASES = [
@@ -16,6 +18,7 @@ const CASES = [
   { level: desert, theme: DESERT_THEME },
   { level: palace, theme: PALACE_THEME },
   { level: sewer, theme: SEWER_THEME },
+  { level: mines, theme: MINES_THEME },
 ];
 
 /** Each level entered at its recommended level, and the whole journey with the player carrying their level over. */
@@ -139,6 +142,64 @@ describe('balance model: the sewer between desert and palace', () => {
   });
 });
 
+/**
+ * The Crystal Mines are the hardest normal level, above the palace (the Mad King is Lv15; Bert is Lv17). The model runs without the boss, the
+ * spider's tether and the shard burst beyond their hit rates, so the targets leave room for them. Heroic is left to the boss work (C3).
+ */
+describe('balance model: the Crystal Mines above the palace', () => {
+  const level = { ...mines, enemyPool: MINES_POOL, curve: MINES_CURVE };
+  const run = estimateLevel(level, MINES_ENCOUNTERS, level.recommendedLevel, REFERENCE, MINES_THEME);
+  const rooms = pcts(run);
+  const palaceRooms = pcts(palaceRun!);
+
+  it('has one room per intro monster, starts at the palace level of difficulty and is monster levels 13-16', () => {
+    expect(rooms).toHaveLength(MINES_CURVE.intro.length);
+    expect(rooms[0]).toBeGreaterThan(palaceRooms[0]! * 0.8);
+    expect(rooms[0]).toBeLessThan(palaceRooms[0]! * 1.4);
+    expect(Math.min(...MINES_ENCOUNTERS.map((e) => e.minLevel))).toBe(13);
+    expect(Math.max(...MINES_ENCOUNTERS.map((e) => e.maxLevel))).toBe(16);
+  });
+
+  it('no room is trivial or above 70% of health, and none spikes more than 20 points over the one before', () => {
+    for (const pct of rooms) {
+      expect(pct).toBeGreaterThan(25);
+      expect(pct).toBeLessThan(70);
+    }
+    for (let i = 1; i < rooms.length; i++) expect(rooms[i]! - rooms[i - 1]!, `room ${i + 1}`).toBeLessThanOrEqual(20);
+  });
+
+  it('climbs: no room is easier than 80% of the one before, the last is the hardest and none is over 1.5 times the mean', () => {
+    for (let i = 1; i < rooms.length; i++) expect(rooms[i]!, `room ${i + 1}`).toBeGreaterThanOrEqual(rooms[i - 1]! * 0.8);
+    expect(Math.max(...rooms)).toBe(rooms[rooms.length - 1]);
+    expect(Math.max(...rooms)).toBeLessThanOrEqual(mean(rooms) * 1.5);
+    expect(mean(rooms.slice(-2))).toBeGreaterThan(mean(rooms.slice(0, 2)) * 1.25);
+  });
+
+  it('is the hardest normal level: 5% to 30% harder on average than the palace', () => {
+    expect(mean(rooms)).toBeGreaterThan(mean(palaceRooms) * 1.05);
+    expect(mean(rooms)).toBeLessThan(mean(palaceRooms) * 1.3);
+  });
+
+  it('levels the hero +2 to +4 from the recommended level and pays more xp than the palace, but under 1.4 times', () => {
+    expect(run.endLevel - level.recommendedLevel).toBeGreaterThanOrEqual(2);
+    expect(run.endLevel - level.recommendedLevel).toBeLessThanOrEqual(4);
+    const xp = (r: LevelEstimate): number => r.rooms.reduce((sum, room) => sum + room.xp, 0);
+    expect(xp(run)).toBeGreaterThan(xp(palaceRun!));
+    expect(xp(run)).toBeLessThan(xp(palaceRun!) * 1.4);
+  });
+
+  it('is survivable (potions cover over half of the damage) and a full clear of the rooms takes 4-6 minutes', () => {
+    expect(run.loot.heal * 0.7).toBeGreaterThan(run.rooms.reduce((sum, r) => sum + r.damage, 0) * 0.5);
+    expect(run.runSeconds / 60).toBeGreaterThan(4);
+    expect(run.runSeconds / 60).toBeLessThan(6);
+  });
+
+  it('pays gold between the sewer and the palace room for room, boss not counted (350-650)', () => {
+    expect(run.loot.gold).toBeGreaterThan(350);
+    expect(run.loot.gold).toBeLessThan(650);
+  });
+});
+
 describe('balance model: levelling and pacing', () => {
   it('a player arrives at each next level near its recommended level', () => {
     expect(journey[0]!.endLevel).toBeGreaterThanOrEqual(5);
@@ -246,6 +307,10 @@ describe('balance model: Heroic levels', () => {
       const [r, d, p] = ['ruins', 'desert', 'palace'].map((id) => mean(pcts(runs.find((x) => x.name === `${id} @ hero ${hero}`)!.run)));
       expect(d).toBeGreaterThan(r!);
       expect(p).toBeGreaterThan(d!);
+      // Heroic sets monster levels to the hero's, which removes the mines' +3 level edge; its raw stats are tuned for that edge, so it sits just under the palace here.
+      const m = mean(pcts(runs.find((x) => x.name === `mines @ hero ${hero}`)!.run));
+      expect(m).toBeGreaterThan(d!);
+      expect(m).toBeGreaterThan(p! * 0.75);
     }
   });
 });

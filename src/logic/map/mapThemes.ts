@@ -1,10 +1,11 @@
-import { Frame } from '../../content/assetKeys';
+import { Frame, MinesFrame } from '../../content/assetKeys';
+import { MINES_ENCOUNTERS } from '../../content/levels/minesMonsters';
 import { SEWER_ENCOUNTERS } from '../../content/levels/sewerMonsters';
 import { RogueFrame } from '../../content/sewerFrames';
 import type { ChannelPlan } from '../layout/channels';
 import type { DecorPlan } from '../layout/decor';
 import type { BossHazard, HazardPlan } from '../hazard/plan';
-import { DESERT_PRESET, PALACE_PRESET, RUINS_PRESET, SEWER_PRESET, type LayoutPreset, type RandomPlan } from '../layoutPresets';
+import { DESERT_PRESET, MINES_PRESET, PALACE_PRESET, RUINS_PRESET, SEWER_PRESET, type LayoutPreset, type RandomPlan } from '../layoutPresets';
 
 export interface Encounter {
   waves: number;
@@ -42,6 +43,8 @@ export interface MapTheme {
   channels?: ChannelPlan;
   /** Moss, bones, drains and puddles scattered on open floor. */
   decor?: DecorPlan;
+  /** The boss chamber's corners are walled off into an ellipse (a round cavern). */
+  roundBoss?: boolean;
 }
 
 export const RUINS_THEME: MapTheme = {
@@ -140,4 +143,35 @@ export const SEWER_THEME: MapTheme = {
   decor: { perRoom: [5, 9], moss: RogueFrame.moss, bones: RogueFrame.bones },
 };
 
-export const THEMES: readonly MapTheme[] = [RUINS_THEME, DESERT_THEME, PALACE_THEME, SEWER_THEME];
+export const MINES_THEME: MapTheme = {
+  id: 'mines',
+  seed: 1618033,
+  preset: MINES_PRESET,
+  random: { gridCols: 5, gridRows: 3, shapes: ['plain', 'plain', 'ell', 'ell', 'pillared', 'split'], sideChance: 0.6 },
+  floor: {
+    base: Frame.floor,
+    variants: [
+      { frame: Frame.floorRubble, chance: 0.08 },
+      { frame: Frame.floorPebbles, chance: 0.08 },
+    ],
+  },
+  wall: { base: Frame.wall, alt: Frame.wallAlt, altChance: 0.45, accent: Frame.wall, accentChance: 0 },
+  cover: [Frame.boulder, Frame.rocks, Frame.boulder],
+  encounters: [...MINES_ENCOUNTERS],
+  quicksandPerRoom: 0,
+  hazards: { minecart: [1, 1, 1, 1, 2, 2], resonator: [0, 1, 1, 1, 1, 2], stalactite: [0, 1, 1, 1, 2, 2] },
+  bossHazard: { kind: 'stalactite', count: 1 },
+  roundBoss: true,
+  decor: {
+    perRoom: [6, 10],
+    moss: [],
+    bones: RogueFrame.bones,
+    kinds: [
+      ['crystal', 0.86],
+      ['bones', 0.14],
+    ],
+    crystals: [MinesFrame.crystalBlue, MinesFrame.crystalViolet],
+  },
+};
+
+export const THEMES: readonly MapTheme[] = [RUINS_THEME, DESERT_THEME, PALACE_THEME, SEWER_THEME, MINES_THEME];

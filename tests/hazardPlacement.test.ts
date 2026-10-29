@@ -8,7 +8,7 @@ import type { PlacedHazard } from '../src/logic/hazard/placement';
 import { buildWorld } from '../src/logic/map/mapBuilder';
 import { THEMES } from '../src/logic/map/mapThemes';
 
-const AREA_KINDS: ActiveHazardKind[] = ['rubble', 'wind', 'sandstorm'];
+const AREA_KINDS: ActiveHazardKind[] = ['rubble', 'stalactite', 'wind', 'sandstorm'];
 const tiles = (r: Rect): [number, number][] => Array.from({ length: r.w * r.h }, (_, i) => [r.x + (i % r.w), r.y + Math.floor(i / r.w)]);
 const inside = (outer: Rect, r: Rect): boolean => r.x >= outer.x && r.y >= outer.y && r.x + r.w <= outer.x + outer.w && r.y + r.h <= outer.y + outer.h;
 const roomOf = (layout: DungeonLayout, h: PlacedHazard) => layout.rooms[h.room]!;

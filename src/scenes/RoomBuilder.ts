@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { Frame, TILE_SIZE, Tex } from '../content/assetKeys';
 import { SEWER_TINT } from '../content/sewerFrames';
+import { MINES_TINT } from '../content/minesTint';
 import type { Environment, LevelConfig } from '../content/levels';
 import type { Rect } from '../logic/geometry';
 import type { HazardSpec, LevelObjects } from '../logic/tiledObjects';
@@ -65,6 +66,7 @@ export const ENVIRONMENT_TINT: Record<Environment, EnvironmentTint> = {
   desert: { ground: 0xfff0d0, walls: 0xe6c48c },
   palace: { ground: 0xffffff, walls: 0xc4c8d8, checker: 0xd0c0ee },
   sewer: { ground: SEWER_TINT.ground, walls: SEWER_TINT.walls },
+  mines: { ground: MINES_TINT.ground, walls: MINES_TINT.walls },
   unknown: uniform(null),
 };
 

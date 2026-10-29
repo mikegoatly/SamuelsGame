@@ -2,6 +2,9 @@ import { unlockHeroes, type HeroKit } from './heroSave';
 import { nextRunsWithoutGrate } from './grate';
 import type { SaveData } from './save';
 
+/** Hidden levels that stay off Level Select until found. */
+export type SecretId = 'sewer' | 'mines';
+
 /** The hero who lives down the grate. */
 export const SEWER_HERO = 'gloop';
 

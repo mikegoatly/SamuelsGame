@@ -1,3 +1,4 @@
+import { strikeAt } from './strikes';
 import Phaser from 'phaser';
 import { Frame, Tex } from '../content/assetKeys';
 import type { WeaponDef } from '../content/weapons';
@@ -119,6 +120,7 @@ export class JavelinSystem {
       hurtEnemy(this.world, enemy, item.weapon.baseDamage, item.last.x, item.last.y, 1, JAVELIN.knockback, 'basic');
       this.ignite(item, enemy);
     }
+    strikeAt(this.world.scene, at.x, at.y, JAVELIN.width);
     item.last = at;
     this.flicker(item, now);
     if (item.weapon.burns) this.burn?.spark(at.x, at.y);

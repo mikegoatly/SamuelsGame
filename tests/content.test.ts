@@ -106,9 +106,9 @@ describe('desert content', () => {
 });
 
 describe('skill tables', () => {
-  it('has ten skills with a distinct icon source and level 5 only twist', () => {
-    expect(skillList).toHaveLength(10);
-    expect(new Set(skillList.map((s) => SKILL_ICON_SOURCES[s.id])).size).toBe(10);
+  it('has eleven skills with a distinct icon source and level 5 only twist', () => {
+    expect(skillList).toHaveLength(11);
+    expect(new Set(skillList.map((s) => SKILL_ICON_SOURCES[s.id])).size).toBe(11);
     for (const skill of skillList) {
       expect(skill.params.map((p) => p.twist), skill.id).toEqual([false, false, false, false, true]);
       expect(skill.cooldownMs[4], skill.id).toBeLessThan(skill.cooldownMs[0]);

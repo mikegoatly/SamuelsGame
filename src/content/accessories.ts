@@ -16,6 +16,7 @@ export const accessories: readonly AccessoryDef[] = [
   { id: 'royalCrown', name: 'Royal Crown', slot: 'head', frame: 2, heroicRewardFor: 'palace' },
   { id: 'shadowCrown', name: 'Shadow Crown', slot: 'head', frame: 3 },
   { id: 'sludgeCrown', name: 'Sludge Crown', slot: 'head', frame: 4, heroicRewardFor: 'sewer' },
+  { id: 'crystalCrown', name: 'Crystal Crown', slot: 'head', frame: 5, heroicRewardFor: 'mines' },
 ];
 
 export const getAccessory = (id: string): AccessoryDef | undefined => accessories.find((a) => a.id === id);

@@ -5,6 +5,7 @@ import { randInt } from '../rng';
 import { ACTIVE_HAZARD_KINDS, type ActiveHazardKind } from './kinds';
 import { swingBounds } from './pendulum';
 import { hazardCount, type BossHazard, type HazardPlan } from './plan';
+import { freeRuns, railRuns } from './rails';
 
 export interface PlacedHazard {
   kind: ActiveHazardKind;
@@ -166,8 +167,19 @@ function placePipe(s: Spot): PlacedHazard | null {
   return null;
 }
 
+/** A minecart rail: a straight run of free floor off the lanes. It never blocks anything, so it adds no footprint for path planners. */
+function placeRail(s: Spot): PlacedHazard | null {
+  const runs = freeRuns(railRuns(s.room, s.solid, s.ground), s.used);
+  if (runs.length === 0) return null;
+  return make(s, 'minecart', runs[randInt(s.rng, 0, runs.length - 1)]!, {}, []);
+}
+
 function placeKind(s: Spot, kind: ActiveHazardKind): PlacedHazard | null {
   switch (kind) {
+    case 'minecart':
+      return placeRail(s);
+    case 'resonator':
+      return placeBox(s, kind, [1, 1], [1, 1], 2, 0);
     case 'crackedFloor':
       return placeBox(s, kind, [2, 4], [2, 3], 1, 0);
     case 'firePit':
@@ -190,14 +202,14 @@ function placeKind(s: Spot, kind: ActiveHazardKind): PlacedHazard | null {
 /** Room-wide effects: no footprint to keep clear, `level` is how fierce they are. */
 function areaHazard(s: Spot, kind: ActiveHazardKind, level: number): PlacedHazard {
   const rect = insetRect(s.room.rect, 1);
-  if (kind === 'rubble') return make(s, kind, rect, { rocks: level }, []);
+  if (kind === 'rubble' || kind === 'stalactite') return make(s, kind, rect, { rocks: level }, []);
   if (kind === 'wind') return make(s, kind, rect, { level, dir: randInt(s.rng, 0, 3) * 90 }, []);
   return make(s, kind, s.room.rect, { level }, []);
 }
 
-const isArea = (kind: ActiveHazardKind): boolean => kind === 'rubble' || kind === 'wind' || kind === 'sandstorm';
+const isArea = (kind: ActiveHazardKind): boolean => kind === 'rubble' || kind === 'stalactite' || kind === 'wind' || kind === 'sandstorm';
 /** Big footprints first, so they find room before the small ones. */
-const ORDER: ActiveHazardKind[] = ['pendulum', 'gasVent', 'gasPipe', 'crackedFloor', 'firePit', 'arrowWall', 'flameJet'];
+const ORDER: ActiveHazardKind[] = ['minecart', 'pendulum', 'gasVent', 'gasPipe', 'crackedFloor', 'firePit', 'arrowWall', 'flameJet', 'resonator'];
 
 function fill(s: Spot, kind: ActiveHazardKind, count: number): PlacedHazard[] {
   if (count <= 0) return [];
@@ -207,7 +219,7 @@ function fill(s: Spot, kind: ActiveHazardKind, count: number): PlacedHazard[] {
     const hazard = placeKind(s, kind);
     if (!hazard) continue;
     placed.push(hazard);
-    s.used.push(...hazard.blocks);
+    s.used.push(...(hazard.kind === 'minecart' ? [hazard.rect] : hazard.blocks));
     s.walls.push(...hazard.blocks);
   }
   return placed;

@@ -22,6 +22,7 @@ export const skillUpgradeInfo: Readonly<Record<string, UpgradeInfo>> = {
   spiritWolf: { gem: 'blue', tier: 3, twist: 'Summons two wolves' },
   meteor: { gem: 'red', tier: 3, twist: 'Leaves burning ground' },
   gravityWell: { gem: 'green', tier: 3, twist: 'Collapses with an explosion' },
+  bertsPebble: { gem: 'blue', tier: 2, twist: 'A second pebble joins in' },
 };
 
 export const weaponUpgradeInfo: Readonly<Record<string, UpgradeInfo>> = {

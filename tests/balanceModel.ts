@@ -58,7 +58,7 @@ const BOSS_XP_BONUS = 100;
 const TRANSIT_S = 6;
 const START_S = 4;
 /** Hits a standing player takes from one instance of each hazard over a room fight. */
-const HAZARD_EXPOSURE: Record<keyof typeof HAZARD_HITS, number> = { crackedFloor: 0.4, rubble: 0.5, gasVent: 0.6, gasPipe: 0.6, firePit: 1, arrowWall: 1, pendulum: 0.8, flameJet: 0.6, spikes: 0.8 };
+const HAZARD_EXPOSURE: Record<keyof typeof HAZARD_HITS, number> = { crackedFloor: 0.4, rubble: 0.5, gasVent: 0.6, gasPipe: 0.6, firePit: 1, arrowWall: 1, pendulum: 0.8, flameJet: 0.6, minecart: 0.6, stalactite: 0.5, spikes: 0.8 };
 
 /** Chance that someone passing a fire pit steps in and so keeps burning afterwards (a standing player is in it for good, which HAZARD_EXPOSURE already counts). */
 const PIT_STEP_IN_CHANCE = 0.5;
@@ -111,6 +111,10 @@ const HIT_RATE: Record<string, number> = {
   toad: 0.25,
   gator: 0.25,
   shroom: 0,
+  miner: 0.3,
+  mole: 0.3,
+  shard: 0.2,
+  spider: 0.35,
 };
 
 /** Slow bodies are easy to kite, so they catch a moving player less often than fast ones. */

@@ -6,10 +6,11 @@ import type { SplitSpec } from '../logic/blob';
 import type { Shield } from '../logic/shield';
 import { Frame, Tex } from './assetKeys';
 import { madKingBrain, sandRatBrain, stoneGuardianBrain } from './bosses';
+import { bertBoss } from './bert';
 import { sludgeBoss } from './motherSludge';
 import { newMonsters } from './monsters';
 
-export type CustomKind = 'beetle' | 'archer' | 'wisp' | 'rat' | 'necromancer' | 'shark' | 'imp' | 'turret' | 'devil' | 'priest' | 'jester' | 'gargoyle' | 'twin' | 'houndmaster' | 'hound' | 'blob' | 'spitter' | 'toad' | 'gator' | 'shroom';
+export type CustomKind = 'beetle' | 'archer' | 'wisp' | 'rat' | 'necromancer' | 'shark' | 'imp' | 'turret' | 'devil' | 'priest' | 'jester' | 'gargoyle' | 'twin' | 'houndmaster' | 'hound' | 'blob' | 'spitter' | 'toad' | 'gator' | 'shroom' | 'miner' | 'mole' | 'shard' | 'spider';
 
 export interface PackSpec {
   member: string;
@@ -73,6 +74,8 @@ export interface EnemyDef {
   charge?: ChargeTuning;
   /** Takes reduced damage from the front; the shield turns slowly toward the player. */
   shield?: Shield;
+  /** Frame of the def's own texture shown while its shield blocks (no separate shield sprite is drawn, and the sprite turns to face the shield). */
+  shieldGlint?: number;
   /** Ranged enemies aim where the player is going rather than where they are. */
   lead?: boolean;
   /** Orbs steer toward the player for `ms` at `turnRate` radians per second. */
@@ -265,6 +268,6 @@ export const madKing: EnemyDef = {
   boltSpeed: 85,
 };
 
-export const enemies: EnemyDef[] = [slime, bat, cyclops, spider, ghost, stoneGuardian, scorpion, bandit, mummy, vulture, sandRat, palaceGuard, royalArcher, darkMage, assassin, madKing, ...newMonsters, ...sludgeBoss];
+export const enemies: EnemyDef[] = [slime, bat, cyclops, spider, ghost, stoneGuardian, scorpion, bandit, mummy, vulture, sandRat, palaceGuard, royalArcher, darkMage, assassin, madKing, ...newMonsters, ...sludgeBoss, ...bertBoss];
 
 export const getEnemy = (id: string): EnemyDef => enemies.find((e) => e.id === id) ?? slime;

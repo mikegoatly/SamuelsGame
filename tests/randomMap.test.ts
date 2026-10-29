@@ -114,7 +114,7 @@ describe.each(themes)('random %s layouts', (_id, theme) => {
     for (const { seed, world } of worlds) {
       const { layout } = world;
       const boss = layout.rooms[layout.rooms.length - 1]!;
-      expect(layout.blocks.filter((b) => layout.rooms[b.room]!.kind !== 'combat')).toEqual([]);
+      expect(layout.blocks.filter((b) => layout.rooms[b.room]!.kind !== 'combat' && !(theme.roundBoss && b.room === boss.index))).toEqual([]);
       for (const room of layout.rooms) if (room !== boss) expect(rectArea(boss.rect)).toBeGreaterThan(rectArea(room.rect));
       const floor = floorMask(layout);
       const cover = new Set(layout.pillars.map((p) => keyOf(p.x, p.y)));
