@@ -5,6 +5,7 @@ import { items } from '../src/content/items';
 import { lootTables } from '../src/content/lootTables';
 import { getWeapon as baseWeapon, weaponAtLevel, type WeaponDef } from '../src/content/weapons';
 import { normalBossLevel, heroicBossLevel, heroicLevelRange, heroicRoomRange } from '../src/logic/heroic';
+import { BURN, burnTicks } from '../src/logic/burning';
 import { damageToEnemy, damageToPlayer, enemyMaxHp, playerMaxHp } from '../src/logic/combat';
 import { addLoot, expectedLoot, noLoot, type LootValue } from '../src/logic/lootValue';
 import { addXp } from '../src/logic/progression';
@@ -59,6 +60,12 @@ const START_S = 4;
 /** Hits a standing player takes from one instance of each hazard over a room fight. */
 const HAZARD_EXPOSURE: Record<keyof typeof HAZARD_HITS, number> = { crackedFloor: 0.4, rubble: 0.5, gasVent: 0.6, gasPipe: 0.6, firePit: 1, arrowWall: 1, pendulum: 0.8, flameJet: 0.6, spikes: 0.8 };
 
+/** Chance that someone passing a fire pit steps in and so keeps burning afterwards (a standing player is in it for good, which HAZARD_EXPOSURE already counts). */
+const PIT_STEP_IN_CHANCE = 0.5;
+
+/** Share of max health the burn that lingers after one fire pit costs, on average. */
+export const LINGERING_BURN_SHARE = PIT_STEP_IN_CHANCE * burnTicks(BURN.playerMs) * BURN.playerFraction;
+
 /** Share of max health a standing player loses to the room's hazards. */
 function hazardShare(theme: Pick<MapTheme, 'hazards' | 'spikePairsPerRoom'>, order: number): number {
   const plan = theme.hazards ?? {};
@@ -66,6 +73,7 @@ function hazardShare(theme: Pick<MapTheme, 'hazards' | 'spikePairsPerRoom'>, ord
   for (const kind of Object.keys(HAZARD_EXPOSURE) as (keyof typeof HAZARD_HITS)[]) {
     const count = kind === 'spikes' ? (theme.spikePairsPerRoom ?? 0) * 2 : kind in plan ? hazardCount(plan, kind as 'rubble', order) : 0;
     share += count * HAZARD_HITS[kind].fraction * HAZARD_EXPOSURE[kind];
+    if (kind === 'firePit') share += count * LINGERING_BURN_SHARE;
   }
   return share;
 }

@@ -43,6 +43,8 @@ const SHIELD_TINT = 0xc8d8ff;
 const HIT_REVEAL_MS = 600;
 const FROST_TINT = 0x8fd8ff;
 const POISON_TINT = 0x8fe05a;
+const BURN_TINT = 0xff8a3c;
+const BURN_TINT_BRIGHT = 0xffc060;
 const ORB_SCALE = 1.35;
 const ORB_TINT = 0xc070ff;
 const ORB_RANGE = 320;
@@ -51,7 +53,7 @@ const pathBudget = new PathBudget();
 const NO_STRIKE = { multiplier: 1, stunMs: 0 };
 
 /** Where a hit comes from: the basic attack (hero passives apply) or a skill. */
-export type HitSource = 'basic' | 'skill' | 'ally';
+export type HitSource = 'basic' | 'skill' | 'ally' | 'crescent';
 
 export interface EnemyContext {
   target: Player;
@@ -114,6 +116,8 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
   private stunnedUntil = 0;
   private poisonedUntil = 0;
   private dotTint = POISON_TINT;
+  /** Set by the BurnSystem while the monster is on fire: a flickering flame tint. */
+  burning = false;
   private revealedUntil = 0;
   private readonly shieldImage?: Phaser.GameObjects.Image;
 
@@ -266,7 +270,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
   takeHit(amount: number, directionX: number, directionY: number, knockback = 1, source: HitSource = 'basic'): void {
     if (!this.alive) return;
     this.lastHit = source;
-    const strike = source === 'basic' ? this.target.strike(this.x, this.y) : NO_STRIKE;
+    const strike = source === 'basic' || source === 'crescent' ? this.target.strike(this.x, this.y) : NO_STRIKE;
     amount = Math.max(1, Math.round(amount * strike.multiplier));
     const { shield } = this.def;
     const blocked = shield !== undefined && isFrontal(this.facing, { x: -directionX, y: -directionY }, shield.arc);
@@ -568,7 +572,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     this.behaviour?.onDeath?.();
     this.mods.onDeath();
     this.recordCorpse();
-    if (this.announcesDeath) this.events.emit('enemy-died', this.killLevel, this.x, this.y, this.dropTable(), this.def.boss === true, this.lastHit === 'ally', this.isElite);
+    if (this.announcesDeath) this.events.emit('enemy-died', this.killLevel, this.x, this.y, this.dropTable(), this.def.boss === true, this.lastHit === 'ally', this.isElite, this.lastHit === 'crescent');
     deathBurst(this.scene, this.x, this.y, deathTint(this.def.id, this.def.tint), this.def.boss === true);
     playSfx(this.scene, 'enemyDie');
     this.scene.tweens.killTweensOf(this);
@@ -597,6 +601,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     if (this.charge.phase === 'windup') this.setTint(WINDUP_TINT);
     else if (this.forcedTint !== null) this.setTint(this.forcedTint);
     else if (this.stunned || this.slowed) this.setTint(FROST_TINT);
+    else if (this.burning) this.setTint(feel.reduced || Math.floor(this.clock.now / 160) % 2 === 0 ? BURN_TINT : BURN_TINT_BRIGHT);
     else if (this.clock.now < this.poisonedUntil) this.setTint(this.dotTint);
     else if (this.baseTint === null) this.clearTint();
     else this.setTint(this.baseTint);

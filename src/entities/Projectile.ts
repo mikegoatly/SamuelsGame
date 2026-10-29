@@ -17,6 +17,8 @@ export interface BoltOptions {
   scale?: { x: number; y: number };
   /** Draw as this Tiny Dungeon frame (an arrow, a thrown dagger) instead of the glowing bolt. */
   frame?: number;
+  /** A kill by this shot may raise a lesser skeleton (Bone Staff level 5). */
+  raises?: boolean;
 }
 
 export class Projectile extends Phaser.Physics.Arcade.Sprite {
@@ -24,6 +26,7 @@ export class Projectile extends Phaser.Physics.Arcade.Sprite {
   damageScale = 1;
   hits = new BoltHits(0);
   splits = false;
+  raises = false;
   private range = 0;
   private readonly spawn = new Phaser.Math.Vector2();
 
@@ -37,6 +40,7 @@ export class Projectile extends Phaser.Physics.Arcade.Sprite {
     this.range = options.range ?? weapon.range;
     const pierce = options.pierce ?? (weapon.activeTwist === 'pierce' ? PIERCE_EXTRA_ENEMIES : 0);
     this.hits = new BoltHits(pierce, options.skip);
+    this.raises = options.raises ?? false;
     this.splits = weapon.activeTwist === 'split' && !options.child;
     this.enableBody(true, x, y, true, true);
     if (weapon.tint === null) this.clearTint();

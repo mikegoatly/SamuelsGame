@@ -1,6 +1,7 @@
 import type Phaser from 'phaser';
 import type { Player } from '../../entities/Player';
 import type { ActiveHazardSpec } from '../../logic/tiledObjects';
+import type { BurnSystem } from '../BurnSystem';
 import type { GameClock } from '../GameClock';
 
 export interface HazardWorld {
@@ -9,6 +10,8 @@ export interface HazardWorld {
   enemies: Phaser.Physics.Arcade.Group;
   clock: GameClock;
   isSolid: (x: number, y: number) => boolean;
+  /** Fire pits light whoever stands in them; absent in unit tests. */
+  burn?: BurnSystem;
 }
 
 /** One placed hazard. Dormant until its room is entered, calm once the room is cleared, halted for good when the run ends. */

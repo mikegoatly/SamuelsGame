@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { bow, brokenWand, fists, goldenSword, hammer, javelin, twinDaggers, weaponList } from '../src/content/weapons';
-import { BOLTS_SWATTED_MAX, cleaveFactor, CROWD_FOR_FULL_CLEAVE, MELEE_ACCURACY_BONUS, weaponProfile } from './weaponProfile';
+import { bow, boneStaff, brokenWand, fists, goldenSword, hammer, ironSword, javelin, sludgeSlinger, twinDaggers, weaponAtLevel, weaponList } from '../src/content/weapons';
+import { BURN } from '../src/logic/burning';
+import { burnDps, CRESCENT_TARGETS, LOB_TARGETS, PUDDLE_SLOW_AVOIDED, BOLTS_SWATTED_MAX, cleaveFactor, CROWD_FOR_FULL_CLEAVE, MELEE_ACCURACY_BONUS, weaponProfile } from './weaponProfile';
 
 const ACCURACY = 0.6;
 
@@ -48,7 +49,7 @@ describe('weapon profile', () => {
 
 describe('bolts blocked', () => {
   it.each([
-    ['goldenSword', goldenSword, 0.35],
+    ['goldenSword', goldenSword, 0.39],
     ['twinDaggers', twinDaggers, BOLTS_SWATTED_MAX],
     ['fists', fists, BOLTS_SWATTED_MAX],
   ])('%s blocks %s of the bolts', (_, weapon, expected) => {
@@ -68,5 +69,34 @@ describe('cleave factor', () => {
     [1, 10, 1],
   ])('%s targets with %s alive multiplies kill speed by %s', (targets, alive, expected) => {
     expect(cleaveFactor(targets, alive)).toBeCloseTo(expected, 6);
+  });
+});
+
+describe('crescent, lob and burn rules', () => {
+  it('a crescent hits about 1.4 targets in a crowd and, with only 120px of range, kites worse than the wand', () => {
+    const profile = weaponProfile(boneStaff, ACCURACY);
+    expect(profile.targetsPerHit).toBe(CRESCENT_TARGETS);
+    expect(CRESCENT_TARGETS).toBe(1.4);
+    expect(profile.contactAvoided).toBeLessThan(0);
+    expect(profile.boltsBlocked).toBe(0);
+  });
+
+  it('a lobbed blob splashes a little and its puddle slows monsters', () => {
+    const profile = weaponProfile(sludgeSlinger, ACCURACY);
+    expect(profile.targetsPerHit).toBe(LOB_TARGETS);
+    expect(profile.contactAvoided - weaponProfile({ ...sludgeSlinger, lob: false }, ACCURACY).contactAvoided).toBeCloseTo(PUDDLE_SLOW_AVOIDED, 6);
+  });
+
+  it('only the burning javelin adds burn damage: tick share x hit x ticks per burn, per throw', () => {
+    expect(burnDps({ ...javelin, burns: false })).toBe(0);
+    expect(burnDps(brokenWand)).toBe(0);
+    expect(burnDps(javelin)).toBeCloseTo((BURN.weaponTickScale * javelin.baseDamage * (BURN.enemyMs / BURN.tickMs) * 1000) / javelin.fireRateMs, 6);
+    expect(weaponProfile(javelin, ACCURACY).rawDps).toBeGreaterThan(weaponProfile({ ...javelin, burns: false }, ACCURACY).rawDps);
+  });
+
+  it('the Iron Sword hits more once it swipes at level 5', () => {
+    const stab = weaponProfile(weaponAtLevel(ironSword, 4), ACCURACY).targetsPerHit;
+    const swipe = weaponProfile(weaponAtLevel(ironSword, 5), ACCURACY).targetsPerHit;
+    expect(swipe).toBeGreaterThan(stab);
   });
 });

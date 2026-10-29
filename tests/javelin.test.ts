@@ -137,6 +137,6 @@ describe('Javelin numbers', () => {
   });
 
   it('is announced on the results screen', () => {
-    expect(rewardsOf({ rewardWeaponId: 'javelin' })[0]).toMatchObject({ kind: 'weapon', id: 'javelin', headline: 'Javelin acquired!' });
+    expect(rewardsOf({ rewardWeaponId: 'javelin' })[0]).toMatchObject({ kind: 'weapon', id: 'javelin', headline: 'Burning Javelin acquired!' });
   });
 });

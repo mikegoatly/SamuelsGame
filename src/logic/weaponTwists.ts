@@ -1,4 +1,4 @@
-export type WeaponTwist = 'pierce' | 'split' | 'wave' | 'daggerThrow' | 'shockwave' | 'spread' | 'forceWave' | 'poisonPuddle' | 'stickBurst';
+export type WeaponTwist = 'pierce' | 'split' | 'wave' | 'daggerThrow' | 'shockwave' | 'spread' | 'forceWave' | 'poisonPuddle' | 'stickBurst' | 'sweep' | 'boneRise';
 
 export const TWIST_LEVEL = 5;
 export const PIERCE_EXTRA_ENEMIES = 1;
@@ -6,6 +6,21 @@ export const SPLIT_SPREAD = 0.55;
 export const SPLIT_DAMAGE_SCALE = 0.6;
 export const SPLIT_RANGE = 90;
 export const WAVE = { damageScale: 0.6, speed: 210, range: 90 } as const;
+
+/** Bone Staff: a short crescent bolt that hits every enemy in a ~60 degree arc and fades after 120px. */
+export const CRESCENT = { damageScale: 1, speed: 260, range: 120, scale: { x: 1.2, y: 4 } } as const;
+/** Iron Sword level 5: the stab becomes a swipe. */
+export const SWEEP = { arc: (100 * Math.PI) / 180, reach: 36 } as const;
+
+export interface ConeShape {
+  arc: number;
+  reach: number;
+  thrust?: boolean;
+}
+
+/** The cone a melee weapon swings: the Iron Sword's stab turns into a wide swipe once its `sweep` twist is active. */
+export const coneAt = <T extends ConeShape>(base: T, twist: WeaponTwist | undefined): T =>
+  twist === 'sweep' ? { ...base, arc: SWEEP.arc, reach: SWEEP.reach, thrust: false } : base;
 
 /** Every 4th dagger swing also throws a dagger. */
 export const DAGGER_THROW = { damageScale: 2.5, speed: 320, range: 170, every: 4 } as const;

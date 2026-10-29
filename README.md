@@ -29,7 +29,7 @@ npm run gen-maps   # regenerate public/assets/maps/*.tmj (ruins, desert, palace)
 
 ## Features
 
-Three levels (Ruins, Desert, Palace) with bosses, loot, gems and permanent saves; Apprentice Staff, Broken Wand, Golden Sword and ten skills (Fireball, Frost Nova, Chain Lightning, Boomerang Blade, Arcane Shield, Poison Cloud, Spirit Wolf, Blink Strike, Meteor, Gravity Well) chosen on a loadout screen;
+Three levels (Ruins, Desert, Palace) with bosses, loot, gems and permanent saves; Apprentice Staff, Broken Wand, Golden Sword (plus each hero's own weapon) and ten skills (Fireball, Frost Nova, Chain Lightning, Boomerang Blade, Arcane Shield, Poison Cloud, Spirit Wolf, Blink Strike, Meteor, Gravity Well) chosen on a loadout screen;
 keyboard/mouse, gamepad and touch; title screen, How to Play (highlights the device you used last) and Settings (music and effects volume
 in 10% steps, master mute, "Reduce shake / flashes"); Kenney sound effects with random variants and pitch, menu music and a victory jingle;
 hit-stop, budgeted screen shake, hurt and low-HP vignettes, death particles, dust and muzzle flashes; boss intro banners.
@@ -120,7 +120,7 @@ Every hazard is telegraphed, hurts monsters too (lure them in; bosses are immune
 Boss arenas get one: rubble (Ruins), gentle wind (Desert), north-wall flame jets (Palace). Hazards stop when the run ends. Counts per room live in `MapTheme.hazards` (`tools/mapThemes.ts`).
 
 The Mad King (Lv 15) lunges along a red lane, fires spinning blade rings, calls guards and, below 50% HP, teleports between thrones and fires spirals.
-Reward: the Golden Sword, a melee weapon (~100 degree swing, hits everything in the arc once, knockback, swats one enemy bolt per swing). It also teaches Chain Lightning. After clearing the palace a locked "???" card teases the next chapter. Music: `palace.mp3` and `boss-palace.mp3` (copied by `copy-assets`).
+Reward: the Golden Sword, a melee weapon (~110 degree swing, hits everything in the arc once, knockback, swats one enemy bolt per swing). It also teaches Chain Lightning. After clearing the palace a locked "???" card teases the next chapter. Music: `palace.mp3` and `boss-palace.mp3` (copied by `copy-assets`).
 
 ## Skills and loadout (v2 phase 1)
 
@@ -196,7 +196,7 @@ Volumes and the shake toggle live in the save (`settings`, save v4). Effects go 
 - **Camp** (`CampScene`): Level Select has a Camp button and the results screen has Visit Camp. Tabs: Upgrades and Shop (left/right or tap), gold and gems on top, scrolling list (wheel, arrows, tap).
   - Upgrades: every owned weapon and skill goes level 1 to 5. Going from level L costs `round(60 * L^1.6 * tier)` gold (tier x1 / 1.25 / 1.5) plus L gems of the item colour
     (skills: offence red, utility green, defence and support blue; weapons red; mapping in `src/content/upgradeInfo.ts`). The preview reads the per-level tables, e.g. Fireball 1 to 2: Damage 30 -> 36, Cooldown 2.5s -> 2.35s.
-  - Weapons gain +12% damage and +5% fire rate per level. Level 5 twists: staff bolts pierce one enemy, wand bolts split in two on hit (60% damage), sword swings send a short slash wave. Skill twists are in `skills.ts`.
+  - Weapons gain +12% damage and +5% fire rate per level. Level 5 twists: staff bolts pierce one enemy, wand bolts split in two on hit (60% damage), Golden Sword swings send a short slash wave, the Iron Sword's stab becomes a wide swipe, Bone Staff kills may raise lesser skeletons. Skill twists are in `skills.ts`.
   - Shop: 3 unowned skills for 150 / 250 / 400 gold (tier 1 / 2 / 3), rotating after every level clear (seeded from the save); Health Potions (40 gold, carry 3, heal 40% HP); one Revive Token (300 gold).
 - **Floor potions** no longer fly to you: gold and gems still magnetise, a potion is only drunk when you walk onto it. Coins are worth 2 / 12 / 24 gold (coin, pile, gold pile).
 - **In a level**: F / gamepad Y / the touch potion button drinks a carried potion (only when hurt). With a Revive Token you rise once at 50% HP with 2s of i-frames; the token is consumed.

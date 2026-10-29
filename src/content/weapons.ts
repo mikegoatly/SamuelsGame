@@ -1,5 +1,5 @@
 import { weaponDamageAt, weaponFireRateAt } from '../logic/upgrades';
-import { TWIST_LEVEL, type WeaponTwist } from '../logic/weaponTwists';
+import { coneAt, TWIST_LEVEL, type WeaponTwist } from '../logic/weaponTwists';
 import { Frame } from './assetKeys';
 
 export interface MeleeTuning {
@@ -52,6 +52,10 @@ export interface WeaponDef {
   lob?: boolean;
   /** Thrown straight through every enemy in its path, then sticks in the floor or a wall (Javelin). */
   javelin?: boolean;
+  /** Hits set enemies on fire (Burning Javelin). */
+  burns?: boolean;
+  /** Fires a short crescent bolt that hits everything in its arc (Bone Staff). */
+  crescent?: boolean;
   /** What level 5 adds. */
   twist?: WeaponTwist;
   /** Upgrade level of this copy (1 when unset). */
@@ -86,19 +90,36 @@ export const brokenWand: WeaponDef = {
   twist: 'split',
 };
 
-/** Sweeping melee weapon: hits everything in a ~100 degree cone once per swing, hits hard, knocks back and swats one bolt per swing. */
+/** Sir Brandt's own: a precise stab (30 degrees, 36px) that learns to swipe (100 degrees) at level 5. Swats one bolt per swing. */
+export const ironSword: WeaponDef = {
+  id: 'ironSword',
+  kind: 'melee',
+  name: 'Iron Sword',
+  frame: Frame.sword,
+  baseDamage: 20,
+  fireRateMs: 450,
+  speed: 0,
+  range: 36,
+  tint: null,
+  melee: { arc: (45 * Math.PI) / 180, reach: 36, knockback: 1.4, swingMs: 140, thrust: true, colour: 0xdfe6f2 },
+  twist: 'sweep',
+  description: 'A quick, precise stab',
+};
+
+/** The Mad King's prize: a sweeping melee weapon that hits everything in a ~110 degree cone once per swing, hits hard, knocks back and swats one bolt per swing. */
 export const goldenSword: WeaponDef = {
   id: 'goldenSword',
   kind: 'melee',
   name: 'Golden Sword',
   frame: Frame.sword,
-  baseDamage: 22,
-  fireRateMs: 500,
+  baseDamage: 24,
+  fireRateMs: 450,
   speed: 0,
   range: 28,
   tint: 0xffd84a,
-  melee: { arc: (100 * Math.PI) / 180, reach: 28, knockback: 1.6, swingMs: 160 },
+  melee: { arc: (110 * Math.PI) / 180, reach: 28, knockback: 2, swingMs: 160 },
   twist: 'wave',
+  description: 'A royal blade that sweeps wide',
 };
 
 /** Very fast stabs with a short reach; the sides alternate and every 4th swing also throws a dagger. */
@@ -176,14 +197,14 @@ export const fists: WeaponDef = {
   description: '3-hit combo, the last punch hits hard',
 };
 
-/** Lobs a goo blob up to 200px that bursts into a puddle slowing monsters. Gloop's own; DPS (15 per 600ms = 25) sits between the staff and the wand. */
+/** Lobs a goo blob up to 200px that bursts into a puddle slowing monsters. Gloop's own and a hidden-boss reward (tier 3): 18 per 480ms = 37.5 DPS, plus the puddle the model does not count. */
 export const sludgeSlinger: WeaponDef = {
   id: 'sludgeSlinger',
   kind: 'ranged',
   name: 'Sludge Slinger',
   frame: Frame.slinger,
-  baseDamage: 15,
-  fireRateMs: 600,
+  baseDamage: 24,
+  fireRateMs: 480,
   speed: 260,
   range: 200,
   tint: null,
@@ -192,23 +213,40 @@ export const sludgeSlinger: WeaponDef = {
   description: 'Lobs goo that leaves a slowing puddle',
 };
 
+/** Morwen's staff: a short crescent bolt (about 60 degrees, fades after 120px) that hurts every enemy it crosses once. A caster weapon, so it cannot swat bolts. */
+export const boneStaff: WeaponDef = {
+  id: 'boneStaff',
+  kind: 'ranged',
+  name: 'Bone Staff',
+  frame: Frame.staff,
+  baseDamage: 16,
+  fireRateMs: 420,
+  speed: 260,
+  range: 120,
+  tint: 0xcdb8ff,
+  crescent: true,
+  twist: 'boneRise',
+  description: 'Crescent bolts hit every enemy in a small arc',
+};
+
 /** Slow heavy throw through every enemy in line. One target: 20 per 700ms = 28.6 DPS (between the staff 18.8 and the wand 40); two in a line already beat the wand and the bow. */
 export const javelin: WeaponDef = {
   id: 'javelin',
   kind: 'ranged',
-  name: 'Javelin',
+  name: 'Burning Javelin',
   frame: Frame.javelin,
   baseDamage: 20,
   fireRateMs: 700,
   speed: 320,
   range: 260,
-  tint: null,
+  tint: 0xff9a3c,
   javelin: true,
+  burns: true,
   twist: 'stickBurst',
   description: 'Slow throw that pierces every enemy in line',
 };
 
-export const weaponList: readonly WeaponDef[] = [apprenticeStaff, brokenWand, goldenSword, twinDaggers, hammer, bow, fists, sludgeSlinger, javelin];
+export const weaponList: readonly WeaponDef[] = [apprenticeStaff, brokenWand, ironSword, goldenSword, twinDaggers, hammer, bow, fists, sludgeSlinger, boneStaff, javelin];
 
 export const weapons: Record<string, WeaponDef> = Object.fromEntries(weaponList.map((weapon) => [weapon.id, weapon]));
 
@@ -218,11 +256,15 @@ export const knownWeapons = (owned: readonly string[]): string[] => owned.filter
 export const getWeapon = (id: string): WeaponDef => weapons[id] ?? apprenticeStaff;
 
 /** The weapon as it plays at an upgrade level: +12% damage and +5% fire rate per level, and its twist from level 5. */
-export const weaponAtLevel = (weapon: WeaponDef, level: number): WeaponDef => ({
-  ...weapon,
-  baseDamage: weaponDamageAt(weapon.baseDamage, level),
-  fireRateMs: weaponFireRateAt(weapon.fireRateMs, level),
-  charge: weapon.charge && { maxMs: weaponFireRateAt(weapon.charge.maxMs, level) },
-  level,
-  activeTwist: level >= TWIST_LEVEL ? weapon.twist : undefined,
-});
+export const weaponAtLevel = (weapon: WeaponDef, level: number): WeaponDef => {
+  const activeTwist = level >= TWIST_LEVEL ? weapon.twist : undefined;
+  return {
+    ...weapon,
+    baseDamage: weaponDamageAt(weapon.baseDamage, level),
+    fireRateMs: weaponFireRateAt(weapon.fireRateMs, level),
+    charge: weapon.charge && { maxMs: weaponFireRateAt(weapon.charge.maxMs, level) },
+    melee: weapon.melee && coneAt(weapon.melee, activeTwist),
+    level,
+    activeTwist,
+  };
+};

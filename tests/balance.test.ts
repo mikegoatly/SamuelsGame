@@ -188,23 +188,23 @@ describe('mad king balance', () => {
   });
 });
 
-describe('golden sword balance', () => {
+describe('golden sword balance (the Mad King prize, tier 3)', () => {
   const dpsAtGap0 = (level: number) => ({
     wand: damageToEnemy(brokenWand.baseDamage, level, level) * (1000 / brokenWand.fireRateMs),
     sword: damageToEnemy(goldenSword.baseDamage, level, level) * (1000 / goldenSword.fireRateMs),
   });
 
-  it('has only slightly higher single-target DPS than the wand at every palace level (its edge is the cone and the shove), and only within a short reach', () => {
+  it('has clearly higher single-target DPS than the wand at every palace level, but only within a short reach', () => {
     for (let level = 9; level <= 15; level++) {
       const { wand, sword } = dpsAtGap0(level);
       expect(sword / wand, `level ${level}`).toBeGreaterThan(1);
-      expect(sword / wand, `level ${level}`).toBeLessThan(1.3);
+      expect(sword / wand, `level ${level}`).toBeLessThan(1.45);
     }
     expect(goldenSword.melee!.reach).toBeLessThan(brokenWand.range / 5);
   });
 
-  it('hits for about 2.2x a wand bolt', () => {
-    expect(damageToEnemy(goldenSword.baseDamage, 12, 12) / damageToEnemy(brokenWand.baseDamage, 12, 12)).toBeCloseTo(2.2, 1);
+  it('hits for about 2.4x a wand bolt', () => {
+    expect(damageToEnemy(goldenSword.baseDamage, 12, 12) / damageToEnemy(brokenWand.baseDamage, 12, 12)).toBeCloseTo(2.4, 1);
   });
 });
 

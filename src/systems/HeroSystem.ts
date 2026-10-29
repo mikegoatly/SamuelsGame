@@ -5,8 +5,9 @@ import type { Enemy } from '../entities/Enemy';
 import type { AllyLook } from '../entities/SpiritWolf';
 import { EdgeWatch } from '../logic/edge';
 import { pushCapped, TickGate } from '../logic/heroTraps';
-import { risesAgain } from '../logic/passives';
+import { LESSER_SKELETON, risingFor, SKELETON as FULL_SKELETON } from '../logic/passives';
 import type { GameEvents } from './GameEvents';
+import { feel } from './feel';
 import { GloopTrailFx } from './GloopTrailFx';
 import { SpiritWolfCaster } from './skills/SpiritWolfCaster';
 import { hurtEnemy } from './skills/targets';
@@ -15,7 +16,8 @@ import { zonesFor } from './skills/ZoneField';
 
 const TRAP = { radius: 16, durationMs: 3000, tickMs: 500, damage: 6, color: 0xd0d8ff, max: 2 };
 const SKELETON_LOOK: AllyLook = { frame: Frame.ghost, tint: 0xb8f0a0 };
-const SKELETON = { durationMs: 8000, biteDamage: 8, biteEveryMs: 700, speed: 80, count: 1, twist: false };
+const SKELETON = { ...FULL_SKELETON, speed: 80, count: 1, twist: false };
+const LESSER = { ...LESSER_SKELETON, speed: 80, count: 1, twist: false };
 
 /** Hero passives that act in the world: the rogue's dagger trap (dropped where a dash ends, two at most, never stacking on one enemy) and the necromancer's risen skeletons (the Spirit Wolf's hunting AI; allies are not enemies, so they never affect room clears). */
 export class HeroSystem {
@@ -35,12 +37,13 @@ export class HeroSystem {
       scene.events.once(Phaser.Scenes.Events.SHUTDOWN, () => scene.events.off(Phaser.Scenes.Events.UPDATE, this.watchDash, this));
     }
     if (effects.trail) new GloopTrailFx(world);
-    if (effects.riseChance > 0) {
+    const boneRise = world.player.weapon.activeTwist === 'boneRise';
+    if (effects.riseChance > 0 || boneRise) {
       const skeletons = new SpiritWolfCaster(world, SKELETON_LOOK);
-      events.on('enemy-died', (_level, x, y, _table, boss, byAlly) => {
-        if (risesAgain(effects, this.rng, { boss, byAlly, live: skeletons.live })) {
-          skeletons.cast({ skill: spiritWolf, level: 1, x, y, aim: new Phaser.Math.Vector2(1, 0), params: SKELETON });
-        }
+      events.on('enemy-died', (_level, x, y, _table, boss, byAlly, _elite, crescent) => {
+        if (feel.isLocked || world.player.dead) return;
+        const rising = risingFor(effects, this.rng, { boss, byAlly, live: skeletons.live, crescent: boneRise && crescent });
+        if (rising !== 'none') skeletons.cast({ skill: spiritWolf, level: 1, x, y, aim: new Phaser.Math.Vector2(1, 0), params: rising === 'full' ? SKELETON : LESSER });
       });
     }
   }

@@ -53,7 +53,7 @@ export const knight: HeroDef = {
   bio: 'A sworn knight who walks straight into trouble.',
   stats: mods(RATING.high, RATING.low, RATING.low, 1.1),
   passive: { id: 'frontGuard', name: 'Shield Wall', text: 'Takes 20% less damage from the front.' },
-  signatureWeaponId: 'goldenSword',
+  signatureWeaponId: 'ironSword',
   hint: 'A true warrior needs no tricks, from the first door to the last.',
 };
 
@@ -123,7 +123,7 @@ export const necromancer: HeroDef = {
   bio: 'Listens to what the dead have to say.',
   stats: mods(RATING.low, RATING.mid, RATING.mid),
   passive: { id: 'risenDead', name: 'Risen Dead', text: 'Enemies you slay sometimes rise as a skeleton ally for 8 seconds (3 at a time).' },
-  signatureWeaponId: 'apprenticeStaff',
+  signatureWeaponId: 'boneStaff',
   startingSkillId: 'spiritWolf',
   hint: 'So many souls...',
 };

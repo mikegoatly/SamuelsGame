@@ -109,7 +109,7 @@ export class SaveSystem {
   private parseStored(raw: string | null | undefined, strict: false): SaveData;
   private parseStored(raw: string | null | undefined, strict: boolean): SaveData | null {
     if (strict && !isJsonObject(raw)) return null;
-    return parseSave(raw, LEGACY_REWARDS, (id) => getSkill(id) !== undefined, (id) => heroes[id] !== undefined);
+    return parseSave(raw, LEGACY_REWARDS, (id) => getSkill(id) !== undefined, (id) => heroes[id] !== undefined, (id) => heroes[id]?.signatureWeaponId);
   }
 
   private write(): void {

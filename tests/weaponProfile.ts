@@ -1,6 +1,7 @@
 import { weaponDps } from '../src/content/weaponDps';
 import { brokenWand, type WeaponDef } from '../src/content/weapons';
 import { BOW } from '../src/logic/bowDraw';
+import { BURN } from '../src/logic/burning';
 
 /** Each factor is relative to the Broken Wand, which the model was calibrated on: the wand's profile is exactly neutral. */
 export interface WeaponProfile {
@@ -41,6 +42,12 @@ export const BOLTS_SWATTED_MAX = 0.6;
 export const CLOSE_IN_MAX = 0.4;
 /** Share of closeIn lost from attack time (the walk in is partly spent hurting things). */
 export const CLOSE_IN_TIME_SHARE = 0.5;
+/** Enemies a Bone Staff crescent (about 60 degrees, 40px across) hurts per cast in a crowd. */
+export const CRESCENT_TARGETS = 1.4;
+/** Enemies a lobbed blob's landing burst reaches in a crowd (the second takes half damage, so 1.3 counts it as 0.6 of a target). */
+export const LOB_TARGETS = 1.3;
+/** Share of contact hits a slowing puddle prevents (monsters at half speed are easy to kite). */
+export const PUDDLE_SLOW_AVOIDED = 0.2;
 /** Other enemies on the field needed for a cone or pierce to reach its full target count. */
 export const CROWD_FOR_FULL_CLEAVE = 3;
 
@@ -56,9 +63,17 @@ function averageKnockback(weapon: WeaponDef): number {
 }
 
 function targetsOf(weapon: WeaponDef): number {
+  if (weapon.crescent) return CRESCENT_TARGETS;
+  if (weapon.lob) return LOB_TARGETS;
   if (weapon.melee) return 1 + CONE_TARGETS_PER_RAD * weapon.melee.arc;
   const pierce = weapon.javelin ? JAVELIN_PIERCE : weapon.charge ? BOW.fullPierce : 1;
   return 1 + PIERCE_TARGETS_PER_EXTRA * (pierce - 1);
+}
+
+/** Damage per second a burning weapon adds against one target: every hit lights the enemy, and the fire ticks for a share of the hit until it goes out. */
+export function burnDps(weapon: WeaponDef): number {
+  if (!weapon.burns) return 0;
+  return (BURN.weaponTickScale * weapon.baseDamage * (BURN.enemyMs / BURN.tickMs) * 1000) / weapon.fireRateMs;
 }
 
 /** Strengths and costs of a weapon the damage-times-rate model leaves out. Hero passives (Knight's front guard and the like) are ignored. */
@@ -66,12 +81,12 @@ export function weaponProfile(weapon: WeaponDef, baseAccuracy: number): WeaponPr
   const melee = weapon.melee;
   const closeIn = melee ? CLOSE_IN_MAX * clamp(1 - melee.reach / brokenWand.range, 0, 1) : 0;
   return {
-    rawDps: weaponDps(weapon),
+    rawDps: weaponDps(weapon) + burnDps(weapon),
     accuracy: baseAccuracy + (melee ? MELEE_ACCURACY_BONUS : 0),
     targetsPerHit: targetsOf(weapon),
     contactAvoided: melee
       ? Math.min(KNOCKBACK_AVOIDED_MAX, KNOCKBACK_AVOIDED_PER_UNIT * averageKnockback(weapon))
-      : clamp((KITE_PER_RANGE_SHARE * (weapon.range - brokenWand.range)) / brokenWand.range, -KITE_MAX, KITE_MAX),
+      : clamp((KITE_PER_RANGE_SHARE * (weapon.range - brokenWand.range)) / brokenWand.range, -KITE_MAX, KITE_MAX) + (weapon.lob ? PUDDLE_SLOW_AVOIDED : 0),
     boltsBlocked: melee ? Math.min(BOLTS_SWATTED_MAX, (BOLTS_PER_SWING_SHARE * 1000) / weapon.fireRateMs) : 0,
     closeIn,
     uptime: 1 - closeIn * CLOSE_IN_TIME_SHARE,

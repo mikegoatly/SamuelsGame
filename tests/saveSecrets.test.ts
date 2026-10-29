@@ -6,7 +6,7 @@ const parse = (raw: object, isKnownHero?: (id: string) => boolean): SaveData => 
 
 describe('migration to version 11', () => {
   it('is version 11 with nothing found yet', () => {
-    expect(SAVE_VERSION).toBe(11);
+    expect(SAVE_VERSION).toBeGreaterThanOrEqual(11);
     expect(defaultSave().secrets).toEqual({ sewerFound: false, desertRunsWithoutGrate: 0 });
   });
 

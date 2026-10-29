@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { weaponDps } from '../src/content/weaponDps';
-import { apprenticeStaff, brokenWand, sludgeSlinger, weaponAtLevel } from '../src/content/weapons';
+import { brokenWand, sludgeSlinger, weaponAtLevel } from '../src/content/weapons';
 import { lobDistance, lobFlightMs, lobHeight, lobPosition, lobProgress, SLUDGE } from '../src/logic/sludge';
 import { GloopTrail, trailAlpha, trailLimits, TRAIL } from '../src/logic/gloopTrail';
 import { expectClose } from './builders';
@@ -52,13 +52,12 @@ describe('lob flight', () => {
 });
 
 describe('Sludge Slinger numbers', () => {
-  it('fires every 550-650ms and its DPS sits between the staff and the wand', () => {
-    expect(sludgeSlinger.fireRateMs).toBeGreaterThanOrEqual(550);
-    expect(sludgeSlinger.fireRateMs).toBeLessThanOrEqual(650);
+  it('fires every 450-550ms and, as a tier 3 reward, out-damages the wand on raw DPS', () => {
+    expect(sludgeSlinger.fireRateMs).toBeGreaterThanOrEqual(450);
+    expect(sludgeSlinger.fireRateMs).toBeLessThanOrEqual(550);
     for (const level of [1, 5]) {
       const dps = weaponDps(weaponAtLevel(sludgeSlinger, level));
-      expect(dps, `L${level}`).toBeGreaterThan(weaponDps(weaponAtLevel(apprenticeStaff, level)));
-      expect(dps, `L${level}`).toBeLessThan(weaponDps(weaponAtLevel(brokenWand, level)));
+      expect(dps, `L${level}`).toBeGreaterThan(weaponDps(weaponAtLevel(brokenWand, level)));
     }
   });
 

@@ -19,7 +19,7 @@ export function registerBoltHits(scene: Phaser.Scene, pool: Phaser.Physics.Arcad
     const base = bolt.weapon.baseDamage * bolt.damageScale;
     const damage = damageToEnemy(base, player.level, enemy.level, player.stats.damageMultiplier) * (GOD_MODE ? GOD_DAMAGE_MULTIPLIER : 1);
     const { x: vx, y: vy } = bolt.body!.velocity;
-    enemy.takeHit(damage, vx, vy);
+    enemy.takeHit(damage, vx, vy, 1, bolt.raises ? 'crescent' : 'basic');
     if (outcome === 'last') {
       if (bolt.splits) split(scene, pool, bolt, enemy, Math.atan2(vy, vx));
       bolt.kill();

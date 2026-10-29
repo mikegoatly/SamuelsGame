@@ -3,6 +3,7 @@ import type { Player } from '../entities/Player';
 import { withPotions } from '../logic/campPurchases';
 import { drinkPotion } from '../logic/potions';
 import { floatText } from './floatText';
+import type { BurnSystem } from './BurnSystem';
 import type { SaveSystem } from './SaveSystem';
 import { playSfx } from './sfx';
 
@@ -12,6 +13,7 @@ export class PotionSystem {
     private readonly scene: Phaser.Scene,
     private readonly player: Player,
     private readonly save: SaveSystem,
+    private readonly burn?: BurnSystem,
   ) {
     player.potionHandler = () => this.drink();
   }
@@ -26,6 +28,7 @@ export class PotionSystem {
     }
     this.save.update((save) => withPotions(save, result.carried));
     player.heal(result.healed);
+    this.burn?.extinguishPlayer();
     player.events.emit('potion-used');
     at(`+${result.healed} HP`, '#ff8a8a');
     playSfx(this.scene, 'potion');

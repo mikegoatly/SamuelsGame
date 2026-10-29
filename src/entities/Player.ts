@@ -23,7 +23,9 @@ import type { InputController } from '../systems/InputController';
 import type { ProgressionSystem } from '../systems/ProgressionSystem';
 import { floatText } from '../systems/floatText';
 import { playSfx } from '../systems/sfx';
+import { CRESCENT } from '../logic/weaponTwists';
 import { fireProjectile } from './Projectile';
+import { sendWave } from './waveShot';
 
 /** What a hit did: nothing (i-frames, dead), soaked by a shield, or hurt the player. */
 export type DamageResult = 'none' | 'absorbed' | 'hurt';
@@ -152,7 +154,8 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     return computePlayerStats(this.level, this.hero.stats, this.weapon.id === this.hero.signatureWeaponId);
   }
 
-  takeDamage(amount: number, fromX: number, fromY: number, source: DamageSource = 'melee'): DamageResult {
+  /** `gentle` (burning): no i-frames, knockback, shake, rumble or hurt sound; the health still drops. */
+  takeDamage(amount: number, fromX: number, fromY: number, source: DamageSource = 'melee', options: { gentle?: boolean } = {}): DamageResult {
     if (this.dead || this.actionsLocked || feel.isLocked || this.invulnerable || GOD_MODE) return 'none';
     const reduced = frontalDamage(amount, this.aimDirection.angle(), { x: fromX - this.x, y: fromY - this.y }, this.effects, source);
     const through = this.damageAbsorber ? this.damageAbsorber(reduced) : reduced;
@@ -162,13 +165,15 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     }
     this.hp = Math.max(0, this.hp - through);
     this.events.emit('player-damaged', source, through);
-    this.timers.hurt(this.clock.now);
-    playSfx(this.scene, 'hurt');
-    feel.shake(100, 0.004);
-    this.controls.rumble(150, 0.4, 0.7);
-    const away = new Phaser.Math.Vector2(this.x - fromX, this.y - fromY).normalize().scale(120);
-    this.setVelocity(away.x, away.y);
-    this.events.emit('player-hurt');
+    if (!options.gentle) {
+      this.timers.hurt(this.clock.now);
+      playSfx(this.scene, 'hurt');
+      feel.shake(100, 0.004);
+      this.controls.rumble(150, 0.4, 0.7);
+      const away = new Phaser.Math.Vector2(this.x - fromX, this.y - fromY).normalize().scale(120);
+      this.setVelocity(away.x, away.y);
+      this.events.emit('player-hurt');
+    }
     const outcome = this.hp <= 0 ? this.knockouts.resolve(() => this.reviver?.() ?? false) : undefined;
     if (outcome === 'secondBlob') this.shrinkInstead();
     else if (outcome === 'revive') this.revive();
@@ -328,6 +333,11 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
       const reach = Math.hypot(this.controls.aimWorldPoint.x - this.x, this.controls.aimWorldPoint.y - this.y);
       const distance = lobDistance({ fromPointer: this.controls.aimFromPointer, distance: reach }, this.weapon.range);
       this.lobHandler?.(this.x, this.y - 2, this.aimDirection.angle(), distance, this.weapon);
+      return;
+    }
+    if (this.weapon.crescent) {
+      sendWave(this.projectiles, this.x, this.y - 2, this.aimDirection.angle(), this.weapon, [], CRESCENT, this.weapon.activeTwist === 'boneRise');
+      playSfx(this.scene, 'shoot');
       return;
     }
     const bolt = fireProjectile(

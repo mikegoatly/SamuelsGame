@@ -22,6 +22,7 @@ import { withRevive } from '../logic/campPurchases';
 import { feel } from '../systems/feel';
 import { GameClock } from '../systems/GameClock';
 import { HeroSystem } from '../systems/HeroSystem';
+import { BurnSystem } from '../systems/BurnSystem';
 import { JavelinSystem } from '../systems/JavelinSystem';
 import { SludgeSystem } from '../systems/SludgeSystem';
 import { HeroUnlocks } from '../systems/HeroUnlocks';
@@ -149,7 +150,6 @@ export class GameScene extends Phaser.Scene {
     const worn = save.accessories.worn.head;
     player.wearHead(worn ? getAccessory(worn)?.frame : undefined);
     player.reviver = () => this.useRevive();
-    new PotionSystem(this, player, saveSystem);
     player.slowZones = map.slowZones;
     const enemies = (this.enemies = this.physics.add.group({ allowGravity: false }));
     const lookups = [walls, ...map.solid].map((layer) => (x: number, y: number) => layer.getTileAtWorldXY(x, y));
@@ -168,7 +168,9 @@ export class GameScene extends Phaser.Scene {
     const director = (this.director = this.createDirector(map, player, factory, events, blockedByRects(avoid, isSolid)));
     const skills = new SkillSystem({ scene: this, player, enemies, shots, clock: this.clock, isSolid, save: saveSystem, events });
     new HeroSystem({ scene: this, player, enemies, shots, clock: this.clock, isSolid }, events);
-    if (player.weapon.javelin) new JavelinSystem({ scene: this, player, enemies, shots, clock: this.clock, isSolid });
+    const burn = new BurnSystem({ scene: this, player, enemies, shots, clock: this.clock, isSolid }, events);
+    new PotionSystem(this, player, saveSystem, burn);
+    if (player.weapon.javelin) new JavelinSystem({ scene: this, player, enemies, shots, clock: this.clock, isSolid }, burn);
     if (player.weapon.lob) new SludgeSystem({ scene: this, player, enemies, shots, clock: this.clock, isSolid });
     this.unlocks = new HeroUnlocks(this, player, events, saveSystem, player.hero.id, this.level.id, this.level.bossId, (ids) => this.announceHeroes(ids));
     this.acquisition = new SkillAcquisition(this, saveSystem, skills, this.cards);
@@ -177,7 +179,7 @@ export class GameScene extends Phaser.Scene {
     new MeleeSystem({ scene: this, player, enemies, shots, projectiles, isSolid });
     if (map.spikes.length > 0) new SpikeSystem(this, player, this.clock, map.spikes);
     if (map.channels.length > 0) new ChannelSystem(this, player, enemies, this.clock, map.channels);
-    if (map.world && map.world.active.length > 0) new HazardDirector({ scene: this, player, enemies, clock: this.clock, isSolid }, map.world, events);
+    if (map.world && map.world.active.length > 0) new HazardDirector({ scene: this, player, enemies, clock: this.clock, isSolid, burn }, map.world, events);
 
     this.addColliders(map, player, enemies, projectiles, shots);
     registerBoltHits(this, projectiles, enemies, player);

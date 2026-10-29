@@ -79,9 +79,9 @@ describe('weapons', () => {
     expect(brokenWand.kind).toBe('ranged');
     expect(apprenticeStaff.kind).toBe('ranged');
     expect(goldenSword.melee).toMatchObject({ reach: 28 });
-    expect(goldenSword.melee!.arc).toBeCloseTo((100 * Math.PI) / 180);
-    expect(goldenSword.fireRateMs).toBe(500);
-    expect(goldenSword.baseDamage / brokenWand.baseDamage).toBeCloseTo(2.2);
+    expect(goldenSword.melee!.arc).toBeCloseTo((110 * Math.PI) / 180);
+    expect(goldenSword.fireRateMs).toBe(450);
+    expect(goldenSword.baseDamage / brokenWand.baseDamage).toBeCloseTo(2.4);
     expect(Object.keys(weapons)).toContain('goldenSword');
   });
 });

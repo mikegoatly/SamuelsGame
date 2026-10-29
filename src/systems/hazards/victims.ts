@@ -15,9 +15,9 @@ export const enemyRadius = (enemy: Enemy): number => enemy.displayWidth * 0.3;
 export const playerAlive = (world: HazardWorld): boolean => !world.player.dead && !world.player.actionsLocked;
 
 /** A fraction of max HP as 'hazard' damage; `from` sets the knockback direction (pass the player's own spot for none). Returns true when the hit landed (hurt or absorbed), false when i-frames or a dash swallowed it. */
-export function hurtPlayer(world: HazardWorld, fraction: number, fromX: number, fromY: number, sfx?: SfxId): boolean {
+export function hurtPlayer(world: HazardWorld, fraction: number, fromX: number, fromY: number, sfx?: SfxId, gentle = false): boolean {
   const { player, scene } = world;
-  const result = player.takeDamage(hazardDamage(player.maxHp, fraction), fromX, fromY, 'hazard');
+  const result = player.takeDamage(hazardDamage(player.maxHp, fraction), fromX, fromY, 'hazard', { gentle });
   if (result === 'none') return false;
   if (sfx && result === 'hurt') playSfx(scene, sfx);
   return true;

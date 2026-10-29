@@ -136,10 +136,13 @@ export class LoadoutScene extends MenuScene {
       const base = getWeapon(this.weapon);
       const level = weaponLevel(saveSystem.data, base.id);
       const weapon = weaponAtLevel(base, level);
-      info.add(this.add.image(14, 14, Tex.tiles, weapon.frame).setScale(2));
+      const icon = this.add.image(14, 14, Tex.tiles, weapon.frame).setScale(2);
+      if (weapon.tint !== null) icon.setTint(weapon.tint);
+      info.add(icon);
       text(36, `${weapon.name}  Lv ${level}/5`, '#ffe066');
       text(56, `Damage ${weapon.baseDamage}`);
-      text(74, weapon.description ?? (weapon.kind === 'melee' ? `${(1000 / weapon.fireRateMs).toFixed(1)} swings/s, hits an arc` : `${(1000 / weapon.fireRateMs).toFixed(1)} shots/s, range ${weapon.range}`));
+      text(74, weapon.kind === 'melee' ? `${(1000 / weapon.fireRateMs).toFixed(1)} swings/s, hits an arc` : `${(1000 / weapon.fireRateMs).toFixed(1)} shots/s, range ${weapon.range}`);
+      if (weapon.description) text(92, weapon.description, '#9a9ab8');
       text(110, knownWeapons(saveSystem.data.weapons.owned).length > 1 ? 'Left/Right or tap to change' : 'Win more weapons from bosses', '#9a9ab8');
       return;
     }

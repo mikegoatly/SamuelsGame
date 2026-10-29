@@ -12,6 +12,7 @@ import type { LootSystem } from '../systems/LootSystem';
 import type { ProgressionSystem } from '../systems/ProgressionSystem';
 import type { LevelDirector } from '../systems/LevelDirector';
 import { MUTE_EVENT } from '../systems/audioSettings';
+import { feel } from '../systems/feel';
 import { saveSystem } from '../systems/SaveSystem';
 import { BossIntro } from '../ui/BossIntro';
 import { gameText } from '../ui/gameText';
@@ -49,6 +50,7 @@ const TIMER_SIZE = 32;
 export class HudScene extends Phaser.Scene {
   private bars!: Phaser.GameObjects.Graphics;
   private hpText!: Phaser.GameObjects.Text;
+  private burnText!: Phaser.GameObjects.Text;
   private levelText!: Phaser.GameObjects.Text;
   private waveText!: Phaser.GameObjects.Text;
   private heroicText?: Phaser.GameObjects.Text;
@@ -98,6 +100,7 @@ export class HudScene extends Phaser.Scene {
     this.bars = this.add.graphics();
     this.levelText = this.makeText(BAR_X, 4, '#ffffff', 16);
     this.hpText = this.makeText(BAR_X + 5, 27, '#ffffff', 16).setOrigin(0, 0.5);
+    this.burnText = this.makeText(BAR_X + BAR_WIDTH + 12, 27, '#ffb347', 16).setOrigin(0, 0.5).setText('Burning!').setStroke('#5a1400', 4).setBackgroundColor('#7a1c08').setPadding(4, 2, 4, 2).setVisible(false);
     this.waveText = this.makeText(0, 4, '#d8d8e8', 16).setOrigin(1, 0);
     this.waveBar = this.add.graphics();
     this.director = director;
@@ -135,6 +138,7 @@ export class HudScene extends Phaser.Scene {
     this.hp = { value: player.hp, max: player.maxHp };
     this.showProgress(progression.progress, progression.xpForNextLevel);
 
+    events.on('burning-changed', (burning) => this.burnText.setVisible(burning));
     events.on('hp-changed', (value, max) => {
       this.hp = { value, max };
       this.drawBars();
@@ -170,6 +174,7 @@ export class HudScene extends Phaser.Scene {
     this.showSurvivalTime();
     this.skillBar.update();
     this.potionSlot.update();
+    if (this.burnText.visible) this.burnText.setAlpha(feel.reduced ? 1 : 0.75 + 0.25 * Math.sin(this.time.now / 110));
   }
 
   /** Bottom-left readout of the basic weapon picked on the loadout screen. */

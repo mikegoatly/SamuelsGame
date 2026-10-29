@@ -1,5 +1,7 @@
 import Phaser from 'phaser';
 import { rectContains } from '../../logic/geometry';
+import type { Enemy } from '../../entities/Enemy';
+import { BURN } from '../../logic/burning';
 import { HAZARD_HITS } from '../../logic/hazard/hits';
 import { Cooldowns } from '../../logic/hazard/victims';
 import type { ActiveHazardSpec } from '../../logic/tiledObjects';
@@ -17,6 +19,7 @@ export class FirePit extends HazardBase {
   private readonly ticks = new Cooldowns<unknown>();
   private readonly flames: Emitter;
   private readonly carry = { value: 0 };
+  private occupants = new Set<unknown>();
 
   constructor(world: HazardWorld, spec: ActiveHazardSpec) {
     super(world, spec);
@@ -52,11 +55,30 @@ export class FirePit extends HazardBase {
     this.burn(now);
   }
 
+  /** Standing in the pit, only the pit's own tick applies; the burn starts (and keeps refreshing) once the target steps out, so the fire lingers. */
   private burn(now: number): void {
-    const { player } = this.world;
+    const { player, burn } = this.world;
     const area = { x: this.rect.x - 1, y: this.rect.y - 1, w: this.rect.w + 2, h: this.rect.h + 2 };
-    if (playerAlive(this.world) && rectContains(area, player)) this.ticks.tryTake('player', now, TICK_MS, () => hurtPlayer(this.world, PLAYER_TICK, player.x, player.y));
-    for (const enemy of hazardTargets(this.world)) if (rectContains(area, enemy) && this.ticks.take(enemy, now, TICK_MS)) dotEnemy(enemy, ENEMY_TICK, '#ff9a3c', 0xff8a3c);
+    const inside = new Set<unknown>();
+    if (playerAlive(this.world) && rectContains(area, player)) {
+      inside.add(player);
+      this.ticks.tryTake('player', now, TICK_MS, () => hurtPlayer(this.world, PLAYER_TICK, player.x, player.y));
+      burn?.hold(player);
+    }
+    for (const enemy of hazardTargets(this.world)) {
+      if (!rectContains(area, enemy)) continue;
+      inside.add(enemy);
+      if (this.ticks.take(enemy, now, TICK_MS)) dotEnemy(enemy, ENEMY_TICK, '#ff9a3c', 0xff8a3c);
+      burn?.hold(enemy);
+    }
+    for (const was of this.occupants) if (!inside.has(was)) this.leave(was);
+    this.occupants = inside;
+  }
+
+  private leave(who: unknown): void {
+    const { burn, player } = this.world;
+    if (who === player) burn?.ignitePlayer();
+    else burn?.igniteEnemy(who as Enemy, { fraction: BURN.pitEnemyFraction });
   }
 
   private paint(glow: number, lit: boolean): void {

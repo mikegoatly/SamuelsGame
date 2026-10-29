@@ -36,8 +36,11 @@ weights, monster level range, boss id, reward id, unlock requirement (previous l
 
 - Stats: HP, move speed, level, XP, dash (cooldown), inventory.
 - Weapons (`content/weapons.ts`, `kind: 'ranged' | 'melee'`): Apprentice Staff -> Broken Wand -> Golden Sword; the basic weapon is chosen on the loadout screen, skills work with any of them.
-  Golden Sword: base 22 (2.2x a wand bolt), swing every 350ms, ~100 degree cone, reach 28px to the target's body edge, each enemy hit once per
-  swing (`logic/melee.ts`, angle-wrap safe), knockback 1.6x, 500ms per swing, and it swats the nearest enemy bolt inside the cone, one per swing (`systems/MeleeSystem`). DPS ~1.1x the wand, plus the cone, and only at close range.
+  Golden Sword (the Mad King's prize, tier 3): base 24, swing every 450ms, 110 degree cone, reach 28px to the target's body edge, each enemy hit once per
+  swing (`logic/melee.ts`, angle-wrap safe), knockback 2x, and it swats the nearest enemy bolt inside the cone, one per swing (`systems/MeleeSystem`). Raw DPS ~1.3x the wand, only at close range.
+  Iron Sword (Sir Brandt's own, tier 2): base 20 every 450ms, a 45 degree stab with 36px reach; its level 5 `sweep` twist makes it a 100 degree swipe at the same 36px (`coneAt` in `logic/weaponTwists.ts`).
+  Bone Staff (Morwen's own, tier 2): base 16 every 420ms, a crescent bolt (about 60 degrees, fades after 120px) that hits every enemy it crosses once (`entities/waveShot.ts`); level 5 `boneRise`: a crescent kill has a 10% chance to raise a lesser skeleton (half bite, 5s, counts toward the cap of 3).
+  Weapon balance is by tier (`tests/weaponBalance.test.ts`): a hero's own weapon is tier 2, a boss or level reward tier 3, the starter tier 1.
   Owned weapons cycle with Q / mouse wheel / gamepad Y, LB, RB / touch swap button (`logic/weaponCycle.ts`, `systems/WeaponSwitcher`); the equipped weapon is saved and shown in the HUD.
 - Weapon damage = `base × (1 + 0.12 × (playerLevel − 1))` × item modifiers.
 

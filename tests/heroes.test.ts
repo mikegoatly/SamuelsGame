@@ -50,7 +50,7 @@ describe('hero content', () => {
 
   it('falls back to the wizard for an unknown id and builds kits', () => {
     expect(getHero('nobody').id).toBe(WIZARD);
-    expect(heroKit('necromancer')).toEqual({ weaponId: 'apprenticeStaff', skillId: 'spiritWolf' });
+    expect(heroKit('necromancer')).toEqual({ weaponId: 'boneStaff', skillId: 'spiritWolf' });
     expect(heroKit('gloop')).toEqual({ weaponId: 'sludgeSlinger', skillId: undefined });
     expect(heroKit('nobody')).toBeUndefined();
   });

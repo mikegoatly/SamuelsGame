@@ -27,12 +27,14 @@ export const skillUpgradeInfo: Readonly<Record<string, UpgradeInfo>> = {
 export const weaponUpgradeInfo: Readonly<Record<string, UpgradeInfo>> = {
   apprenticeStaff: { gem: 'red', tier: 1, twist: 'Bolts pierce 1 enemy' },
   brokenWand: { gem: 'red', tier: 2, twist: 'Bolts split in two on hit' },
+  ironSword: { gem: 'red', tier: 2, twist: 'Stabs become a wide swipe' },
   goldenSword: { gem: 'red', tier: 3, twist: 'Swings send out a slash wave' },
   twinDaggers: { gem: 'green', tier: 2, twist: 'Every 4th swing throws a dagger' },
-  hammer: { gem: 'red', tier: 3, twist: 'Slams send a shockwave ring' },
+  hammer: { gem: 'red', tier: 2, twist: 'Slams send a shockwave ring' },
   bow: { gem: 'green', tier: 2, twist: 'Full draws loose 3 arrows' },
   fists: { gem: 'blue', tier: 2, twist: 'The 3rd punch sends a force wave' },
-  sludgeSlinger: { gem: 'green', tier: 2, twist: 'Puddles also poison' },
+  sludgeSlinger: { gem: 'green', tier: 3, twist: 'Puddles also poison' },
+  boneStaff: { gem: 'blue', tier: 2, twist: 'Crescent kills may rise as skeletons' },
   javelin: { gem: 'red', tier: 3, twist: 'The stuck javelin bursts' },
 };
 

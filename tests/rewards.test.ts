@@ -27,7 +27,7 @@ describe('rewardsOf', () => {
 
 describe('rewards that are not equipped automatically', () => {
   it('the sewer grants the Javelin with a note to equip it on the Loadout screen', () => {
-    expect(rewardsOf(sewer)).toMatchObject([{ kind: 'weapon', id: 'javelin', headline: 'Javelin acquired!', note: 'Equip it on the Loadout screen.' }]);
+    expect(rewardsOf(sewer)).toMatchObject([{ kind: 'weapon', id: 'javelin', headline: 'Burning Javelin acquired!', note: 'Equip it on the Loadout screen.' }]);
   });
 
   it('other levels keep their plain headline and no note', () => {

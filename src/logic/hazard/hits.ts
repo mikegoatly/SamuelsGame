@@ -17,7 +17,7 @@ export const HAZARD_HITS = {
   spikes: { fraction: 0.1, gapMs: 650, duty: 900 / 3200 },
   gasVent: { fraction: 0.035, gapMs: 650, duty: 2800 / 6200 },
   gasPipe: { fraction: 0.035, gapMs: 650, duty: 2800 / 6200 },
-  firePit: { fraction: 0.04, gapMs: 750, duty: 1 },
+  firePit: { fraction: 0.02, gapMs: 750, duty: 1 },
   flameJet: { fraction: 0.1, gapMs: 1000, duty: 1000 / 4200 },
   pendulum: { fraction: 0.08, gapMs: 1400, duty: 1 },
 } satisfies Record<string, HazardHit>;

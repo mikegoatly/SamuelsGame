@@ -112,3 +112,27 @@ export interface Kill {
 
 export const risesAgain = (fx: PassiveEffects, rng: () => number, kill: Kill): boolean =>
   fx.riseChance > 0 && !kill.boss && !kill.byAlly && kill.live < MAX_SKELETONS && rng() < fx.riseChance;
+
+/** Bone Staff level 5: a crescent kill may raise a lesser skeleton (shares the cap of 3 and one roll with Risen Dead). */
+export const BONE_RISE = { chance: 0.1, durationMs: 5000, biteScale: 0.5 } as const;
+
+/** Full skeleton parameters (Risen Dead). */
+export const SKELETON = { durationMs: 8000, biteDamage: 8, biteEveryMs: 700 } as const;
+/** Lesser skeleton: half the bite, 5s instead of 8s (skeletons have no health, so the bite and the time are their strength). */
+export const LESSER_SKELETON = { durationMs: BONE_RISE.durationMs, biteDamage: SKELETON.biteDamage * BONE_RISE.biteScale, biteEveryMs: SKELETON.biteEveryMs } as const;
+
+export interface RiseKill extends Kill {
+  /** The killing blow was a Bone Staff crescent whose boneRise twist is active. */
+  crescent: boolean;
+}
+
+export type Rising = 'none' | 'full' | 'lesser';
+
+/** One roll per kill: under Risen Dead's chance a full skeleton rises, and a crescent kill adds the Bone Staff's chance on top for a lesser one. Bosses, ally kills and a full cap never raise anything. */
+export function risingFor(fx: PassiveEffects, rng: () => number, kill: RiseKill): Rising {
+  const bone = kill.crescent ? BONE_RISE.chance : 0;
+  if (fx.riseChance + bone <= 0 || kill.boss || kill.byAlly || kill.live >= MAX_SKELETONS) return 'none';
+  const roll = rng();
+  if (roll < fx.riseChance) return 'full';
+  return roll < fx.riseChance + bone ? 'lesser' : 'none';
+}

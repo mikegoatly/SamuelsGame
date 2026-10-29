@@ -8,7 +8,7 @@ export interface GameEventMap {
   'level-up': [level: number];
   'hp-changed': [hp: number, maxHp: number];
   'wave-started': [wave: number];
-  'enemy-died': [level: number, x: number, y: number, lootTableId: string, boss: boolean, byAlly: boolean, elite: boolean];
+  'enemy-died': [level: number, x: number, y: number, lootTableId: string, boss: boolean, byAlly: boolean, elite: boolean, crescent: boolean];
   'coins-changed': [total: number];
   'gems-changed': [gems: Gems];
   'room-started': [order: number, total: number];
@@ -26,6 +26,8 @@ export interface GameEventMap {
   /** A potion (carried or picked up) actually healed. */
   'potion-used': [];
   'player-died': [];
+  /** The hero caught fire or was put out. */
+  'burning-changed': [burning: boolean];
 }
 
 /** Small typed wrapper over a Phaser emitter, shared by the game and HUD scenes. */

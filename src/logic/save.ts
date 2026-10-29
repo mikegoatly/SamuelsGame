@@ -8,8 +8,10 @@ import { getAccessory, crownFor, type AccessorySlot } from '../content/accessori
 import { isHeroicUnlocked, type LevelMode } from './heroic';
 import { emptySlots, equipInSlot, firstEmptySlot, sanitizeSlots, type Loadout } from './loadout';
 
-/** v11: `secrets`. v10: `survival`. v9: `levels.heroic`, `levels.mode`, `accessories`. v8: `heroes` + `stats`. v7: `gems` replace `charms`; `potions`, `revive`, `shop`, `weapons.levels` added. v6: `skills` + `loadout` replace `powers` and `weapons.equipped`. v5: `seen` + `itemCards`; v4: volumes + reduceShake; v2: `settings`. Older saves load through the same tolerant parse. */
-export const SAVE_VERSION = 11;
+/** v12: unlocked heroes own their signature weapon (the Knight's Iron Sword, the Necromancer's Bone Staff); nothing is removed, so a Golden Sword stays owned and equipped. v11: `secrets`. v10: `survival`. v9: `levels.heroic`, `levels.mode`, `accessories`. v8: `heroes` + `stats`. v7: `gems` replace `charms`; `potions`, `revive`, `shop`, `weapons.levels` added. v6: `skills` + `loadout` replace `powers` and `weapons.equipped`. v5: `seen` + `itemCards`; v4: volumes + reduceShake; v2: `settings`. Older saves load through the same tolerant parse. */
+export const SAVE_VERSION = 12;
+/** First version where every unlocked hero already owns their signature weapon. */
+const KIT_WEAPONS_VERSION = 12;
 /** Gems a level's first Heroic clear pays: one full 3-to-4 item upgrade of every colour. */
 export const HEROIC_CLEAR_GEMS: Gems = { red: 3, green: 3, blue: 3 };
 /** First version that stores `gems` instead of `charms`. */
@@ -205,7 +207,7 @@ function parseWeaponLevels(value: unknown, owned: readonly string[]): Record<str
 }
 
 /** Tolerant: junk, partial or old data falls back to defaults field by field; never throws. */
-export function parseSave(json: string | null | undefined, legacyRewards: LegacySkillRewards = {}, isKnownSkill: (id: string) => boolean = () => true, isKnownHero: (id: string) => boolean = () => true): SaveData {
+export function parseSave(json: string | null | undefined, legacyRewards: LegacySkillRewards = {}, isKnownSkill: (id: string) => boolean = () => true, isKnownHero: (id: string) => boolean = () => true, signatureWeaponOf: (heroId: string) => string | undefined = () => undefined): SaveData {
   const save = defaultSave();
   let raw: unknown;
   try {
@@ -251,7 +253,18 @@ export function parseSave(json: string | null | undefined, legacyRewards: Legacy
   save.seen = strings(raw.seen).map((id) => LEGACY_CARD_IDS[id] ?? id);
   const converted = !(typeof raw.version === 'number' && raw.version >= GEMS_VERSION) && totalGems(save.gems) > 0 && !save.seen.includes(CHARMS_NOTICE);
   save.pendingNotices = [...new Set([...strings(raw.pendingNotices).filter((id) => !save.seen.includes(id)), ...(converted ? [CHARMS_NOTICE] : [])])];
-  return parseSkills(save, raw, legacyRewards, isKnownSkill);
+  const parsed = parseSkills(save, raw, legacyRewards, isKnownSkill);
+  return typeof raw.version === 'number' && raw.version >= KIT_WEAPONS_VERSION ? parsed : grantSignatureWeapons(parsed, signatureWeaponOf);
+}
+
+/** Migration: owns the signature weapon of every unlocked hero without equipping it or touching what is already owned. */
+function grantSignatureWeapons(save: SaveData, signatureWeaponOf: (heroId: string) => string | undefined): SaveData {
+  let next = save;
+  for (const id of save.heroes.unlocked) {
+    const weaponId = signatureWeaponOf(id);
+    if (weaponId) next = grantWeapon(next, weaponId, false);
+  }
+  return next;
 }
 
 /** Reads `skills` and `loadout`; saves older than v6 convert unlocked powers and the equipped weapon, and collect the rewards of cleared levels. */

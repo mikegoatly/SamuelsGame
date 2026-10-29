@@ -5,6 +5,7 @@ import type { Enemy } from '../entities/Enemy';
 import type { EnemyProjectile, EnemyProjectiles } from '../entities/EnemyProjectile';
 import type { Player } from '../entities/Player';
 import { fireProjectile } from '../entities/Projectile';
+import { sendWave } from '../entities/waveShot';
 import { ComboCycle, type ComboStep } from '../logic/comboCycle';
 import { damageToEnemy } from '../logic/combat';
 import { lineClear } from '../logic/lineOfSight';
@@ -17,13 +18,6 @@ import { playSfx } from './sfx';
 
 const DEFLECT_PADDING = 6;
 const OPENING: ComboStep = { step: 0, last: false };
-
-interface WaveShape {
-  damageScale: number;
-  speed: number;
-  range: number;
-  scale: { x: number; y: number };
-}
 
 interface Swing {
   x: number;
@@ -100,10 +94,10 @@ export class MeleeSystem {
     const alreadyHit = swing.hits.map((i) => swing.targets[i]);
     switch (weapon.activeTwist) {
       case 'wave':
-        this.sendWave(x, y, aim, weapon, alreadyHit, { ...WAVE, scale: { x: 2.6, y: 1.6 } });
+        sendWave(this.o.projectiles, x, y, aim, weapon, alreadyHit, { ...WAVE, scale: { x: 2.6, y: 1.6 } });
         break;
       case 'forceWave':
-        if (combo.last) this.sendWave(x, y, aim, weapon, alreadyHit, { ...FORCE_WAVE, scale: { x: 1.6, y: 2.2 } });
+        if (combo.last) sendWave(this.o.projectiles, x, y, aim, weapon, alreadyHit, { ...FORCE_WAVE, scale: { x: 1.6, y: 2.2 } });
         break;
       case 'daggerThrow':
         if (combo.last) this.throwDagger(x, y, aim, weapon);
@@ -115,19 +109,7 @@ export class MeleeSystem {
     }
   }
 
-  /** Level 5 twist: a wave flies on from the swing, hurting what it reaches once. */
-  private sendWave(x: number, y: number, aim: number, weapon: WeaponDef, alreadyHit: readonly unknown[], shape: WaveShape): void {
-    const direction = new Phaser.Math.Vector2(Math.cos(aim), Math.sin(aim));
-    const wave: WeaponDef = { ...weapon, kind: 'ranged', speed: shape.speed, range: shape.range, activeTwist: undefined, projectileFrame: undefined };
-    fireProjectile(this.o.projectiles, x + direction.x * 14, y + direction.y * 14, direction, wave, {
-      damageScale: shape.damageScale,
-      pierce: Infinity,
-      skip: alreadyHit,
-      scale: shape.scale,
-    });
-  }
-
-  private throwDagger(x: number, y: number, aim: number, weapon: WeaponDef): void {
+    private throwDagger(x: number, y: number, aim: number, weapon: WeaponDef): void {
     const direction = new Phaser.Math.Vector2(Math.cos(aim), Math.sin(aim));
     const thrown: WeaponDef = { ...weapon, kind: 'ranged', speed: DAGGER_THROW.speed, range: DAGGER_THROW.range, activeTwist: undefined };
     fireProjectile(this.o.projectiles, x + direction.x * 12, y + direction.y * 12, direction, thrown, {
