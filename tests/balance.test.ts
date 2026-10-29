@@ -194,11 +194,11 @@ describe('golden sword balance', () => {
     sword: damageToEnemy(goldenSword.baseDamage, level, level) * (1000 / goldenSword.fireRateMs),
   });
 
-  it('has higher single-target DPS than the wand at every palace level, but only within a short reach', () => {
+  it('has only slightly higher single-target DPS than the wand at every palace level (its edge is the cone and the shove), and only within a short reach', () => {
     for (let level = 9; level <= 15; level++) {
       const { wand, sword } = dpsAtGap0(level);
-      expect(sword / wand, `level ${level}`).toBeGreaterThan(1.3);
-      expect(sword / wand, `level ${level}`).toBeLessThan(2);
+      expect(sword / wand, `level ${level}`).toBeGreaterThan(1);
+      expect(sword / wand, `level ${level}`).toBeLessThan(1.3);
     }
     expect(goldenSword.melee!.reach).toBeLessThan(brokenWand.range / 5);
   });

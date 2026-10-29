@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { inCone, meleeHits, radialHits, type MeleeCone } from '../src/logic/melee';
+import { inCone, meleeHits, nearestInCone, radialHits, type MeleeCone } from '../src/logic/melee';
 
 const cone: MeleeCone = { arc: (100 * Math.PI) / 180, reach: 28 };
 const origin = { x: 0, y: 0 };
@@ -50,5 +50,26 @@ describe('radialHits', () => {
 
   it('can leave out enemies already struck', () => {
     expect(radialHits(origin, 30, [at(5, 0), at(10, 0), at(0, 10)], [1])).toEqual([0, 2]);
+  });
+});
+
+describe('nearestInCone', () => {
+  it('wraps the angle: aiming at pi finds the nearer of bolts either side of the seam', () => {
+    const bolts = [polar(Math.PI - 0.1, 20), polar(-(Math.PI - 0.1), 10)];
+    expect(nearestInCone(origin, Math.PI, cone, bolts)).toBe(1);
+    expect(nearestInCone(origin, Math.PI, cone, [...bolts].reverse())).toBe(0);
+  });
+
+  it.each([
+    ['the closer of two bolts in the cone', [polar(0, 20), polar(0.2, 10)], 1],
+    ['the only bolt in the cone', [polar(Math.PI, 5), polar(0.3, 22)], 1],
+    ['the first of two equally near', [polar(0.1, 15), polar(-0.1, 15)], 0],
+    ['nothing when all are behind or out of reach', [polar(Math.PI, 5), polar(0, 60)], -1],
+    ['nothing when there are no bolts', [], -1],
+    ['a farther bolt inside the cone over a nearer one outside it', [polar(1.5, 8), polar(0.1, 25)], 1],
+    ['a bolt exactly at reach', [polar(0, cone.reach)], 0],
+    ['nothing just past reach', [polar(0, cone.reach + 0.5)], -1],
+  ])('picks %s', (_, bolts, expected) => {
+    expect(nearestInCone(origin, 0, cone, bolts)).toBe(expected);
   });
 });

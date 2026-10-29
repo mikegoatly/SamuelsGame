@@ -37,7 +37,7 @@ weights, monster level range, boss id, reward id, unlock requirement (previous l
 - Stats: HP, move speed, level, XP, dash (cooldown), inventory.
 - Weapons (`content/weapons.ts`, `kind: 'ranged' | 'melee'`): Apprentice Staff -> Broken Wand -> Golden Sword; the basic weapon is chosen on the loadout screen, skills work with any of them.
   Golden Sword: base 22 (2.2x a wand bolt), swing every 350ms, ~100 degree cone, reach 28px to the target's body edge, each enemy hit once per
-  swing (`logic/melee.ts`, angle-wrap safe), knockback 2.4x, and it swats enemy bolts inside the cone (`systems/MeleeSystem`). DPS ~1.57x the wand but only at close range.
+  swing (`logic/melee.ts`, angle-wrap safe), knockback 1.6x, 500ms per swing, and it swats the nearest enemy bolt inside the cone, one per swing (`systems/MeleeSystem`). DPS ~1.1x the wand, plus the cone, and only at close range.
   Owned weapons cycle with Q / mouse wheel / gamepad Y, LB, RB / touch swap button (`logic/weaponCycle.ts`, `systems/WeaponSwitcher`); the equipped weapon is saved and shown in the HUD.
 - Weapon damage = `base × (1 + 0.12 × (playerLevel − 1))` × item modifiers.
 

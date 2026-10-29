@@ -86,18 +86,18 @@ export const brokenWand: WeaponDef = {
   twist: 'split',
 };
 
-/** Sweeping melee weapon: hits everything in a ~100 degree cone once per swing, hits hard, knocks back and swats bolts. */
+/** Sweeping melee weapon: hits everything in a ~100 degree cone once per swing, hits hard, knocks back and swats one bolt per swing. */
 export const goldenSword: WeaponDef = {
   id: 'goldenSword',
   kind: 'melee',
   name: 'Golden Sword',
   frame: Frame.sword,
   baseDamage: 22,
-  fireRateMs: 350,
+  fireRateMs: 500,
   speed: 0,
   range: 28,
   tint: 0xffd84a,
-  melee: { arc: (100 * Math.PI) / 180, reach: 28, knockback: 2.4, swingMs: 160 },
+  melee: { arc: (100 * Math.PI) / 180, reach: 28, knockback: 1.6, swingMs: 160 },
   twist: 'wave',
 };
 
@@ -124,12 +124,12 @@ export const hammer: WeaponDef = {
   kind: 'melee',
   name: 'Hammer',
   frame: Frame.hammer,
-  baseDamage: 45,
-  fireRateMs: 700,
+  baseDamage: 32,
+  fireRateMs: 900,
   speed: 0,
   range: 30,
   tint: null,
-  melee: { arc: (140 * Math.PI) / 180, reach: 30, knockback: 4.5, swingMs: 260, shake: 0.006, colour: 0xd9c9b0 },
+  melee: { arc: (140 * Math.PI) / 180, reach: 30, knockback: 3, swingMs: 260, shake: 0.006, colour: 0xd9c9b0 },
   twist: 'shockwave',
   description: 'Slow, wide, heavy blows that shove',
 };

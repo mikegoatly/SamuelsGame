@@ -8,7 +8,7 @@ import { fireProjectile } from '../entities/Projectile';
 import { ComboCycle, type ComboStep } from '../logic/comboCycle';
 import { damageToEnemy } from '../logic/combat';
 import { lineClear } from '../logic/lineOfSight';
-import { inCone, meleeHits, radialHits, type MeleeCone, type MeleeTarget } from '../logic/melee';
+import { meleeHits, nearestInCone, radialHits, type MeleeCone, type MeleeTarget } from '../logic/melee';
 import { DAGGER_THROW, FORCE_WAVE, SHOCKWAVE, WAVE } from '../logic/weaponTwists';
 import { BowSystem } from './BowSystem';
 import { feel } from './feel';
@@ -45,7 +45,7 @@ export interface MeleeOptions {
   isSolid: (x: number, y: number) => boolean;
 }
 
-/** Resolves melee swings (sword, daggers, hammer, fists): one cone test per swing hurts each enemy once, swats enemy bolts away and draws the strike. Also hosts the bow. */
+/** Resolves melee swings (sword, daggers, hammer, fists): one cone test per swing hurts each enemy once, swats the nearest enemy bolt away and draws the strike. Also hosts the bow. */
 export class MeleeSystem {
   private readonly cycles = new Map<string, ComboCycle>();
 
@@ -147,14 +147,13 @@ export class MeleeSystem {
     playSfx(this.o.scene, 'slam', { volume: 0.6 });
   }
 
+  /** Swats the nearest enemy bolt in the cone: one per swing, so a volley still gets through. */
   private deflect(origin: { x: number; y: number }, aim: number, cone: MeleeCone): boolean {
-    let any = false;
-    for (const bolt of this.o.shots.group.getChildren() as EnemyProjectile[]) {
-      if (!bolt.active || !inCone(origin, aim, cone, bolt) || !lineClear(origin, bolt, this.o.isSolid)) continue;
-      bolt.kill();
-      any = true;
-      sparkFx(this.o.scene, bolt.x, bolt.y);
-    }
-    return any;
+    const bolts = (this.o.shots.group.getChildren() as EnemyProjectile[]).filter((b) => b.active && lineClear(origin, b, this.o.isSolid));
+    const bolt = bolts[nearestInCone(origin, aim, cone, bolts)];
+    if (!bolt) return false;
+    bolt.kill();
+    sparkFx(this.o.scene, bolt.x, bolt.y);
+    return true;
   }
 }

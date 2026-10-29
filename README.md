@@ -120,7 +120,7 @@ Every hazard is telegraphed, hurts monsters too (lure them in; bosses are immune
 Boss arenas get one: rubble (Ruins), gentle wind (Desert), north-wall flame jets (Palace). Hazards stop when the run ends. Counts per room live in `MapTheme.hazards` (`tools/mapThemes.ts`).
 
 The Mad King (Lv 15) lunges along a red lane, fires spinning blade rings, calls guards and, below 50% HP, teleports between thrones and fires spirals.
-Reward: the Golden Sword, a melee weapon (~100 degree swing, hits everything in the arc once, strong knockback, swats enemy bolts). It also teaches Chain Lightning. After clearing the palace a locked "???" card teases the next chapter. Music: `palace.mp3` and `boss-palace.mp3` (copied by `copy-assets`).
+Reward: the Golden Sword, a melee weapon (~100 degree swing, hits everything in the arc once, knockback, swats one enemy bolt per swing). It also teaches Chain Lightning. After clearing the palace a locked "???" card teases the next chapter. Music: `palace.mp3` and `boss-palace.mp3` (copied by `copy-assets`).
 
 ## Skills and loadout (v2 phase 1)
 

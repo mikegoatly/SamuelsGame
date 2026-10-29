@@ -32,6 +32,20 @@ export function meleeHits(origin: Point, aim: number, cone: MeleeCone, targets: 
 /** True when a point (e.g. an enemy bolt) lies inside the cone. */
 export const inCone = (origin: Point, aim: number, cone: MeleeCone, p: Point): boolean => meleeHits(origin, aim, cone, [{ ...p, reach: 0 }]).length === 1;
 
+/** Index of the point inside the cone nearest the origin (the first on a tie), or -1 when none is. */
+export function nearestInCone(origin: Point, aim: number, cone: MeleeCone, points: readonly Point[]): number {
+  let best = -1;
+  let bestDistance = Infinity;
+  points.forEach((p, index) => {
+    const distance = Math.hypot(p.x - origin.x, p.y - origin.y);
+    if (distance < bestDistance && inCone(origin, aim, cone, p)) {
+      best = index;
+      bestDistance = distance;
+    }
+  });
+  return best;
+}
+
 /** Indices of targets whose body touches a circle (a shockwave), skipping the `except` indices. */
 export function radialHits(center: Point, radius: number, targets: readonly MeleeTarget[], except: readonly number[] = []): number[] {
   const skip = new Set(except);

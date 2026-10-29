@@ -32,7 +32,8 @@ describe('new basic weapons', () => {
   });
 
   it('the hammer is slow, wide and shoves hard', () => {
-    expect(hammer.fireRateMs).toBe(700);
+    expect(hammer.fireRateMs).toBe(900);
+    for (const other of weaponList.filter((w) => w.melee && w.id !== 'hammer')) expect(hammer.fireRateMs, other.id).toBeGreaterThan(other.fireRateMs);
     expect(hammer.melee!.arc).toBeCloseTo((140 * Math.PI) / 180);
     expect(hammer.melee!.knockback).toBeGreaterThan(goldenSword.melee!.knockback);
     expect(hammer.melee!.shake).toBeGreaterThan(0);
@@ -64,12 +65,12 @@ describe('new weapon balance', () => {
     }
   });
 
-  it('the hammer matches the golden sword for DPS but swings far less often', () => {
+  it('the hammer has lower raw DPS than the golden sword (it makes up for it with a wide cone and a big shove) and swings far less often', () => {
     for (const level of [1, 5]) {
-      expect(ratio(hammer, goldenSword, level), `L${level}`).toBeGreaterThan(0.9);
-      expect(ratio(hammer, goldenSword, level), `L${level}`).toBeLessThan(1.15);
+      expect(ratio(hammer, goldenSword, level), `L${level}`).toBeGreaterThan(0.7);
+      expect(ratio(hammer, goldenSword, level), `L${level}`).toBeLessThan(0.95);
     }
-    expect(hammer.baseDamage).toBeGreaterThan(goldenSword.baseDamage * 1.8);
+    expect(hammer.baseDamage).toBeGreaterThan(goldenSword.baseDamage * 1.3);
   });
 
   it('spamming bow taps is clearly worse than drawing fully', () => {

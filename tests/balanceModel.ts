@@ -3,12 +3,13 @@ import { curveOf, infoOf, DEFAULT_CURVE } from '../src/content/levels/curve';
 import type { LevelConfig } from '../src/content/levels';
 import { items } from '../src/content/items';
 import { lootTables } from '../src/content/lootTables';
-import { getWeapon as baseWeapon, weaponAtLevel } from '../src/content/weapons';
+import { getWeapon as baseWeapon, weaponAtLevel, type WeaponDef } from '../src/content/weapons';
 import { normalBossLevel, heroicBossLevel, heroicLevelRange, heroicRoomRange } from '../src/logic/heroic';
 import { damageToEnemy, damageToPlayer, enemyMaxHp, playerMaxHp } from '../src/logic/combat';
 import { addLoot, expectedLoot, noLoot, type LootValue } from '../src/logic/lootValue';
 import { addXp } from '../src/logic/progression';
 import { REFLECT_COOLDOWN_MS } from '../src/logic/reflect';
+import { cleaveFactor, weaponProfile, type WeaponProfile } from './weaponProfile';
 import { mulberry32 } from '../src/logic/rng';
 import { planWave, wavesInRoom, type LevelCurve, type WaveSpawn } from '../src/logic/waveMix';
 import { MARKER_MS } from '../src/logic/spawnMarker';
@@ -32,9 +33,18 @@ export interface Reference {
   dodge: number;
   /** Weapon upgrade level; 1 when missing. */
   weaponLevel?: number;
+  /** Overrides on the weapon's derived profile (to switch single factors off in comparisons). */
+  profile?: Partial<WeaponProfile>;
 }
 
 const getWeapon = (ref: Reference) => weaponAtLevel(baseWeapon(ref.weaponId), ref.weaponLevel ?? 1);
+
+/** What the weapon adds beyond damage times rate (multi-hit, knockback, bolt swatting, walking in); neutral for the default wand. Hero passives are not modelled. */
+const profileOf = (ref: Reference): WeaponProfile => ({ ...weaponProfile(getWeapon(ref), ref.accuracy), ...ref.profile });
+
+/** Damage per second against one target at the given levels, skills and walking-in time included. */
+const attackDps = (weapon: WeaponDef, profile: WeaponProfile, ref: Reference, playerLevel: number, monsterLevel: number, shield?: EnemyDef['shield']): number =>
+  damageToEnemy(weapon.baseDamage, playerLevel, monsterLevel) * (profile.rawDps / weapon.baseDamage) * profile.accuracy * profile.uptime * ref.skillBoost * (shield ? (1 + (1 - shield.reduction)) / 2 : 1);
 
 export const REFERENCE: Reference = { weaponId: 'brokenWand', accuracy: 0.6, skillBoost: 1.25, dodge: 0.5 };
 
@@ -97,6 +107,10 @@ const HIT_RATE: Record<string, number> = {
 
 /** Slow bodies are easy to kite, so they catch a moving player less often than fast ones. */
 const catchUp = (def: EnemyDef): number => Math.min(1, Math.max(0.35, def.speed / 60));
+
+/** Monsters whose damage arrives as bolts a melee swing can swat. */
+const BOLT_KINDS: readonly string[] = ['archer', 'wisp', 'necromancer', 'turret', 'priest'];
+const throwsBolts = (def: EnemyDef): boolean => def.behaviour === 'ranged' || def.behaviour === 'mage' || BOLT_KINDS.includes(def.custom ?? '');
 
 const rateOf = (def: EnemyDef): number => {
   if (def.behaviour === 'ranged' || def.behaviour === 'mage') return ((def.spread?.count ?? 1) * BOLT_RATE) / ((def.fireEveryMs ?? 2500) / 1000);
@@ -165,8 +179,8 @@ function expand(spawns: WaveSpawn[]): MonsterShot[] {
 }
 
 /** Bolts thrown back by a mirror: half the shots meet its front, at most one reflection per cooldown. */
-function reflectedPerSecond(def: EnemyDef, level: number, playerLevel: number, ref: Reference, shotsPerSecond: number): number {
-  const reflections = Math.min(shotsPerSecond * ref.accuracy * 0.5, 1000 / Math.max(1, REFLECT_COOLDOWN_MS));
+function reflectedPerSecond(def: EnemyDef, level: number, playerLevel: number, accuracy: number, shotsPerSecond: number): number {
+  const reflections = Math.min(shotsPerSecond * accuracy * 0.5, 1000 / Math.max(1, REFLECT_COOLDOWN_MS));
   return reflections * damageToPlayer(def.baseDamage, level, playerLevel) * def.reflect!.damageScale * BOLT_RATE;
 }
 
@@ -180,9 +194,13 @@ interface Foe {
 }
 
 /** Damage a standing player takes per second from one living monster, plus what it does on death. */
-function threatOf({ def, level }: MonsterShot, playerLevel: number, ref: Reference, shotsPerSecond: number): { perSecond: number; onDeath: number } {
-  let perSecond = CALIBRATION * rateOf(def) * damageToPlayer(def.custom === 'jester' ? def.blastDamage! : def.baseDamage, level, playerLevel);
-  if (def.reflect) perSecond += CALIBRATION * reflectedPerSecond(def, level, playerLevel, ref, shotsPerSecond);
+function threatOf({ def, level }: MonsterShot, playerLevel: number, profile: WeaponProfile, shotsPerSecond: number): { perSecond: number; onDeath: number } {
+  const hits = CALIBRATION * rateOf(def) * damageToPlayer(def.custom === 'jester' ? def.blastDamage! : def.baseDamage, level, playerLevel);
+  const survives = throwsBolts(def) ? 1 - profile.boltsBlocked : 1 - profile.contactAvoided;
+  let perSecond = hits * survives;
+  // Melee fires no bolts (shotsPerSecond 0), so a mirror has nothing to throw back.
+  if (def.reflect && shotsPerSecond > 0) perSecond += CALIBRATION * reflectedPerSecond(def, level, playerLevel, profile.accuracy, shotsPerSecond);
+  perSecond *= 1 + profile.closeIn;
   const blasts = def.custom === 'toad' ? TOAD_CLOUD_TICKS : def.custom === 'beetle' ? 1 : 0;
   const onDeath = blasts > 0 && def.blastDamage ? damageToPlayer(def.blastDamage, level, playerLevel) * blasts * BLAST_CHANCE * CALIBRATION : 0;
   return { perSecond, onDeath };
@@ -194,7 +212,8 @@ function threatOf({ def, level }: MonsterShot, playerLevel: number, ref: Referen
  */
 function roomFight(level: LevelConfig, curve: LevelCurve, order: number, encounter: Encounter, playerLevel: number, ref: Reference, seed: number) {
   const weapon = getWeapon(ref);
-  const shotsPerSecond = 1000 / weapon.fireRateMs;
+  const profile = profileOf(ref);
+  const shotsPerSecond = weapon.melee ? 0 : profile.rawDps / weapon.baseDamage;
   const rng = mulberry32(order * 7919 + seed * 104729);
   const scheduler = new WaveScheduler({
     order,
@@ -209,7 +228,7 @@ function roomFight(level: LevelConfig, curve: LevelCurve, order: number, encount
   const pending: { arriveAt: number; foes: Foe[] }[] = [];
   const spawned: MonsterShot[] = [];
   const hurt = (foe: Foe, until: number): number => {
-    const { perSecond, onDeath } = threatOf(foe.shot, playerLevel, ref, shotsPerSecond);
+    const { perSecond, onDeath } = threatOf(foe.shot, playerLevel, profile, shotsPerSecond);
     return perSecond * (until - foe.arrivedAt) + onDeath;
   };
   let damage = 0;
@@ -224,7 +243,7 @@ function roomFight(level: LevelConfig, curve: LevelCurve, order: number, encount
       if (event.kind !== 'spawn') continue;
       const arriveAt = clock + MARKER_MS / 1000;
       const foes = expand([{ ...event.spawn, role: 'any' }]).map((shot): Foe => {
-        const dps = damageToEnemy(weapon.baseDamage, playerLevel, shot.level) * shotsPerSecond * ref.accuracy * ref.skillBoost * (shot.def.shield ? (1 + (1 - shot.def.shield.reduction)) / 2 : 1);
+        const dps = attackDps(weapon, profile, ref, playerLevel, shot.level, shot.def.shield);
         return { shot, arrivedAt: arriveAt, killSeconds: (enemyMaxHp(shot.def.baseHp, shot.level) * (shot.elite ? 1.3 : 1)) / Math.max(1, dps) };
       });
       pending.push({ arriveAt, foes });
@@ -235,7 +254,7 @@ function roomFight(level: LevelConfig, curve: LevelCurve, order: number, encount
     clock += STEP_S;
     target ??= alive[0];
     if (!target) continue;
-    work += STEP_S;
+    work += STEP_S * cleaveFactor(profile.targetsPerHit, alive.length);
     if (work < target.killSeconds) continue;
     damage += hurt(target, clock);
     xp += xpReward(payLevel(target.shot.level, target.shot.def.xpLevelDrop), playerLevel);
@@ -274,7 +293,7 @@ function bossFightSeconds(level: LevelConfig, playerLevel: number, ref: Referenc
   const weapon = getWeapon(ref);
   const boss = getEnemy(level.bossId!);
   const bossLevel = level.bossLevel ?? 1;
-  const dps = damageToEnemy(weapon.baseDamage, playerLevel, bossLevel) * (1000 / weapon.fireRateMs) * ref.accuracy * ref.skillBoost;
+  const dps = attackDps(weapon, profileOf(ref), ref, playerLevel, bossLevel);
   return enemyMaxHp(boss.baseHp, bossLevel) / dps;
 }
 
@@ -337,7 +356,8 @@ export interface SurvivalEstimate {
 /** Heroic Survival played out on the real director: the oldest monster is killed first, every living one hurts, drops heal, xp raises the hero. Dies when health runs out. */
 export function estimateSurvival(startLevel: number, ref: Reference, source: SurvivalSource, seed: number): SurvivalEstimate {
   const weapon = getWeapon(ref);
-  const shotsPerSecond = 1000 / weapon.fireRateMs;
+  const profile = profileOf(ref);
+  const shotsPerSecond = weapon.melee ? 0 : profile.rawDps / weapon.baseDamage;
   const rng = mulberry32(seed * 7919 + 13);
   const timing = { ...survivalStage(0, startLevel, source).timing };
   let progress = { level: startLevel, xp: 0 };
@@ -367,7 +387,7 @@ export function estimateSurvival(startLevel: number, ref: Reference, source: Sur
       if (event.kind !== 'spawn') continue;
       const arriveAt = clock + MARKER_MS / 1000;
       const foes = expand([{ ...event.spawn, role: 'any' }]).map((shot): Foe => {
-        const dps = damageToEnemy(weapon.baseDamage, progress.level, shot.level) * shotsPerSecond * ref.accuracy * ref.skillBoost * (shot.def.shield ? (1 + (1 - shot.def.shield.reduction)) / 2 : 1);
+        const dps = attackDps(weapon, profile, ref, progress.level, shot.level, shot.def.shield);
         return { shot, arrivedAt: arriveAt, killSeconds: (enemyMaxHp(shot.def.baseHp, shot.level) * (shot.elite ? 1.3 : 1)) / Math.max(1, dps) };
       });
       pending.push({ arriveAt, foes });
@@ -375,14 +395,14 @@ export function estimateSurvival(startLevel: number, ref: Reference, source: Sur
     while (pending.length > 0 && pending[0]!.arriveAt <= clock) alive.push(...pending.shift()!.foes);
     clock += STEP_S;
     let incoming = 0;
-    for (const foe of alive) incoming += threatOf(foe.shot, progress.level, ref, shotsPerSecond).perSecond;
+    for (const foe of alive) incoming += threatOf(foe.shot, progress.level, profile, shotsPerSecond).perSecond;
     hp -= incoming * STEP_S * (1 - ref.dodge);
     if (hp <= 0) return { seconds: clock, stage: stage.index, kills, endLevel: progress.level };
     target ??= alive[0];
     if (!target) continue;
-    work += STEP_S;
+    work += STEP_S * cleaveFactor(profile.targetsPerHit, alive.length);
     if (work < target.killSeconds) continue;
-    hp -= threatOf(target.shot, progress.level, ref, shotsPerSecond).onDeath * (1 - ref.dodge);
+    hp -= threatOf(target.shot, progress.level, profile, shotsPerSecond).onDeath * (1 - ref.dodge);
     const table = lootTables[target.shot.def.lootTableId];
     const heal = table ? expectedLoot(table, coinValue, target.shot.elite, healValue).heal : 0;
     const before = progress.level;
