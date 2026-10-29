@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { gameText } from '../ui/gameText';
-import { Frame, MUSIC_FILES, SHEET_COLS, SKILL_ICON_SOURCES, TILE_SIZE, Tex } from '../content/assetKeys';
+import { Frame, SHEET_COLS, SKILL_ICON_SOURCES, TILE_SIZE, Tex } from '../content/assetKeys';
 import { ROGUE_SPACING } from '../content/sewerFrames';
 import { PROMPT_SIZE } from '../content/inputGlyphs';
 import { skillList } from '../content/skills';
@@ -37,7 +37,6 @@ export class PreloadScene extends Phaser.Scene {
     this.load.image(Tex.star, 'fx/star.png');
     this.load.image(Tex.muzzle, 'fx/muzzle.png');
     this.load.atlasXML(Tex.explosion, 'fx/explosion.png', 'fx/explosion.xml');
-    for (const [key, file] of Object.entries(MUSIC_FILES)) this.load.audio(key, file);
     for (const level of levels) if (level.mapKey) this.load.tilemapTiledJSON(level.mapKey, `maps/${level.mapKey}.tmj`);
   }
 
