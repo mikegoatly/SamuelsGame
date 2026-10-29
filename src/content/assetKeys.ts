@@ -21,6 +21,10 @@ export const Tex = {
   monsters: 'monsters-extra',
   /** Hand-drawn sewer sprites (tools/add_sewer_frames.py, public/assets/extra/sewer-extra.png), 16px tiles, 12 per row. */
   sewer: 'sewer-extra',
+  /** Hand-drawn Crystal Mines sprites (tools/add_mines_frames.py, public/assets/extra/mines-extra.png), 16px tiles, 12 per row. */
+  mines: 'mines-extra',
+  /** Bert the Crystal Golem (public/assets/extra/bert.png), 32px frames, one row. */
+  bert: 'bert',
   /** Hand-drawn wearable crowns (tools/add_accessory_frames.py), 16px frames, one per column. */
   accessories: 'accessories-extra',
   /** Hand-drawn floor props (tools/add_prop_frames.py), 16px frames. */
@@ -153,6 +157,54 @@ export const SewerFrame = {
   gas: [15, 16, 17] as readonly number[],
   spitter: 18,
   spitterFiring: 19,
+} as const;
+
+/** Frames of the hand-drawn Crystal Mines sheet (docs/assets-mines.md). */
+export const MinesFrame = {
+  nabIdle: 0,
+  nabRun: 1,
+  nabHit: 2,
+  nabWave: 3,
+  miner: 4,
+  minerThrow: 5,
+  pickaxe: 6,
+  spider: 7,
+  spiderRear: 8,
+  beetle: 9,
+  beetleGlint: 10,
+  mole: 11,
+  dirtMound: 12,
+  wisp: 13,
+  wispFlicker: 14,
+  pebble: 15,
+  pebbleBlock: 16,
+  crystalBlue: 17,
+  crystalViolet: 18,
+  resonator: 19,
+  pillarTop: 20,
+  spike: 21,
+  stalactite: 22,
+  minecart: 23,
+  gate: [24, 25, 26] as readonly number[],
+  scepter: 27,
+  scepterBolt: 28,
+  stuckShard: 29,
+  encased: 30,
+  shatterShard: 31,
+  pillarBottom: 32,
+} as const;
+
+/** Frames of Bert's 32px sheet. Plate left/right are screen sides (left plate sits on Bert's own right shoulder). */
+export const BertFrame = {
+  body: 0,
+  angry: 1,
+  plateFront: 2,
+  plateBack: 3,
+  plateLeft: 4,
+  plateRight: 5,
+  ball: 6,
+  stunned: 7,
+  rocks: 8,
 } as const;
 
 /** Frames of the hand-drawn prop sheet: the sewer grate is a pit, glowing eyes and bars layered in that order. */

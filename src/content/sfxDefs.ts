@@ -76,6 +76,13 @@ export const SFX_DEFS = {
   splash: { files: variants('splash', 2), volume: 0.4, jitter: 0.08, minGapMs: 100 },
   squelch: { files: variants('squelch', 2), volume: 0.35, jitter: 0.08, minGapMs: 80 },
   bladeSwish: { files: variants('swing', 2), volume: 0.22, rate: 0.6, jitter: 0.08, minGapMs: 500 },
+  rumble: { files: variants('rumble', 2), volume: 0.45, jitter: 0.05, minGapMs: 800 },
+  chime: { files: variants('chime', 2), volume: 0.35, rate: 1.4, jitter: 0.06, minGapMs: 200 },
+  crystalHit: { files: variants('crystalhit', 2), volume: 0.35, jitter: 0.1, minGapMs: 60 },
+  shatter: { files: variants('shatter', 2), volume: 0.45, jitter: 0.08, minGapMs: 80 },
+  crumble: { files: variants('crumble', 2), volume: 0.5, jitter: 0.06, minGapMs: 150 },
+  roll: { files: ['roll_0.ogg'], volume: 0.5, jitter: 0.05, minGapMs: 400 },
+  thwip: { files: variants('thwip', 2), volume: 0.4, rate: 1.3, jitter: 0.08, minGapMs: 120 },
 } as const satisfies Record<string, SfxDef>;
 
 export type SfxId = keyof typeof SFX_DEFS;

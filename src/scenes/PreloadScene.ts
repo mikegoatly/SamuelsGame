@@ -26,6 +26,8 @@ export class PreloadScene extends Phaser.Scene {
     this.load.image(Tex.weaponsExtra, 'extra/weapons-extra.png');
     this.load.spritesheet(Tex.monsters, 'extra/monsters-extra.png', { frameWidth: TILE_SIZE, frameHeight: TILE_SIZE });
     this.load.spritesheet(Tex.sewer, 'extra/sewer-extra.png', { frameWidth: TILE_SIZE, frameHeight: TILE_SIZE });
+    this.load.spritesheet(Tex.mines, 'extra/mines-extra.png', { frameWidth: TILE_SIZE, frameHeight: TILE_SIZE });
+    this.load.spritesheet(Tex.bert, 'extra/bert.png', { frameWidth: TILE_SIZE * 2, frameHeight: TILE_SIZE * 2 });
     this.load.spritesheet(Tex.rogue, 'sewer/roguelike-dungeon.png', { frameWidth: TILE_SIZE, frameHeight: TILE_SIZE, spacing: ROGUE_SPACING });
     this.load.spritesheet(Tex.accessories, 'extra/accessories-extra.png', { frameWidth: TILE_SIZE, frameHeight: TILE_SIZE });
     this.load.spritesheet(Tex.props, 'extra/props-extra.png', { frameWidth: TILE_SIZE, frameHeight: TILE_SIZE });
