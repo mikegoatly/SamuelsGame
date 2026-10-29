@@ -85,3 +85,68 @@ Licences: each pack has its own `License.txt` (CC0).
 
 `docs/assets-mines/`: `roguelike-characters.png`, `roguelike-interior.png`, `monochrome-rpg.png`, `one-bit-legacy.png`,
 `topdown-shooter.png`.
+
+## Hand-drawn mines sprites
+
+Drawn by `tools/add_mines_frames.py` (Pillow only). Contact sheets: `docs/assets-mines/mines-extra.png`,
+`docs/assets-mines/bert.png`, `docs/assets-mines/accessories-extra.png`. Not wired into `assetKeys.ts` yet.
+
+`public/assets/extra/mines-extra.png`: 16px frames, 12 per row (192×48).
+
+| Frame | Sprite | Notes |
+|---|---|---|
+| 0 | Nab, idle | Green goblin, big ears, grin, maroon tunic, brown sack on his right |
+| 1 | Nab, run | Head up 1px, mid-stride, sack lifted |
+| 2 | Nab, hit | Eyes squeezed, open mouth, blue gem popping out top-right |
+| 3 | Nab, wave | Head and raised arm only; bottom 4 rows empty for the gate to cover |
+| 4 | Goblin Miner | Darker goblin, yellow helmet with lamp, grey overalls, fangs |
+| 5 | Goblin Miner, throw | Pickaxe raised behind his head on the left |
+| 6 | Pickaxe (projectile) | Horizontal, head on the right |
+| 7 | Hookjaw Spider | One big eye, crystal-tipped legs, hooked fangs |
+| 8 | Hookjaw Spider, rearing | Front legs up, red pupil (aim telegraph) |
+| 9 | Crystal Beetle | Blue crystal plates, head and eye on the right (faces right) |
+| 10 | Crystal Beetle, glint | Front plates bright white (blocking) |
+| 11 | Rock Mole | Head and claws out of a dark hole |
+| 12 | Dirt mound | Burrow telegraph |
+| 13 | Shard Wisp | Cyan crystal core with eyes, orbiting shards |
+| 14 | Shard Wisp, flicker | Shards in other positions |
+| 15 | Bert's Pebble | Round grey pebble, happy face |
+| 16 | Bert's Pebble, block | Squinting, yellow crack line and spark on the right |
+| 17 | Crystal cluster, blue | Floor decoration on a slate base |
+| 18 | Crystal cluster, violet | Mirror of 17, violet |
+| 19 | Resonating crystal | Bright blue cluster with cyan rings (rings have no outline) |
+| 20 | Crystal pillar, top | Upper half of a 16×32 pillar; frame 32 is directly below |
+| 21 | Crystal spike, small | Violet, Bert phase 3 |
+| 22 | Stalactite | Pointed slate rock with a blue drip |
+| 23 | Minecart | Timber cart with metal rim, crystals inside, two wheels; horizontal |
+| 24-26 | Magic gate | Violet swirl ring, white centre; play 24→25→26 |
+| 27 | Crystal Scepter | Vertical like the other weapons, faceted crystal head on top |
+| 28 | Scepter bolt | Small shard with sparkles |
+| 29 | Stuck shard | Tiny crystal overlay |
+| 30 | Encased | Opaque light-blue block with facet lines; draw it with alpha (~0.6) for a see-through look |
+| 31 | Shatter shard | Particle |
+| 32 | Crystal pillar, bottom | Lower half, slate base |
+
+`public/assets/extra/bert.png`: 32px frames, one row (288×32).
+
+| Frame | Sprite | Notes |
+|---|---|---|
+| 0 | Bert | Grey-blue rock golem, kind eyes, smile, glowing blue heart crystal |
+| 1 | Bert, angry | Slanted brows, red eye glints, frown |
+| 2 | Plate: front (red) | Belly shield below the heart |
+| 3 | Plate: back (yellow) | Spiky crest; only the parts that show around his head and shoulders are drawn, so it reads as behind him |
+| 4 | Plate: left (green) | Screen-left shoulder (Bert's right) |
+| 5 | Plate: right (blue) | Screen-right shoulder (Bert's left) |
+| 6 | Bert rolled up | Boulder ball, heart crystal glinting |
+| 7 | Bert stunned | Spiral eyes, wobbly mouth, dizzy stars |
+| 8 | Happy little rocks | Six smiling pebbles in a pile (ending) |
+
+Plates 2-5 are drawn in the same 32×32 space as frame 0, so place them at the same position as Bert.
+
+`public/assets/extra/accessories-extra.png` frame **5**: Crystal Crown (blue/violet crystal points, violet band). Frames 0-4
+are unchanged.
+
+Colours added to the shared letter palette (in `add_mines_frames.py`): goblin green `g/G/e`, crystal blue
+`C/c/N` + core `W`, violet `V/v/P`, cyan `q/Q/u`, spider `K/H`, mole fur `f/F`, golem rock `t/L/T`, green plate
+`j/J/i`, plate highlights `R` (red) and `A` (yellow), dark yellow `Y`, dark slate `z`. Crown: `C` light blue and `v`
+light violet.

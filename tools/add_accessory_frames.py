@@ -1,6 +1,7 @@
 """Draws the hand-made crown frames into public/assets/extra/accessories-extra.png (16px frames, one per column).
 
-Frames: 0 Stone Crown (ruins), 1 Sun Crown (desert), 2 Royal Crown (palace), 3 Shadow Crown (ultimate), 4 Sludge Crown (sewer).
+Frames: 0 Stone Crown (ruins), 1 Sun Crown (desert), 2 Royal Crown (palace), 3 Shadow Crown (ultimate), 4 Sludge Crown (sewer),
+5 Crystal Crown (mines).
 Each crown is drawn so its base sits on row 5 of the frame; the game offsets it per hero so it lands on the head.
 Run: python tools/add_accessory_frames.py   (needs Pillow)
 """
@@ -15,6 +16,7 @@ COLORS = {
     'R': (232, 69, 55, 255), 'B': (99, 155, 255, 255), 'W': (255, 255, 255, 255),
     'L': (170, 240, 100, 255), 'N': (84, 180, 66, 255), 'D': (40, 110, 56, 255),
     'P': (140, 80, 200, 255), 'p': (96, 48, 140, 255), 'k': (48, 28, 72, 255), 'M': (230, 90, 230, 255),
+    'C': (150, 210, 255, 255), 'v': (205, 165, 255, 255),
 }
 
 # 8 columns wide (frame x 4..11), 5 rows tall (frame y 1..5); the Sludge Crown has a sixth row of drips. '.' is transparent.
@@ -24,6 +26,7 @@ CROWNS = [
     ['...YY...', 'Y.YRRY.Y', 'YYYRRYYY', 'yBYYYYBy', 'oyoyyoyo'],
     ['P..PP..P', 'PP.pp.PP', 'PPpkkpPP', 'pkMkkMkp', 'kkkkkkkk'],
     ['L..LL..L', 'LN.NN.NL', 'NNNNNNNN', 'NLNDDNLN', 'DDDDDDDD', '.L...L.L'],
+    ['C..vW..C', 'CB.vP.CB', 'WBCPPvBW', 'pBpWWpBp', 'pppppppp'],
 ]
 
 
