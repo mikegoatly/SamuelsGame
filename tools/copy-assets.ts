@@ -143,6 +143,23 @@ const sewerSfx: Array<[string, string]> = [
   [`${impact}/impactWood_light_000.ogg`, 'snap_1.ogg'],
 ];
 for (const [src, dest] of sewerSfx) files.push([src, `audio/${dest}`]);
+
+const minesSfx: Array<[string, string]> = [
+  [`${retro}/rumble1.ogg`, 'rumble_0.ogg'],
+  [`${retro}/rumble2.ogg`, 'rumble_1.ogg'],
+  [`${impact}/impactBell_heavy_000.ogg`, 'chime_0.ogg'],
+  [`${impact}/impactBell_heavy_001.ogg`, 'chime_1.ogg'],
+  [`${impact}/impactGlass_light_000.ogg`, 'crystalhit_0.ogg'],
+  [`${impact}/impactGlass_light_001.ogg`, 'crystalhit_1.ogg'],
+  [`${impact}/impactGlass_heavy_000.ogg`, 'shatter_0.ogg'],
+  [`${impact}/impactGlass_heavy_001.ogg`, 'shatter_1.ogg'],
+  [`${foley}/Rocks/stonesHit1.ogg`, 'crumble_0.ogg'],
+  [`${foley}/Rocks/stonesHit2.ogg`, 'crumble_1.ogg'],
+  [`${foley}/Rocks/stoneDrag1.ogg`, 'roll_0.ogg'],
+  [`${foley}/Woosh/woosh1.ogg`, 'thwip_0.ogg'],
+  [`${foley}/Woosh/woosh2.ogg`, 'thwip_1.ogg'],
+];
+for (const [src, dest] of minesSfx) files.push([src, `audio/${dest}`]);
 files.push(
   ['Audio/Foley Sounds/License.txt', 'audio/Foley-License.txt'],
   ['Audio/Retro Sounds 1/License.txt', 'audio/Retro1-License.txt'],
@@ -157,6 +174,7 @@ const music: Array<[string, string]> = [
   ['Fight.mp3', 'music/boss.mp3'],
   ['Montage.mp3', 'music/palace.mp3'],
   ['Hard Rock.mp3', 'music/boss-palace.mp3'],
+  ['Synth.mp3', 'music/mines.mp3'],
 ];
 
 if (!existsSync(kenneyDir)) {
