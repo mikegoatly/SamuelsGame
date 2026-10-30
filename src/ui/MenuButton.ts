@@ -19,9 +19,10 @@ export class MenuButton implements MenuItem {
     height: number,
     text: string,
     private readonly onActivate: () => void,
+    textSize = 16,
   ) {
     this.area = scene.add.rectangle(x, y, width, height, IDLE_FILL).setStrokeStyle(2, IDLE_STROKE);
-    this.label = menuText(scene, x, y, text, 16);
+    this.label = menuText(scene, x, y, text, textSize);
   }
 
   setFocused(focused: boolean): void {

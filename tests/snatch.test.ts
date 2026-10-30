@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { passiveEffects } from '../src/logic/passives';
-import { segmentHitsCircle, SnatchLog } from '../src/logic/snatch';
+import { canSnatchFrom, segmentHitsCircle, SnatchLog } from '../src/logic/snatch';
 
 describe('segmentHitsCircle', () => {
   const a = { x: 0, y: 0 };
@@ -39,5 +39,15 @@ describe('Snatch passive', () => {
     expect(passiveEffects('snatch').dashScale).toBeGreaterThan(1);
     expect(passiveEffects('snatch').dashScale).toBeLessThanOrEqual(1.5);
     expect(passiveEffects('daggerTrap')).toMatchObject({ snatch: false, dashScale: 1 });
+  });
+});
+
+describe('canSnatchFrom', () => {
+  it.each([
+    ['a real room monster', { boss: false, roomMonster: true }, true],
+    ['a boss', { boss: true, roomMonster: true }, false],
+    ['a boss piece or summoned minion', { boss: false, roomMonster: false }, false],
+  ])('%s', (_, monster, expected) => {
+    expect(canSnatchFrom(monster)).toBe(expected);
   });
 });

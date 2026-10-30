@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { boltHit, isEncased, noShards, SCEPTER, scepterDpsFactor, shardsAt, sprayHit, sprayTargets, type ShardState } from '../src/logic/scepter';
+import { boltHit, isEncased, noShards, SCEPTER, scepterDpsFactor, shardsAt, sprayCanEncase, sprayHit, sprayTargets, type ShardState } from '../src/logic/scepter';
 
 /** Bolts at `times`, from fresh. */
 function hits(times: number[], start: ShardState = noShards()): { state: ShardState; events: string[] } {
@@ -103,5 +103,16 @@ describe('sprayTargets', () => {
 describe('scepterDpsFactor', () => {
   it('averages the shatter bonus over the 5-hit cycle', () => {
     expect(scepterDpsFactor()).toBeCloseTo(1 + SCEPTER.shatterBonus / (SCEPTER.shardsToEncase + 1));
+  });
+});
+
+describe('sprayCanEncase', () => {
+  it.each([
+    ['twist, ordinary monster', true, { elite: false, boss: false }, true],
+    ['twist, elite', true, { elite: true, boss: false }, false],
+    ['twist, boss', true, { elite: false, boss: true }, false],
+    ['no twist, ordinary monster', false, { elite: false, boss: false }, false],
+  ])('%s', (_, twist, target, expected) => {
+    expect(sprayCanEncase(twist, target)).toBe(expected);
   });
 });

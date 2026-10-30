@@ -37,7 +37,7 @@ export const minesCard: CardData = {
   color: '#8fe8ff',
   frame: MinesFrame.crystal,
   tint: MinesFrame.crystalTint,
-  lines: ['A new level now waits on the level select screen.', 'Nab the thief is your friend now (sort of).'],
+  lines: ['A new level now waits on the level select screen.', 'Nab is your friend now (sort of).'],
 };
 
 export const levelUpCard = (level: number): CardData => ({

@@ -70,6 +70,8 @@ export interface EnemyContext {
 export interface EnemyExtras {
   affix?: Affix;
   raised?: boolean;
+  /** Placed by the room's own waves (not summoned, split or raised mid-fight). */
+  roomMonster?: boolean;
   hp?: number;
   scale?: number;
 }
@@ -93,6 +95,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
   readonly mods: EnemyMods;
   readonly behaviour?: Behaviour;
   readonly raised: boolean;
+  readonly roomMonster: boolean;
   private readonly world?: EnemyWorld;
   private readonly corpseKey = nextCorpseKey++;
   private readonly small: boolean;
@@ -142,6 +145,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     this.level = level;
     this.maxHp = this.hp = extras.hp ?? enemyMaxHp(def.baseHp, level);
     this.raised = extras.raised === true;
+    this.roomMonster = extras.roomMonster === true;
     this.small = extras.hp !== undefined;
     this.world = context.world;
     this.setSize(10, 10).setOffset(3, 5).setDepth(5);

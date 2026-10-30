@@ -62,7 +62,7 @@ import { GrateSystem } from '../systems/GrateSystem';
 import { isLevelPlayable } from '../logic/levelRules';
 import { countsForPity } from '../logic/grate';
 import { discoverMines, discoverSewer, MINES_NOTICE, queueMinesNotice, queueSewerNotice, recordGrateRun, recordNabRun, SEWER_NOTICE, type SecretId } from '../logic/secrets';
-import { chooseNabPlan, countsForNabPity } from '../logic/nab';
+import { chooseNabPlan, nabMissCounts } from '../logic/nab';
 import { NabSystem } from '../systems/NabSystem';
 import { ScepterSystem } from '../systems/ScepterSystem';
 import { SnatchSystem } from '../systems/SnatchSystem';
@@ -285,7 +285,7 @@ export class GameScene extends Phaser.Scene {
     if (rooms.length === 0) return undefined;
     const { secrets } = saveSystem.data;
     const plan = chooseNabPlan({ levelId: this.level.id, classic: this.runMap.classic, heroLevel: this.progression.level, minesFound: secrets.minesFound, runsWithoutNab: secrets.nabPity, rooms: FORCE_NAB ? 1 : rooms.length, rng: Math.random, force: FORCE_NAB });
-    let pityPending = countsForNabPity({ retry, eligible: plan !== undefined, dev: FORCE_NAB || devSeed() !== undefined }) && plan?.room === undefined;
+    let pityPending = nabMissCounts({ plan, retry, dev: FORCE_NAB || devSeed() !== undefined });
     events.on('room-started', () => {
       if (!pityPending) return;
       pityPending = false;

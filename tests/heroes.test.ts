@@ -73,7 +73,7 @@ describe('Nab the gem thief', () => {
   it('is the last hero: hidden, low HP, high speed, mid attack, Snatch and the Crystal Scepter', () => {
     const nab = getHero('nab');
     expect(heroList[heroList.length - 1]).toBe(nab);
-    expect(nab).toMatchObject({ name: 'Nab the Thief', hidden: true, signatureWeaponId: 'crystalScepter' });
+    expect(nab).toMatchObject({ name: 'Nab', hidden: true, signatureWeaponId: 'crystalScepter' });
     expect(nab.passive.id).toBe('snatch');
     expect([nab.stats.maxHp, nab.stats.moveSpeed, nab.stats.attackRate].map(ratingPips)).toEqual([1, 3, 2]);
     expect(nab.tint).not.toBeNull();

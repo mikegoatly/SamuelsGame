@@ -14,6 +14,7 @@ import {
   NAB_SPEED,
   newNabChase,
   nearestCoin,
+  steerInRoom,
 } from '../src/logic/nabChase';
 
 describe('hitNab', () => {
@@ -35,6 +36,26 @@ describe('hitNab', () => {
     expect(second.result).toBe('ignored');
     expect(second.chase).toBe(first.chase);
     expect(hitNab(first.chase, 1000 + NAB_HIT_GAP_MS).result).toBe('gem');
+  });
+
+  it.each([
+    ['tick-spaced hits (350ms)', 350, 'ignored'],
+    ['just under the gap', NAB_HIT_GAP_MS - 1, 'ignored'],
+    ['exactly the gap', NAB_HIT_GAP_MS, 'gem'],
+  ])('%s', (_, spacing, expected) => {
+    const first = hitNab(newNabChase(0), 1000);
+    expect(hitNab(first.chase, 1000 + spacing).result).toBe(expected);
+  });
+
+  it('a 350ms aura cannot open the gate in under a second', () => {
+    let chase = newNabChase(0);
+    let opened = -1;
+    for (let t = 0; t <= 3000 && opened < 0; t += 350) {
+      const step = hitNab(chase, t);
+      chase = step.chase;
+      if (step.result === 'gate') opened = t;
+    }
+    expect(opened).toBeGreaterThanOrEqual(2 * NAB_HIT_GAP_MS);
   });
 
   it('ignores hits once the gate is open', () => {
@@ -114,5 +135,33 @@ describe('edgeArrow', () => {
     expect(arrow.x).toBeLessThanOrEqual(190);
     expect(arrow.y).toBeGreaterThanOrEqual(10);
     expect(arrow.y).toBeLessThanOrEqual(90);
+  });
+});
+
+describe('steerInRoom', () => {
+  const room = { x: 0, y: 0, w: 400, h: 300 };
+  const MARGIN = 20;
+  const len = (p: { x: number; y: number }) => Math.hypot(p.x, p.y);
+
+  it.each([
+    ['left wall, fleeing left', { x: 10, y: 150 }, { x: -1, y: 0 }, (v: { x: number; y: number }) => v.x >= 0],
+    ['right wall, fleeing right', { x: 395, y: 150 }, { x: 1, y: 0 }, (v: { x: number; y: number }) => v.x <= 0],
+    ['top wall, fleeing up', { x: 200, y: 5 }, { x: 0, y: -1 }, (v: { x: number; y: number }) => v.y >= 0],
+    ['bottom wall, fleeing down', { x: 200, y: 295 }, { x: 0, y: 1 }, (v: { x: number; y: number }) => v.y <= 0],
+    ['corner, fleeing into it', { x: 5, y: 5 }, { x: -0.7, y: -0.7 }, (v: { x: number; y: number }) => v.x >= 0 && v.y >= 0],
+  ])('never points out of the room: %s', (_, pos, dir, ok) => {
+    const v = steerInRoom(pos, dir, room, MARGIN);
+    expect(ok(v)).toBe(true);
+    expect(len(v)).toBeCloseTo(1);
+  });
+
+  it('keeps moving (never stalls) when pinned in a corner', () => {
+    expect(len(steerInRoom({ x: 2, y: 2 }, { x: -1, y: -1 }, room, MARGIN))).toBeCloseTo(1);
+  });
+
+  it('leaves a heading in the middle of the room alone', () => {
+    const v = steerInRoom({ x: 200, y: 150 }, { x: 0, y: -1 }, room, MARGIN);
+    expect(v.x).toBeCloseTo(0);
+    expect(v.y).toBeCloseTo(-1);
   });
 });

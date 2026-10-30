@@ -25,6 +25,10 @@ export const MAX_POTIONS = 3;
 export const CHARMS_NOTICE = 'charmsToGems';
 export const STARTING_WEAPON = 'apprenticeStaff';
 
+/** Maps a chosen weapon to the one this hero may really use (another hero's own weapon falls back to theirs). */
+export type WeaponResolver = (weaponId: string, heroId: string, owned: readonly string[]) => string;
+const keepWeapon: WeaponResolver = (weaponId) => weaponId;
+
 export interface Settings {
   muted: boolean;
   /** 0-100, steps of 10. */
@@ -216,7 +220,7 @@ function parseWeaponLevels(value: unknown, owned: readonly string[]): Record<str
 }
 
 /** Tolerant: junk, partial or old data falls back to defaults field by field; never throws. */
-export function parseSave(json: string | null | undefined, legacyRewards: LegacySkillRewards = {}, isKnownSkill: (id: string) => boolean = () => true, isKnownHero: (id: string) => boolean = () => true, signatureWeaponOf: (heroId: string) => string | undefined = () => undefined): SaveData {
+export function parseSave(json: string | null | undefined, legacyRewards: LegacySkillRewards = {}, isKnownSkill: (id: string) => boolean = () => true, isKnownHero: (id: string) => boolean = () => true, signatureWeaponOf: (heroId: string) => string | undefined = () => undefined, resolveWeapon: WeaponResolver = keepWeapon): SaveData {
   const save = defaultSave();
   let raw: unknown;
   try {
@@ -262,7 +266,7 @@ export function parseSave(json: string | null | undefined, legacyRewards: Legacy
   save.seen = strings(raw.seen).map((id) => LEGACY_CARD_IDS[id] ?? id);
   const converted = !(typeof raw.version === 'number' && raw.version >= GEMS_VERSION) && totalGems(save.gems) > 0 && !save.seen.includes(CHARMS_NOTICE);
   save.pendingNotices = [...new Set([...strings(raw.pendingNotices).filter((id) => !save.seen.includes(id)), ...(converted ? [CHARMS_NOTICE] : [])])];
-  const parsed = parseSkills(save, raw, legacyRewards, isKnownSkill);
+  const parsed = parseSkills(save, raw, legacyRewards, isKnownSkill, resolveWeapon);
   return typeof raw.version === 'number' && raw.version >= KIT_WEAPONS_VERSION ? parsed : grantSignatureWeapons(parsed, signatureWeaponOf);
 }
 
@@ -277,9 +281,9 @@ function grantSignatureWeapons(save: SaveData, signatureWeaponOf: (heroId: strin
 }
 
 /** Reads `skills` and `loadout`; saves older than v6 convert unlocked powers and the equipped weapon, and collect the rewards of cleared levels. */
-function parseSkills(save: SaveData, raw: Record<string, unknown>, legacyRewards: LegacySkillRewards, isKnown: (id: string) => boolean): SaveData {
+function parseSkills(save: SaveData, raw: Record<string, unknown>, legacyRewards: LegacySkillRewards, isKnown: (id: string) => boolean, resolveWeapon: WeaponResolver): SaveData {
   const owned = save.weapons.owned;
-  const chosenWeapon = (id: unknown): string => (typeof id === 'string' && owned.includes(id) ? id : STARTING_WEAPON);
+  const chosenWeapon = (id: unknown): string => resolveWeapon(typeof id === 'string' && owned.includes(id) ? id : STARTING_WEAPON, save.heroes.selected, owned);
   if (!(typeof raw.version === 'number' && raw.version >= SKILLS_VERSION)) {
     const equipped = isRecord(raw.weapons) ? raw.weapons.equipped : undefined;
     let next: SaveData = { ...save, loadout: { weapon: chosenWeapon(equipped), slots: emptySlots() } };
@@ -336,10 +340,10 @@ export function grantSkill(save: SaveData, skillId: string, equip = true): SaveD
   return { ...save, skills, loadout: { ...save.loadout, slots } };
 }
 
-export const setLoadout = (save: SaveData, loadout: Loadout): SaveData => ({
+export const setLoadout = (save: SaveData, loadout: Loadout, resolveWeapon: WeaponResolver = keepWeapon): SaveData => ({
   ...save,
   loadout: {
-    weapon: save.weapons.owned.includes(loadout.weapon) ? loadout.weapon : save.loadout.weapon,
+    weapon: resolveWeapon(save.weapons.owned.includes(loadout.weapon) ? loadout.weapon : save.loadout.weapon, save.heroes.selected, save.weapons.owned),
     slots: sanitizeSlots(loadout.slots, save.skills.owned.map((s) => s.id)),
   },
 });

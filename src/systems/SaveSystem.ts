@@ -1,6 +1,7 @@
 import { levels } from '../content/levels';
 import { heroes } from '../content/heroes';
 import { getSkill } from '../content/skills';
+import { weaponFor } from '../content/weapons';
 import { defaultSave, parseSave, serialize, type LegacySkillRewards, type SaveData } from '../logic/save';
 import { ACTIVE_SLOT_KEY, isValidSlot, parseActiveSlot, slotKey, SLOT_COUNT, summarizeSlot, type SlotSummary } from '../logic/saveSlots';
 
@@ -109,7 +110,7 @@ export class SaveSystem {
   private parseStored(raw: string | null | undefined, strict: false): SaveData;
   private parseStored(raw: string | null | undefined, strict: boolean): SaveData | null {
     if (strict && !isJsonObject(raw)) return null;
-    return parseSave(raw, LEGACY_REWARDS, (id) => getSkill(id) !== undefined, (id) => heroes[id] !== undefined, (id) => heroes[id]?.signatureWeaponId);
+    return parseSave(raw, LEGACY_REWARDS, (id) => getSkill(id) !== undefined, (id) => heroes[id] !== undefined, (id) => heroes[id]?.signatureWeaponId, weaponFor);
   }
 
   private write(): void {

@@ -75,6 +75,7 @@ export class NabSystem {
     if (!rect || this.halted) return;
     const spot = factory.world.clearSpot(pickRectSpawn(rect, player, ARRIVE_DISTANCE, Math.random, this.o.isBlocked, ROOM_INSET));
     this.nab = factory.spawnWith((context) => new NabThief(scene, spot.x, spot.y, player.level, context, () => this.onHit()));
+    this.nab.room = rect;
     this.chase = newNabChase(clock.now);
     this.phase = 'chase';
     this.o.onAppear();

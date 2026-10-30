@@ -1,4 +1,5 @@
 import type { SecretId } from '../logic/secrets';
+import { promptMetrics } from '../logic/promptLayout';
 import { gameText } from '../ui/gameText';
 import { MenuButton } from '../ui/MenuButton';
 import { MenuList } from '../ui/MenuList';
@@ -7,8 +8,6 @@ import { MenuScene } from '../ui/MenuScene';
 import type { GameScene } from './GameScene';
 
 const INPUT_DELAY_MS = 300;
-const PANEL_WIDTH = 360;
-const PANEL_HEIGHT = 150;
 
 interface PromptText {
   title: string;
@@ -44,18 +43,27 @@ export class SecretPromptScene extends MenuScene {
   protected build(): void {
     const { width, height } = this.scale;
     const text = PROMPTS[this.secret];
+    const m = promptMetrics(this.scale.displayScale.x, width);
     const cx = width / 2;
     const cy = height / 2;
-    const top = cy - PANEL_HEIGHT / 2;
+    const pad = Math.round((m.textSize * 3) / 4);
     this.add.rectangle(cx, cy, width, height, 0x14121c, 0.75);
-    this.add.rectangle(cx, cy, PANEL_WIDTH, PANEL_HEIGHT, 0x2a2540).setStrokeStyle(4, text.border);
-    menuText(this, cx, top + 20, text.title, 24, text.titleColor);
-    gameText(this, cx, top + 46, text.question, 16, { color: '#d8d8e8' })
+    const panel = this.add.rectangle(cx, cy, m.panelWidth, 0, 0x2a2540).setStrokeStyle(4, text.border);
+    const title = menuText(this, cx, 0, text.title, m.titleSize, text.titleColor);
+    const question = gameText(this, cx, 0, text.question, m.textSize, { color: '#d8d8e8' })
       .setOrigin(0.5, 0)
-      .setWordWrapWidth(PANEL_WIDTH - 32)
+      .setWordWrapWidth(m.panelWidth - pad * 2)
       .setAlign('center');
-    const go = new MenuButton(this, cx - 84, top + PANEL_HEIGHT - 30, 152, 30, text.yes, () => this.choose(true));
-    const stay = new MenuButton(this, cx + 84, top + PANEL_HEIGHT - 30, 152, 30, 'Not now', () => this.choose(false));
+    const panelHeight = pad + title.height + pad / 2 + question.height + pad + m.buttonHeight + pad;
+    const top = cy - panelHeight / 2;
+    panel.setSize(m.panelWidth, panelHeight);
+    title.setY(top + pad + title.height / 2);
+    question.setY(title.y + title.height / 2 + pad / 2);
+    const gap = Math.max(8, pad / 2);
+    const buttonWidth = Math.floor((m.panelWidth - pad * 2 - gap) / 2);
+    const buttonY = top + panelHeight - pad - m.buttonHeight / 2;
+    const go = new MenuButton(this, cx - (buttonWidth + gap) / 2, buttonY, buttonWidth, m.buttonHeight, text.yes, () => this.choose(true), m.textSize);
+    const stay = new MenuButton(this, cx + (buttonWidth + gap) / 2, buttonY, buttonWidth, m.buttonHeight, 'Not now', () => this.choose(false), m.textSize);
     this.menu = new MenuList(this, [go, stay], { columns: 2, initialFocus: 1, onBack: () => this.choose(false) });
   }
 

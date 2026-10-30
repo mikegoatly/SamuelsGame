@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { NabThief } from '../entities/NabThief';
 import type { Enemy } from '../entities/Enemy';
 import type { Projectile } from '../entities/Projectile';
-import { boltHit, isEncased, noShards, SCEPTER, shardsAt, sprayHit, sprayTargets, type ShardEvent, type ShardState } from '../logic/scepter';
+import { boltHit, isEncased, noShards, SCEPTER, shardsAt, sprayCanEncase, sprayHit, sprayTargets, type ShardEvent, type ShardState } from '../logic/scepter';
 import { feel } from './feel';
 import { playSfx } from './sfx';
 import { hurtEnemy, liveEnemies, runOver } from './skills/targets';
@@ -54,7 +54,7 @@ export class ScepterSystem {
     for (const index of sprayTargets({ x, y }, others, SCEPTER.sprayRadius, SCEPTER.sprayCount)) {
       const target = others[index]!;
       this.sprayFx(x, y, target.x, target.y);
-      const step = sprayHit(this.shards.get(target) ?? noShards(), now, this.twist);
+      const step = sprayHit(this.shards.get(target) ?? noShards(), now, sprayCanEncase(this.twist, { elite: target.isElite, boss: target.def.boss === true }));
       this.shards.set(target, step.state);
       this.react(target, step.event);
     }

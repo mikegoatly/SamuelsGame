@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { heroes } from '../src/content/heroes';
-import { defaultSave, equipWeapon, parseSave, SAVE_VERSION, serialize, type SaveData } from '../src/logic/save';
+import { weaponFor } from '../src/content/weapons';
+import { defaultSave, equipWeapon, parseSave, setLoadout, SAVE_VERSION, serialize, type SaveData } from '../src/logic/save';
 import { aSave } from './builders';
 
 const signature = (id: string): string | undefined => heroes[id]?.signatureWeaponId;
@@ -51,5 +52,29 @@ describe('migration to version 12 (heroes own their signature weapon)', () => {
   it('junk data and a missing lookup change nothing', () => {
     expect(parseSave('nope', {}, () => true, () => true, signature)).toEqual(defaultSave());
     expect(parseSave(JSON.stringify({ version: 11, heroes: { unlocked: ['wizard', 'knight'] } })).weapons.owned).toEqual(['apprenticeStaff']);
+  });
+});
+
+describe('another hero\'s own weapon in the loadout', () => {
+  const scepterSave = (selected: string) => ({
+    version: SAVE_VERSION,
+    weapons: { owned: ['apprenticeStaff', 'ironSword', 'crystalScepter'] },
+    loadout: { weapon: 'crystalScepter', slots: [null, null, null] },
+    heroes: { unlocked: ['wizard', 'knight', 'nab'], selected },
+  });
+  const parseWith = (raw: object) => parseSave(JSON.stringify(raw), {}, () => true, () => true, signature, weaponFor);
+
+  it.each([
+    ['a knight falls back to his own sword', 'knight', 'ironSword'],
+    ['a wizard falls back to the staff', 'wizard', 'apprenticeStaff'],
+    ['Nab keeps his scepter', 'nab', 'crystalScepter'],
+  ])('on parse: %s', (_, selected, expected) => {
+    expect(parseWith(scepterSave(selected)).loadout.weapon).toBe(expected);
+  });
+
+  it('setLoadout falls back the same way', () => {
+    const save = aSave({ weapons: { owned: ['apprenticeStaff', 'ironSword', 'crystalScepter'], levels: {} }, heroes: { unlocked: ['wizard', 'knight'], selected: 'knight' } });
+    const next = setLoadout(save, { weapon: 'crystalScepter', slots: save.loadout.slots }, weaponFor);
+    expect(next.loadout.weapon).toBe('ironSword');
   });
 });

@@ -1,8 +1,8 @@
 import Phaser from 'phaser';
 import type { EnemyDef } from '../content/enemies';
 import { MinesFrame } from '../content/minesFrames';
-import type { Point } from '../logic/geometry';
-import { NAB_SPEED } from '../logic/nabChase';
+import type { Point, Rect } from '../logic/geometry';
+import { NAB_SPEED, steerInRoom } from '../logic/nabChase';
 import { Enemy, type EnemyContext, type HitSource } from './Enemy';
 
 /** Nab is not a monster: he never hurts anyone, never dies and never holds up a room. */
@@ -23,6 +23,7 @@ export const NAB_NPC: EnemyDef = {
 
 const FLEE_RANGE = 72;
 const ARRIVE = 4;
+const WALL_MARGIN = 20;
 /** He strolls to coins a little slower than he runs. */
 const COIN_PACE = 0.8;
 
@@ -32,6 +33,8 @@ export class NabThief extends Enemy {
   goal?: Point;
   /** Current walking speed (faster with every hit). */
   speed: number = NAB_SPEED.base;
+  /** The room he stays in (he never flees through its doors). */
+  room?: Rect;
   /** Frozen in place (waiting at his gate, run over). */
   still = false;
   private readonly heading = new Phaser.Math.Vector2();
@@ -68,6 +71,7 @@ export class NabThief extends Enemy {
     const away = this.heading.set(this.x - this.target.x, this.y - this.target.y);
     if (away.length() < FLEE_RANGE) {
       away.normalize().rotate(Math.sin(time / 260 + this.wobble) * 0.6);
+      if (this.room) away.copy(steerInRoom(this, away, this.room, WALL_MARGIN));
       this.setVelocity(away.x * this.speed, away.y * this.speed);
       this.setFlipX(away.x < 0);
       return;

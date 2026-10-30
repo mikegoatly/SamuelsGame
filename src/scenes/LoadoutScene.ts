@@ -168,7 +168,7 @@ export class LoadoutScene extends MenuScene {
 
   private begin(saveChoice: boolean): void {
     if (!this.inputReady(250)) return;
-    if (saveChoice) saveSystem.update((save) => setLoadout(save, { weapon: this.weapon, slots: this.slots }));
+    if (saveChoice) saveSystem.update((save) => setLoadout(save, { weapon: this.weapon, slots: this.slots }, weaponFor));
     this.scene.start('Game', { levelId: this.levelId, heroic: this.heroic });
   }
 

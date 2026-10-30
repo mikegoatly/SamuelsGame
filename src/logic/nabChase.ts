@@ -1,8 +1,8 @@
-import type { Point } from './geometry';
+import type { Point, Rect } from './geometry';
 
 export const NAB_HITS_TO_GATE = 3;
-/** Hits closer together than this are one hit (a pierce, a cone, a skill burst). */
-export const NAB_HIT_GAP_MS = 350;
+/** Hits closer together than this are one hit (a pierce, a cone, an aura or orbit ticking), so the chase always takes a few seconds. */
+export const NAB_HIT_GAP_MS = 700;
 /** Left alone this long (no hit), he slips away with his loot. */
 export const NAB_LINGER_MS = 20000;
 /** Walking speed, px/s, and how much faster each hit makes him. */
@@ -71,4 +71,21 @@ export function edgeArrow(view: View, target: Point, inset: number): { x: number
   const halfH = view.height / 2 - inset;
   const scale = Math.min(dx !== 0 ? halfW / Math.abs(dx) : Infinity, dy !== 0 ? halfH / Math.abs(dy) : Infinity);
   return { x: cx + dx * scale, y: cy + dy * scale, angle: Math.atan2(dy, dx) };
+}
+
+/**
+ * A unit heading for Nab that keeps him in his room: the wanted direction is pulled towards the room centre the nearer a wall is
+ * (so he curls round a corner instead of pinning in it), and never points out through a wall or door once he is within `margin` of it.
+ */
+export function steerInRoom(pos: Point, dir: Point, room: Rect, margin: number): Point {
+  const halfW = room.w / 2;
+  const halfH = room.h / 2;
+  const offX = (pos.x - (room.x + halfW)) / halfW;
+  const offY = (pos.y - (room.y + halfH)) / halfH;
+  let x = dir.x - offX ** 3 * 1.5;
+  let y = dir.y - offY ** 3 * 1.5;
+  if ((pos.x <= room.x + margin && x < 0) || (pos.x >= room.x + room.w - margin && x > 0)) x = 0;
+  if ((pos.y <= room.y + margin && y < 0) || (pos.y >= room.y + room.h - margin && y > 0)) y = 0;
+  const length = Math.hypot(x, y);
+  return length < 0.2 ? { x: -offX, y: -offY } : { x: x / length, y: y / length };
 }

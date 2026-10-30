@@ -45,3 +45,7 @@ export const nextRunsWithoutNab = (count: number, appeared: boolean): number => 
 
 /** Only a fresh, eligible run moves the pity counter. */
 export const countsForNabPity = ({ retry, eligible, dev }: { retry: boolean; eligible: boolean; dev: boolean }): boolean => !retry && eligible && !dev;
+
+/** Does this run, once its first room starts, count as an eligible run without Nab (one more towards the pity)? */
+export const nabMissCounts = ({ plan, retry, dev }: { plan: NabPlan | undefined; retry: boolean; dev: boolean }): boolean =>
+  countsForNabPity({ retry, eligible: plan !== undefined, dev }) && plan?.room === undefined;

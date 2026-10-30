@@ -161,7 +161,7 @@ export const gloop: HeroDef = {
 export const nab: HeroDef = {
   id: 'nab',
   className: 'Thief',
-  name: 'Nab the Thief',
+  name: 'Nab',
   frame: MinesFrame.nab,
   tint: MinesFrame.nabTint,
   color: '#8fe8ff',

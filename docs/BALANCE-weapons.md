@@ -109,3 +109,5 @@ worst desert rooms. Decide after the sword change, which already removes the "ea
   everything. Slow, heavy ones (sword, hammer) have to time it. In the model, bolts blocked comes from swings per second.
 - **Hammer (built):** swing 700 → 900ms, knockback 4.5 → 3.0, damage 45 → 32. Model: room damage 0.81, clear 0.95. Still the slowest and heaviest melee weapon, with the same 140 degree cone, shake and shove.
 - Staff, slinger and wand aim stay unchanged for now. Revisit after this lands.
+- **Crystal Scepter crowd note:** the level 5 twist's spray shards may encase only ordinary monsters. Elites and bosses are never locked by spray (a direct 4th bolt can still encase an elite; bosses only slow). Keeps a shatter in a pack from freezing a whole room including its elite.
+- **Nab's Snatch** pays only for real room monsters (not bosses, boss pieces, summons, spawner minions, splits or raised allies), so it cannot be farmed from a summoner.

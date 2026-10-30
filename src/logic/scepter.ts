@@ -48,6 +48,9 @@ export function sprayHit(state: ShardState, now: number, canEncase: boolean): { 
   return addShard(state, now, canEncase);
 }
 
+/** Spray shards may encase only ordinary monsters, and only with the level 5 twist: elites and bosses never lock by spray. */
+export const sprayCanEncase = (twist: boolean, target: { elite: boolean; boss: boolean }): boolean => twist && !target.elite && !target.boss;
+
 /** Indexes of the nearest `count` monsters within `radius` of a shatter. */
 export function sprayTargets(center: Point, others: readonly Point[], radius: number, count: number): number[] {
   return others

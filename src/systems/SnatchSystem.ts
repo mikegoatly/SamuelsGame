@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { NabThief } from '../entities/NabThief';
-import { segmentHitsCircle, SnatchLog } from '../logic/snatch';
+import { canSnatchFrom, segmentHitsCircle, SnatchLog } from '../logic/snatch';
 import { floatText } from './floatText';
 import type { LootSystem } from './LootSystem';
 import { playSfx } from './sfx';
@@ -29,7 +29,7 @@ export class SnatchSystem {
     this.last = { x: player.x, y: player.y };
     if (!player.isDashing || runOver(this.world)) return;
     for (const enemy of liveEnemies(this.world.enemies)) {
-      if (enemy instanceof NabThief || !segmentHitsCircle(from, player, enemy, enemy.bodyRadius() + REACH) || !this.log.take(enemy)) continue;
+      if (enemy instanceof NabThief || !canSnatchFrom({ boss: enemy.def.boss === true, roomMonster: enemy.roomMonster }) || !segmentHitsCircle(from, player, enemy, enemy.bodyRadius() + REACH) || !this.log.take(enemy)) continue;
       this.loot.grant('coin');
       floatText(this.world.scene, enemy.x, enemy.y - 12, 'Snatched!', '#ffe066', 16, 14, 800);
       playSfx(this.world.scene, 'thwip', { volume: 0.7 });

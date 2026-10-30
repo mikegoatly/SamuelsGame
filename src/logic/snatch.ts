@@ -9,6 +9,9 @@ export function segmentHitsCircle(a: Point, b: Point, c: Point, r: number): bool
   return Math.hypot(a.x + dx * t - c.x, a.y + dy * t - c.y) <= r;
 }
 
+/** Only real room monsters pay: never bosses, boss pieces, or anything summoned, spawned, split or raised mid-fight. */
+export const canSnatchFrom = (monster: { boss: boolean; roomMonster: boolean }): boolean => monster.roomMonster && !monster.boss;
+
 /** Nab's Snatch: each monster gives up one coin, once. */
 export class SnatchLog {
   private readonly taken = new WeakSet<object>();

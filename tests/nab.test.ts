@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { chooseNabPlan, countsForNabPity, NAB_MIN_HERO_LEVEL, NAB_PITY_RUNS, nextRunsWithoutNab } from '../src/logic/nab';
+import { chooseNabPlan, countsForNabPity, nabMissCounts, NAB_MIN_HERO_LEVEL, NAB_PITY_RUNS, nextRunsWithoutNab } from '../src/logic/nab';
 import { mulberry32 } from '../src/logic/rng';
 
 const plan = (over: Partial<Parameters<typeof chooseNabPlan>[0]> = {}) =>
@@ -109,5 +109,27 @@ describe('countsForNabPity', () => {
     ['a dev override', { ...run, dev: true }, false],
   ])('%s', (_, input, expected) => {
     expect(countsForNabPity(input)).toBe(expected);
+  });
+});
+
+describe('nabMissCounts', () => {
+  const base = { retry: false, dev: false, plan: {} as { room?: number } | undefined };
+  it.each([
+    ['eligible, rolled no Nab', base, true],
+    ['eligible, Nab is coming', { ...base, plan: { room: 2 } }, false],
+    ['not eligible', { ...base, plan: undefined }, false],
+    ['a retry', { ...base, retry: true }, false],
+    ['a debug seed or forced Nab', { ...base, dev: true }, false],
+  ])('%s', (_, input, expected) => {
+    expect(nabMissCounts(input)).toBe(expected);
+  });
+
+  it.each([
+    ['mines not found, pity reached: Nab comes, so no miss', false, NAB_PITY_RUNS, false],
+    ['mines found, roll fails: a miss', true, NAB_PITY_RUNS, true],
+    ['mines not found, short of pity, roll fails: a miss', false, 0, true],
+  ])('through chooseNabPlan: %s', (_, minesFound, runsWithoutNab, miss) => {
+    const rolled = plan({ minesFound, runsWithoutNab, rng: () => 0.99 });
+    expect(nabMissCounts({ plan: rolled, retry: false, dev: false })).toBe(miss);
   });
 });
