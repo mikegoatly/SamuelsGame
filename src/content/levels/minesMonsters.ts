@@ -25,7 +25,7 @@ export const MINES_ENCOUNTERS: readonly Encounter[] = [
   { waves: 2, minLevel: 13, maxLevel: 13 },
   { waves: 2, minLevel: 13, maxLevel: 14 },
   { waves: 2, minLevel: 14, maxLevel: 14 },
-  { waves: 3, minLevel: 14, maxLevel: 15 },
+  { waves: 3, minLevel: 15, maxLevel: 15 },
   { waves: 2, minLevel: 15, maxLevel: 15 },
   { waves: 3, minLevel: 15, maxLevel: 16 },
 ];

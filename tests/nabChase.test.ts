@@ -88,8 +88,8 @@ describe('nabGivesUp', () => {
 });
 
 describe('the gate', () => {
-  it('stays open about 8 seconds', () => {
-    expect(GATE_OPEN_MS).toBe(8000);
+  it('stays open about 10 seconds', () => {
+    expect(GATE_OPEN_MS).toBe(10000);
     expect(gateLeft(1000, 1000)).toBe(1);
     expect(gateLeft(1000, 1000 + GATE_OPEN_MS / 2)).toBeCloseTo(0.5);
     expect(gateLeft(1000, 1000 + GATE_OPEN_MS)).toBe(0);

@@ -27,7 +27,7 @@ export const bertBrain: BertBrainConfig = {
     3: {
       speedMultiplier: 1.25,
       attacks: [
-        { kind: 'laser', firstMs: 2500, cooldownMs: 4200, windupMs: 1400, fireMs: 350, bounces: 3, volleys: 2, followUpWindupMs: 1000 },
+        { kind: 'laser', firstMs: 2500, cooldownMs: 4200, windupMs: 1400, fireMs: 350, bounces: 1, volleys: 2, followUpWindupMs: 1000 },
         { kind: 'roll', firstMs: 9000, cooldownMs: 11_000, windupMs: 1200, bounces: 2, speed: 180, maxMs: 8000 },
       ],
     },

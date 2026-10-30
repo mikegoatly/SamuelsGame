@@ -2,6 +2,8 @@ export interface SharkTuning {
   /** Swims at least this long before it may surface. */
   underMinMs: number;
   leapRange: number;
+  /** Surfaces after this long underneath even with nobody in range, so it never idles below forever. */
+  underMaxMs?: number;
   /** Warning pause before the leap. */
   riseMs: number;
   leapMs: number;
@@ -29,7 +31,8 @@ export const leapLaneLength = (t: SharkTuning): number => (t.leapSpeed * t.leapM
 /** Swim under the sand, rise with a warning once close, leap in a straight line, lie exposed, dive again. */
 export function stepShark(state: SharkState, now: number, distance: number, t: SharkTuning): { state: SharkState; event: SharkEvent | null } {
   if (state.phase === 'under') {
-    if (now - state.since < t.underMinMs || distance > t.leapRange) return { state, event: null };
+    const overdue = t.underMaxMs !== undefined && now - state.since >= t.underMaxMs;
+    if (now - state.since < t.underMinMs || (distance > t.leapRange && !overdue)) return { state, event: null };
     return { state: { phase: 'rise', since: now, until: now + t.riseMs }, event: 'rise' };
   }
   if (now < state.until) return { state, event: null };

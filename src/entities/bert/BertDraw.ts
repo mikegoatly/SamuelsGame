@@ -1,6 +1,8 @@
 import Phaser from 'phaser';
 import { bertTuning } from '../../content/bert';
 import type { Point } from '../../logic/geometry';
+import { laserTelegraphAlpha } from '../../logic/laserTelegraph';
+import { feel } from '../../systems/feel';
 
 const WARN = 0xff2a2a;
 const WARN_EDGE = 0xff5a5a;
@@ -37,13 +39,22 @@ const trace = (g: Phaser.GameObjects.Graphics, path: readonly Point[]): void => 
   g.strokePath();
 };
 
-/** The thin pulsing line that shows the laser's whole bouncing path before it fires. */
-export function drawLaserLine(scene: Phaser.Scene, path: readonly Point[], windupMs: number): Shape[] {
-  const line = scene.add.graphics().setDepth(3);
-  line.lineStyle(1.5, LASER, 0.9);
-  trace(line, path);
-  scene.tweens.add({ targets: line, alpha: { from: 0.35, to: 1 }, duration: Math.max(120, windupMs / 6), yoyo: true, repeat: -1 });
-  return [line];
+/** The one upcoming shot: a clear lane exactly as wide as the damage corridor with a bright core, calm at first and pulsing brighter just before it fires. */
+export function drawLaserLine(scene: Phaser.Scene, path: readonly Point[], windupMs: number, laneWidth: number): Shape[] {
+  const lane = scene.add.graphics().setDepth(3);
+  lane.lineStyle(laneWidth, LASER, 0.5);
+  trace(lane, path);
+  const core = scene.add.graphics().setDepth(3.1);
+  core.lineStyle(2, 0xffe0e6, 1);
+  trace(core, path);
+  const set = (elapsed: number): void => {
+    const a = laserTelegraphAlpha(elapsed, windupMs, feel.reduced);
+    lane.setAlpha(a);
+    core.setAlpha(Math.min(1, a + 0.15));
+  };
+  set(0);
+  const timer = scene.tweens.addCounter({ from: 0, to: windupMs, duration: windupMs, onUpdate: (t) => set(t.getValue() ?? 0) });
+  return [lane, core, { destroy: () => timer.stop() } as unknown as Shape];
 }
 
 /** The beam itself: a glowing wide stroke with a white core, fading out. */

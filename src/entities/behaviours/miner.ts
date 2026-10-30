@@ -1,6 +1,7 @@
 import { MinesFrame, Tex } from '../../content/assetKeys';
 import { launchBlade, HitOnce, stepBlade, type BladeState } from '../../logic/boomerang';
 import { damageToPlayer } from '../../logic/combat';
+import { separationPush } from '../../logic/separation';
 import { actStale } from '../../logic/spiderTether';
 import { feel } from '../../systems/feel';
 import { playSfx } from '../../systems/sfx';
@@ -17,9 +18,11 @@ const NEAR = 70;
 const FAR = 120;
 const SPIN = 0.5;
 const WINDUP_TINT = 0xffffff;
+const SEPARATION = 44;
 
 /** Keeps a little distance and, after a visible wind-up (the arm goes back), throws a pickaxe that flies out, turns round and comes back to him; it can hit you both ways. */
-export const miner: BehaviourFactory = (host) => {
+export const miner: BehaviourFactory = (host, world) => {
+  const phase = Math.random() * Math.PI * 2;
   let nextThrowAt = host.clock.now + 1200 + Math.random() * 1200;
   let windupUntil = 0;
   let aim = { x: 1, y: 0 };
@@ -71,7 +74,10 @@ export const miner: BehaviourFactory = (host) => {
       else if (distance < NEAR) {
         const d = directionTo(host, host.target);
         host.setVelocity(-d.x * speed, -d.y * speed);
-      } else goToward(host, { x: host.x + Math.cos(time / 700), y: host.y + Math.sin(time / 700) }, speed * 0.4);
+      } else goToward(host, { x: host.x + Math.cos(time / 700 + phase), y: host.y + Math.sin(time / 700 + phase) }, speed * 0.4);
+      const mates = world.all().filter((e) => e !== host && e.def.id === host.def.id);
+      const push = separationPush(host, mates, SEPARATION, phase);
+      if (push.x !== 0 || push.y !== 0) host.setVelocity(host.body!.velocity.x + push.x * speed * 1.4, host.body!.velocity.y + push.y * speed * 1.4);
     },
     update(time) {
       if (windupUntil > 0 && (host.stunned || actStale(host.clock.now, lastActAt))) {

@@ -367,7 +367,7 @@ export class Bert extends Enemy {
     const dir = new Phaser.Math.Vector2(this.target.x - this.x, this.target.y - this.y);
     if (dir.lengthSq() < 1e-6) dir.set(1, 0);
     this.laserPath = bouncePath(this.arena, { x: this.x, y: this.y }, dir.normalize(), bounces);
-    this.shapes.push(...drawLaserLine(this.scene, this.laserPath, ms));
+    this.shapes.push(...drawLaserLine(this.scene, this.laserPath, ms, bertTuning.laserWidth + 2 * LASER_CORRIDOR_PAD));
     playSfx(this.scene, 'enemyShot', { rate: 0.5, volume: 1.5 });
   }
 

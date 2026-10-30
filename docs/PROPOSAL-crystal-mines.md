@@ -17,7 +17,7 @@ An endgame secret: harder than the Mad King, found by chasing a gem thief, with 
 3. **Chase:** each hit makes him drop a gem (so a failed chase still pays) and run faster.
 4. **Third hit:** he panics, smashes a crystal and a **magic gate** opens where he stands. He jumps through, then
    pokes his head out and waves.
-5. **The gate** stays open about **8s**: a big shrinking ring around it, an off-screen arrow pointing to it. Reaching
+5. **The gate** stays open about **10s**: a big shrinking ring around it, an off-screen arrow pointing to it. Reaching
    it opens a `MenuList` prompt (pauses): *"Follow Nab into the mines?"* — **Follow** / **Not now**.
    - **Follow** ends the run like a quit (gold banked) and starts the mines on Normal, same hero and loadout.
    - Either answer: "Crystal Mines discovered!" notice, mines card appears, **Nab unlocks** (via `heroReveal`).

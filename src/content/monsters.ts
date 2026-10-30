@@ -366,7 +366,7 @@ export const caveBat: EnemyDef = {
   frame: Frame.bat,
   tint: 0xa898ff,
   baseHp: 12,
-  baseDamage: 7,
+  baseDamage: 6,
   speed: 78,
   behaviour: 'erratic',
   lootTableId: 'caveBat',
@@ -395,6 +395,8 @@ export const goblinMiner: EnemyDef = {
   cost: 1,
   placement: 'back',
   tip: 'Throws a pickaxe that comes back like a boomerang.',
+  maxPerWave: 3,
+  maxAlive: 3,
 };
 export const crystalBeetle: EnemyDef = {
   id: 'crystalBeetle',

@@ -36,6 +36,32 @@ describe('sand shark', () => {
   });
 });
 
+describe('rock mole', () => {
+  const mole: SharkTuning = { underMinMs: 1800, underMaxMs: 4000, leapRange: 120, riseMs: 800, leapMs: 300, leapSpeed: 0, exposedMs: 1900 };
+  const surfacings = (distance: number, to: number): number[] => {
+    let state = newShark(0);
+    return eventsOver((now) => {
+      const step = stepShark(state, now, distance, mole);
+      state = step.state;
+      return step.event;
+    }, 0, to)
+      .filter((e) => e.event === 'rise')
+      .map((e) => e.at);
+  };
+
+  it('surfaces within about two seconds of being under a player who stands still, over and over', () => {
+    const rises = surfacings(0, 30_000);
+    expect(rises.length).toBeGreaterThanOrEqual(5);
+    rises.forEach((at, i) => expect(at - (i === 0 ? 0 : rises[i - 1]! + 800 + 300 + 1900)).toBeLessThanOrEqual(2000));
+  });
+
+  it('never idles underneath forever, even with nobody in range', () => {
+    const rises = surfacings(500, 30_000);
+    expect(rises[0]).toBeLessThanOrEqual(4100);
+    expect(rises.length).toBeGreaterThanOrEqual(3);
+  });
+});
+
 describe('fire imp trail', () => {
   it('drops flames only after moving far enough, caps the count and burns out', () => {
     const trail = new FireTrail({ ttlMs: 2000, spacing: 10, max: 3 });

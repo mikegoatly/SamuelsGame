@@ -8,7 +8,7 @@ export const NAB_LINGER_MS = 20000;
 /** Walking speed, px/s, and how much faster each hit makes him. */
 export const NAB_SPEED = { base: 62, perHit: 18 } as const;
 /** How long the gate stays open. */
-export const GATE_OPEN_MS = 8000;
+export const GATE_OPEN_MS = 10000;
 /** The countdown ring around the gate, px. */
 export const GATE_RING = { max: 72, min: 14 } as const;
 

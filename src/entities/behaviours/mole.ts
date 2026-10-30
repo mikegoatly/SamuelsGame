@@ -8,7 +8,7 @@ import { distanceTo, goToward, stand } from './steer';
 import type { BehaviourFactory } from './types';
 
 /** The mole's "leap" is a pop straight up where it stopped, so it does not move (speed 0); the rise is the dirt-mound warning. */
-const TUNING: SharkTuning = { underMinMs: 1800, leapRange: 120, riseMs: 800, leapMs: 300, leapSpeed: 0, exposedMs: 1900 };
+const TUNING: SharkTuning = { underMinMs: 1800, underMaxMs: 4000, leapRange: 120, riseMs: 800, leapMs: 300, leapSpeed: 0, exposedMs: 1900 };
 const TRACK_SHARE = 0.55;
 const TRACK_SPEED = 150;
 const POP_RADIUS = 20;
@@ -77,7 +77,7 @@ export const mole: BehaviourFactory = (host, world) => {
       }
       if (step.event === 'leap') pop();
       if (step.event === 'dive') dive();
-      if (state.phase === 'under') host.chase(time);
+      if (state.phase === 'under') host.chase(time, host.def.speed, distanceTo(host, host.target) > TUNING.leapRange * 1.5);
       else if (state.phase === 'rise' && time - state.since < TUNING.riseMs * TRACK_SHARE) goToward(host, host.target, TRACK_SPEED * host.speedFactor);
       else stand(host);
       if (state.phase === 'exposed') host.setFlipX(host.target.x < host.x);
