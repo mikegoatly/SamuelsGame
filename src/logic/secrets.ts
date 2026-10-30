@@ -1,6 +1,6 @@
 import { unlockHeroes, type HeroKit } from './heroSave';
 import { nextRunsWithoutGrate } from './grate';
-import { nextRunsWithoutNab } from './nab';
+import { NAB_HERO, nextRunsWithoutNab } from './nab';
 import { MAX_PITY, type SaveData, type Secrets } from './save';
 
 /** Hidden levels that stay off Level Select until found. */
@@ -29,7 +29,7 @@ export const queueSewerNotice = (save: SaveData): SaveData =>
 export const foundSecrets = (secrets: Secrets): SecretId[] => [...(secrets.sewerFound ? ['sewer' as const] : []), ...(secrets.minesFound ? ['mines' as const] : [])];
 
 /** The gem thief who leads the way into the mines. */
-export const MINES_HERO = 'nab';
+export const MINES_HERO = NAB_HERO;
 export const MINES_NOTICE = 'secret:mines';
 
 /** Reaching Nab's gate: the mines card appears and Nab unlocks (his reveal card queues once). Safe to repeat. */

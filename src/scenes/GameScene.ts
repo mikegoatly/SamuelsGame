@@ -288,7 +288,7 @@ export class GameScene extends Phaser.Scene {
     const rooms = map.world?.rooms ?? [];
     if (rooms.length === 0) return undefined;
     const { secrets } = saveSystem.data;
-    const plan = chooseNabPlan({ levelId: this.level.id, classic: this.runMap.classic, heroLevel: this.progression.level, minesFound: secrets.minesFound, runsWithoutNab: secrets.nabPity, rooms: FORCE_NAB ? 1 : rooms.length, rng: Math.random, force: FORCE_NAB });
+    const plan = chooseNabPlan({ levelId: this.level.id, classic: this.runMap.classic, heroLevel: this.progression.level, heroId: saveSystem.data.heroes.selected, minesFound: secrets.minesFound, runsWithoutNab: secrets.nabPity, rooms: FORCE_NAB ? 1 : rooms.length, rng: Math.random, force: FORCE_NAB });
     let pityPending = nabMissCounts({ plan, retry, dev: FORCE_NAB || devSeed() !== undefined });
     events.on('room-started', () => {
       if (!pityPending) return;

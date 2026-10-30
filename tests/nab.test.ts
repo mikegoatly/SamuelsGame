@@ -10,6 +10,14 @@ describe('chooseNabPlan: where Nab can turn up', () => {
     expect(plan({ levelId, runsWithoutNab: 99 })).toBeUndefined();
   });
 
+  it.each([
+    ['an eligible run', false],
+    ['a forced (debug) run', true],
+  ])('never on %s when the hero is Nab himself', (_, force) => {
+    expect(plan({ heroId: 'nab', runsWithoutNab: 99, force })).toBeUndefined();
+    expect(plan({ heroId: 'knight', runsWithoutNab: 99, force })?.room).toBeDefined();
+  });
+
   it.each(['desert', 'palace'])('on random %s maps', (levelId) => {
     expect(plan({ levelId })).toBeDefined();
   });

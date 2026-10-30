@@ -7,11 +7,15 @@ export const NAB_CHANCE = { undiscovered: 0.4, discovered: 0.2 } as const;
 export const NAB_PITY_RUNS = 3;
 /** He only turns up as one of the first rooms clears, so a run that falls early still had its chance. */
 export const NAB_LAST_ROOM = 4;
+/** Nab's hero id: while you play as him, the thief never turns up. */
+export const NAB_HERO = 'nab';
 
 export interface NabInput {
   levelId: string;
   classic: boolean;
   heroLevel: number;
+  /** The hero on this run. */
+  heroId?: string;
   minesFound: boolean;
   runsWithoutNab: number;
   /** Combat rooms on the map. */
@@ -32,6 +36,7 @@ export const isNabEligible = ({ levelId, classic, heroLevel }: Pick<NabInput, 'l
 /** Undefined for runs he can never be on; otherwise whether (and after which room) he comes. */
 export function chooseNabPlan(input: NabInput): NabPlan | undefined {
   const { minesFound, runsWithoutNab, rooms, rng, force = false } = input;
+  if (input.heroId === NAB_HERO) return undefined;
   if (!force && !isNabEligible(input)) return undefined;
   const pity = !minesFound && runsWithoutNab >= NAB_PITY_RUNS;
   const comes = force || pity || rng() < (minesFound ? NAB_CHANCE.discovered : NAB_CHANCE.undiscovered);
