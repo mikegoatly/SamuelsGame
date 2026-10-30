@@ -4,11 +4,9 @@ import { deflateSync, inflateSync } from 'node:zlib';
 
 const root = resolve(import.meta.dirname, '..');
 const SHEET = resolve(root, 'public/assets/tiny-dungeon/tilemap_packed.png');
-const OUT = resolve(root, 'public/favicon.png');
 const TILE = 16;
 const COLS = 12;
 const FRAME = 84;
-const SCALE = 4;
 const BACKGROUND = [20, 18, 28, 255];
 
 interface Image {
@@ -91,17 +89,31 @@ function encodeRgba({ width, height, rgba }: Image): Buffer {
   return Buffer.concat([Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]), chunk('IHDR', header), chunk('IDAT', deflateSync(raw)), chunk('IEND', Buffer.alloc(0))]);
 }
 
+/** Each icon is the wizard sprite scaled to `scale`, centred on a square of `size` (padding keeps maskable icons inside the safe zone). */
+const ICONS = [
+  { file: 'favicon.png', size: 64, scale: 4 },
+  { file: 'icon-192.png', size: 192, scale: 12 },
+  { file: 'icon-512.png', size: 512, scale: 32 },
+  { file: 'icon-maskable-512.png', size: 512, scale: 18 },
+];
+
 const sheet = decodeIndexed(readFileSync(SHEET));
-const size = TILE * SCALE;
-const icon = new Uint8Array(size * size * 4);
 const originX = (FRAME % COLS) * TILE;
 const originY = Math.floor(FRAME / COLS) * TILE;
-for (let y = 0; y < size; y++) {
-  for (let x = 0; x < size; x++) {
-    const at = ((originY + Math.floor(y / SCALE)) * sheet.width + originX + Math.floor(x / SCALE)) * 4;
-    const opaque = sheet.rgba[at + 3]! > 0;
-    icon.set(opaque ? sheet.rgba.subarray(at, at + 4) : BACKGROUND, (y * size + x) * 4);
+for (const { file, size, scale } of ICONS) {
+  const icon = new Uint8Array(size * size * 4);
+  const offset = (size - TILE * scale) / 2;
+  for (let y = 0; y < size; y++) {
+    for (let x = 0; x < size; x++) {
+      const sx = Math.floor((x - offset) / scale);
+      const sy = Math.floor((y - offset) / scale);
+      const inside = sx >= 0 && sy >= 0 && sx < TILE && sy < TILE;
+      const at = ((originY + sy) * sheet.width + originX + sx) * 4;
+      const opaque = inside && sheet.rgba[at + 3]! > 0;
+      icon.set(opaque ? sheet.rgba.subarray(at, at + 4) : BACKGROUND, (y * size + x) * 4);
+    }
   }
+  const out = resolve(root, 'public', file);
+  writeFileSync(out, encodeRgba({ width: size, height: size, rgba: icon }));
+  console.log(`wrote ${out}`);
 }
-writeFileSync(OUT, encodeRgba({ width: size, height: size, rgba: icon }));
-console.log(`wrote ${OUT}`);

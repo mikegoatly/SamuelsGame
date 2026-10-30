@@ -1,0 +1,17 @@
+{
+  "name": "Samuel's Game",
+  "short_name": "Samuel's Game",
+  "description": "A top-down magic action adventure. Fight through ruins, desert and palace, defeat the bosses and level up.",
+  "id": "./",
+  "start_url": "./",
+  "scope": "./",
+  "display": "fullscreen",
+  "orientation": "landscape",
+  "background_color": "#14121c",
+  "theme_color": "#14121c",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

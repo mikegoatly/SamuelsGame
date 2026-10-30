@@ -24,6 +24,7 @@ import { installDeviceTracker } from './systems/inputDevice';
 import { applySavedMute, installMuteHotkey } from './systems/audioSettings';
 import { exposeForDebug } from './debug';
 import { installViewportWatch } from './systems/viewportWatch';
+import { registerServiceWorker } from './systems/serviceWorker';
 
 const game = new Phaser.Game({
   type: Phaser.AUTO,
@@ -44,3 +45,4 @@ installMuteHotkey(game);
 installDeviceTracker(game);
 installViewportWatch(game);
 exposeForDebug(game);
+registerServiceWorker();

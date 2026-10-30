@@ -27,6 +27,18 @@ npm run favicon    # regenerate public/favicon.png from the wizard sprite (tools
 npm run gen-maps   # regenerate public/assets/maps/*.tmj (ruins, desert, palace) from tools/mapThemes.ts (deterministic seeds)
 ```
 
+## Install as an app (PWA)
+
+The production build is an installable Progressive Web App: `public/manifest.webmanifest` (fullscreen, landscape, icons from
+`npm run favicon`) plus a service worker (`public/sw.js`, registered only in production builds). On first launch the worker
+downloads every game file listed in `dist/precache.json` (written by a small plugin in `vite.config.ts`), so once installed the
+game plays offline. Each version bump installs a fresh cache; the page itself is network-first, so a new release shows up on
+the next launch while online.
+
+To install on an Android tablet, open the deployed (HTTPS) site in Chrome and use the menu's **Install app** / **Add to Home
+screen**. On iPad, use Safari's Share > **Add to Home Screen**. Installation needs HTTPS (or localhost), so it works from GitHub
+Pages and `npm run preview`, not from a LAN IP over plain HTTP.
+
 ## Features
 
 Three levels (Ruins, Desert, Palace) with bosses, loot, gems and permanent saves; Apprentice Staff, Broken Wand, Golden Sword (plus each hero's own weapon) and ten skills (Fireball, Frost Nova, Chain Lightning, Boomerang Blade, Arcane Shield, Poison Cloud, Spirit Wolf, Blink Strike, Meteor, Gravity Well) chosen on a loadout screen;
