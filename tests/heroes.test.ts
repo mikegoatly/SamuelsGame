@@ -76,7 +76,7 @@ describe('Nab the gem thief', () => {
     expect(nab).toMatchObject({ name: 'Nab', hidden: true, signatureWeaponId: 'crystalScepter' });
     expect(nab.passive.id).toBe('snatch');
     expect([nab.stats.maxHp, nab.stats.moveSpeed, nab.stats.attackRate].map(ratingPips)).toEqual([1, 3, 2]);
-    expect(nab.tint).not.toBeNull();
+    expect(nab.tint).toBeNull();
     expect(heroKit('nab')).toEqual({ weaponId: 'crystalScepter', skillId: undefined });
   });
 });

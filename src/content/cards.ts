@@ -1,6 +1,5 @@
 import { RARITY_COLOR, type ItemDef } from './items';
-import { Frame } from './assetKeys';
-import { MinesFrame } from './minesFrames';
+import { Frame, MinesFrame, Tex } from './assetKeys';
 import { playerMaxHp } from '../logic/combat';
 import { gemCardText, type CardData } from '../logic/itemCards';
 import { skillCooldown, type SkillDef } from './skills';
@@ -35,8 +34,9 @@ export const minesCard: CardData = {
   title: 'Crystal Mines',
   subtitle: 'Crystal Mines discovered!',
   color: '#8fe8ff',
-  frame: MinesFrame.crystal,
-  tint: MinesFrame.crystalTint,
+  frame: MinesFrame.crystalBlue,
+  tint: null,
+  icon: Tex.mines,
   lines: ['A new level now waits on the level select screen.', 'Nab is your friend now (sort of).'],
 };
 

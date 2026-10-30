@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { MinesFrame, Tex } from '../content/assetKeys';
 import { NabThief } from '../entities/NabThief';
 import type { Enemy } from '../entities/Enemy';
 import type { Projectile } from '../entities/Projectile';
@@ -8,23 +9,23 @@ import { playSfx } from './sfx';
 import { hurtEnemy, liveEnemies, runOver } from './skills/targets';
 import type { SkillWorld } from './skills/types';
 
-const SHARD_COLOR = 0x8fe8ff;
-const SHARD_EDGE = 0x2a5c8c;
-const ENCASE_ALPHA = 0.45;
+const ENCASE_ALPHA = 0.6;
 const SPRAY_MS = 160;
 
 /** Crystal Scepter: bolts stick shards in monsters, 4 encase (frozen; bosses slowed), the next bolt shatters for bonus damage and sprays shards onto monsters nearby. */
 export class ScepterSystem {
   private readonly shards = new Map<Enemy, ShardState>();
-  private readonly gfx: Phaser.GameObjects.Graphics;
+  private readonly marks = new Map<Enemy, { shards: Phaser.GameObjects.Image[]; encase: Phaser.GameObjects.Image }>();
   private readonly twist: boolean;
 
   constructor(private readonly world: SkillWorld) {
     const { scene } = world;
     this.twist = world.player.weapon.activeTwist === 'shardEncase';
-    this.gfx = scene.add.graphics().setDepth(7);
     scene.events.on(Phaser.Scenes.Events.UPDATE, this.draw, this);
-    scene.events.once(Phaser.Scenes.Events.SHUTDOWN, () => scene.events.off(Phaser.Scenes.Events.UPDATE, this.draw, this));
+    scene.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      scene.events.off(Phaser.Scenes.Events.UPDATE, this.draw, this);
+      this.marks.clear();
+    });
   }
 
   /** A scepter bolt dealt its damage to `enemy`. */
@@ -63,7 +64,6 @@ export class ScepterSystem {
   }
 
   private draw(): void {
-    const g = this.gfx.clear();
     const now = this.world.clock.now;
     for (const [enemy, state] of this.shards) {
       const count = shardsAt(state, now);
@@ -71,25 +71,37 @@ export class ScepterSystem {
         this.shards.delete(enemy);
         continue;
       }
+      const marks = this.marksFor(enemy);
       const half = enemy.displayWidth / 2;
-      if (isEncased(state, now)) {
-        g.fillStyle(SHARD_COLOR, ENCASE_ALPHA).fillRect(enemy.x - half - 2, enemy.y - enemy.displayHeight / 2 - 2, half * 2 + 4, enemy.displayHeight + 4);
-        g.lineStyle(1, 0xffffff, 0.8).strokeRect(enemy.x - half - 2, enemy.y - enemy.displayHeight / 2 - 2, half * 2 + 4, enemy.displayHeight + 4);
-      }
-      for (let i = 0; i < count; i++) {
+      const encased = isEncased(state, now);
+      marks.encase.setVisible(encased).setPosition(enemy.x, enemy.y).setScale(Math.max(enemy.displayWidth, enemy.displayHeight) / 14);
+      marks.shards.forEach((shard, i) => {
         const angle = -Math.PI / 2 + ((i - (count - 1) / 2) * Math.PI) / 4;
-        this.diamond(enemy.x + Math.cos(angle) * (half + 1), enemy.y + Math.sin(angle) * (half + 1), 2.5);
-      }
+        shard.setVisible(i < count).setPosition(enemy.x + Math.cos(angle) * (half + 1), enemy.y + Math.sin(angle) * (half + 1)).setRotation(angle + Math.PI / 2);
+      });
+    }
+    for (const [enemy, marks] of this.marks) {
+      if (this.shards.has(enemy)) continue;
+      marks.encase.destroy();
+      marks.shards.forEach((shard) => shard.destroy());
+      this.marks.delete(enemy);
     }
   }
 
-  private diamond(x: number, y: number, r: number): void {
-    this.gfx.fillStyle(SHARD_COLOR, 1).fillTriangle(x, y - r * 1.4, x + r, y, x - r, y).fillTriangle(x, y + r * 1.4, x + r, y, x - r, y);
-    this.gfx.lineStyle(1, SHARD_EDGE, 0.8).strokeTriangle(x, y - r * 1.4, x + r, y + r * 1.4, x - r, y);
+  private marksFor(enemy: Enemy): { shards: Phaser.GameObjects.Image[]; encase: Phaser.GameObjects.Image } {
+    const existing = this.marks.get(enemy);
+    if (existing) return existing;
+    const { scene } = this.world;
+    const marks = {
+      encase: scene.add.image(enemy.x, enemy.y, Tex.mines, MinesFrame.encased).setDepth(7).setAlpha(ENCASE_ALPHA),
+      shards: Array.from({ length: SCEPTER.shardsToEncase }, () => scene.add.image(enemy.x, enemy.y, Tex.mines, MinesFrame.stuckShard).setDepth(8)),
+    };
+    this.marks.set(enemy, marks);
+    return marks;
   }
 
   private sprayFx(x: number, y: number, tx: number, ty: number): void {
-    const shard = this.world.scene.add.rectangle(x, y, 3, 3, SHARD_COLOR).setDepth(9).setRotation(Math.PI / 4);
+    const shard = this.world.scene.add.image(x, y, Tex.mines, MinesFrame.shatterShard).setDepth(9).setRotation(Math.atan2(ty - y, tx - x) + Math.PI / 2);
     this.world.scene.tweens.add({ targets: shard, x: tx, y: ty, duration: SPRAY_MS, onComplete: () => shard.destroy() });
   }
 

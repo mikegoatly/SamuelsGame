@@ -118,8 +118,10 @@ export const Frame = {
   slinger: 135,
   blob: 136,
   javelin: 137,
-  /** Placeholder Crystal Scepter: the blue-gem staff of the stock sheet (tinted per weapon). */
-  scepter: 130,
+  /** Mines-sheet frames copied into the tile sheet at load (see MINES_IN_TILES) so Tex.tiles lookups work for Nab and the scepter. */
+  nab: 144,
+  scepter: 148,
+  scepterBolt: 149,
   wolf: 124,
   coin: 102,
   ring: 101,
@@ -199,6 +201,9 @@ export const MinesFrame = {
   shatterShard: 31,
   pillarBottom: 32,
 } as const;
+
+/** Mines frames appended to the tile sheet as a row after the weapon strip, in order from tile frame 144. */
+export const MINES_IN_TILES: readonly number[] = [MinesFrame.nabIdle, MinesFrame.nabRun, MinesFrame.nabHit, MinesFrame.nabWave, MinesFrame.scepter, MinesFrame.scepterBolt];
 
 /** Frames of Bert's 32px sheet. Plate left/right are screen sides (left plate sits on Bert's own right shoulder). */
 export const BertFrame = {

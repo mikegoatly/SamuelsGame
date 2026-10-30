@@ -45,7 +45,8 @@ export class ItemCardScene extends MenuScene {
     const top = cy - PANEL_HEIGHT / 2;
     menuText(this, cx, top + 18, subtitle, 16, color);
     const crown = iconKey === Tex.accessories;
-    const icon = iconKey ? this.add.image(cx, top + (crown ? 78 : 62), iconKey, crown ? frame : undefined).setScale(crown ? 4 : 2) : this.add.image(cx, top + 62, Tex.tiles, frame).setScale(3);
+    const framed = crown || iconKey === Tex.mines;
+    const icon = iconKey ? this.add.image(cx, top + (crown ? 78 : 62), iconKey, framed ? frame : undefined).setScale(crown ? 4 : framed ? 3 : 2) : this.add.image(cx, top + 62, Tex.tiles, frame).setScale(3);
     if (tint !== null && !iconKey) icon.setTint(tint);
     menuText(this, cx, top + 106, title, 32, color);
     let y = top + 134;

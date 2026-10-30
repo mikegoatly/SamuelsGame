@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { gameText } from '../ui/gameText';
-import { Frame, MinesFrame, SHEET_COLS, SKILL_ICON_SOURCES, TILE_SIZE, Tex } from '../content/assetKeys';
+import { Frame, MINES_IN_TILES, MinesFrame, SHEET_COLS, SKILL_ICON_SOURCES, TILE_SIZE, Tex } from '../content/assetKeys';
 import { ROGUE_SPACING } from '../content/sewerFrames';
 import { PROMPT_SIZE } from '../content/inputGlyphs';
 import { skillList } from '../content/skills';
@@ -60,11 +60,17 @@ export class PreloadScene extends Phaser.Scene {
     const extra = this.textures.get(Tex.weaponsExtra).getSourceImage() as HTMLImageElement;
     const rows = source.height / TILE_SIZE;
     this.textures.remove(Tex.tiles);
-    const canvas = this.textures.createCanvas(Tex.tiles, source.width, (rows + 1) * TILE_SIZE)!;
+    const canvas = this.textures.createCanvas(Tex.tiles, source.width, (rows + 2) * TILE_SIZE)!;
     canvas.context.drawImage(source, 0, 0);
     canvas.context.drawImage(extra, 0, rows * TILE_SIZE);
+    const mines = this.textures.get(Tex.mines).getSourceImage() as HTMLImageElement;
+    MINES_IN_TILES.forEach((frame, i) => {
+      const sx = (frame % SHEET_COLS) * TILE_SIZE;
+      const sy = Math.floor(frame / SHEET_COLS) * TILE_SIZE;
+      canvas.context.drawImage(mines, sx, sy, TILE_SIZE, TILE_SIZE, i * TILE_SIZE, (rows + 1) * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+    });
     canvas.refresh();
-    for (let i = 0; i < (rows + 1) * SHEET_COLS; i++) canvas.add(i, 0, (i % SHEET_COLS) * TILE_SIZE, Math.floor(i / SHEET_COLS) * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+    for (let i = 0; i < (rows + 2) * SHEET_COLS; i++) canvas.add(i, 0, (i % SHEET_COLS) * TILE_SIZE, Math.floor(i / SHEET_COLS) * TILE_SIZE, TILE_SIZE, TILE_SIZE);
   }
 
   /** Desaturated copy of the cyclops frame so the boss reads as stone rather than brown. */

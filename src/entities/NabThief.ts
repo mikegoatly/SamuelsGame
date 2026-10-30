@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import type { EnemyDef } from '../content/enemies';
-import { MinesFrame } from '../content/minesFrames';
+import { MinesFrame, Tex } from '../content/assetKeys';
 import type { Point, Rect } from '../logic/geometry';
 import { NAB_SPEED, steerInRoom } from '../logic/nabChase';
 import { Enemy, type EnemyContext, type HitSource } from './Enemy';
@@ -9,8 +9,9 @@ import { Enemy, type EnemyContext, type HitSource } from './Enemy';
 export const NAB_NPC: EnemyDef = {
   id: 'nabThief',
   name: 'Nab',
-  frame: MinesFrame.nab,
-  tint: MinesFrame.nabTint,
+  texture: Tex.mines,
+  textureFrame: MinesFrame.nabIdle,
+  frame: 0,
   baseHp: 1,
   baseDamage: 0,
   speed: NAB_SPEED.base,
@@ -52,8 +53,12 @@ export class NabThief extends Enemy {
   /** A hit from the hero (allies' bites do not count): never hurts him, the system counts it. */
   override takeHit(_amount: number, _dx: number, _dy: number, _knockback = 1, source: HitSource = 'basic'): void {
     if (!this.alive || source === 'ally') return;
-    this.setTintFill(0xffffff);
-    this.scene.time.delayedCall(80, () => this.alive && this.applyBaseTint());
+    this.setTintFill(0xffffff).setFrame(MinesFrame.nabHit);
+    this.scene.time.delayedCall(80, () => {
+      if (!this.alive) return;
+      this.applyBaseTint();
+      this.setFrame(MinesFrame.nabIdle);
+    });
     this.onHit();
   }
 
@@ -74,6 +79,7 @@ export class NabThief extends Enemy {
       if (this.room) away.copy(steerInRoom(this, away, this.room, WALL_MARGIN));
       this.setVelocity(away.x * this.speed, away.y * this.speed);
       this.setFlipX(away.x < 0);
+      this.setFrame(Math.floor(time / 120) % 2 === 0 ? MinesFrame.nabRun : MinesFrame.nabIdle);
       return;
     }
     if (!this.goal || Phaser.Math.Distance.Between(this.x, this.y, this.goal.x, this.goal.y) < ARRIVE) {

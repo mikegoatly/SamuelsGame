@@ -3,7 +3,6 @@ import type { PassiveId } from '../logic/passives';
 import type { HeroStatMods } from '../logic/stats';
 import { WIZARD } from '../logic/unlocks';
 import { Frame } from './assetKeys';
-import { MinesFrame } from './minesFrames';
 
 export interface HeroDef {
   id: string;
@@ -162,8 +161,8 @@ export const nab: HeroDef = {
   id: 'nab',
   className: 'Thief',
   name: 'Nab',
-  frame: MinesFrame.nab,
-  tint: MinesFrame.nabTint,
+  frame: Frame.nab,
+  tint: null,
   color: '#8fe8ff',
   bio: 'A gem-thief goblin. Sorry about the scepter.',
   stats: mods(RATING.low, RATING.high, RATING.mid),

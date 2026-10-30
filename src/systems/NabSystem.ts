@@ -1,6 +1,5 @@
 import Phaser from 'phaser';
-import { Tex } from '../content/assetKeys';
-import { MinesFrame } from '../content/minesFrames';
+import { MinesFrame, Tex } from '../content/assetKeys';
 import { NabThief } from '../entities/NabThief';
 import type { Pickup } from '../entities/Pickup';
 import type { Player } from '../entities/Player';
@@ -104,9 +103,9 @@ export class NabSystem {
     const { x, y } = this.o.factory.world.clearSpot(nab);
     playSfx(scene, 'shatter');
     feel.shake(120, 0.004);
-    const sprite = scene.add.image(x, y, Tex.tiles, MinesFrame.gate).setTint(MinesFrame.gateTint).setDepth(3).setScale(0);
+    const sprite = scene.add.image(x, y, Tex.mines, MinesFrame.gate[0]).setDepth(3).setScale(0);
     scene.tweens.add({ targets: sprite, scale: 1.6, duration: 260, ease: 'Back.easeOut' });
-    const peek = scene.add.image(x, y - 6, Tex.tiles, MinesFrame.nab).setTint(MinesFrame.nabTint).setDepth(4).setVisible(false);
+    const peek = scene.add.image(x, y - 6, Tex.mines, MinesFrame.nabWave).setDepth(4).setVisible(false);
     this.gate = { x, y, openedAt: clock.now, sprite, peek, trigger: new StepOnTrigger() };
     floatText(scene, x, y - 18, 'Catch me if you can!', '#c8a8ff', 16, 18, 1600);
     scene.tweens.add({
@@ -164,6 +163,7 @@ export class NabSystem {
       this.close();
       return;
     }
+    gate.sprite.setFrame(MinesFrame.gate[Math.floor(this.o.clock.now / 120) % MinesFrame.gate.length]!);
     const colour = left < RING_URGENT ? URGENT_COLOR : GATE_COLOR;
     this.gfx.lineStyle(3, colour, 0.9).strokeCircle(gate.x, gate.y, gateRingRadius(left));
     this.drawArrow(gate, colour);
