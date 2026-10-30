@@ -4,7 +4,7 @@ import { items, RARITY_COLOR, type ItemDef } from '../content/items';
 import { lootTables } from '../content/lootTables';
 import { Pickup } from '../entities/Pickup';
 import type { Player } from '../entities/Player';
-import { skillIds } from '../content/skills';
+import { findableSkillIds } from '../content/skills';
 import { GEM_LABEL, noGems, type Gems } from '../logic/gems';
 import { eliteBonus } from '../logic/elites';
 import { rollDrops, rollGemBurst } from '../logic/loot';
@@ -62,7 +62,7 @@ export class LootSystem {
     const bonus = elite ? eliteBonus(table, this.rng, this.player.effects.luck) : [];
     for (const itemId of [...rollDrops(table, this.rng, this.player.effects.luck), ...burst, ...bonus]) this.spawn(itemId, x, y);
     const owned = [...this.save.data.skills.owned.map((skill) => skill.id), ...this.scrollsOnGround()];
-    const scroll = rollSkillScroll((table.scrollChance ?? SCROLL_CHANCE.normal) * (1 + this.player.effects.luck), skillIds, owned, this.rng);
+    const scroll = rollSkillScroll((table.scrollChance ?? SCROLL_CHANCE.normal) * (1 + this.player.effects.luck), findableSkillIds, owned, this.rng);
     if (scroll) this.spawn(`scroll_${scroll}`, x, y);
   }
 

@@ -262,6 +262,12 @@ export const skills: Readonly<Record<string, SkillDef>> = Object.fromEntries(ski
 
 export const skillIds: readonly string[] = skillList.map((skill) => skill.id);
 
+/** Trophy skills only their boss grants: never a random scroll or a camp offer. */
+const TROPHY_SKILLS: readonly string[] = [bertsPebble.id];
+
+/** Skills that can drop as scrolls or show up in the camp shop. */
+export const findableSkillIds: readonly string[] = skillIds.filter((id) => !TROPHY_SKILLS.includes(id));
+
 export const getSkill = (id: string): SkillDef | undefined => (Object.hasOwn(skills, id) ? skills[id] : undefined);
 
 /** Owned ids that are real skills (stale or junk save entries are ignored). */

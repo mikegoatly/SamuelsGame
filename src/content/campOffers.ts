@@ -7,7 +7,7 @@ import { MAX_UPGRADE_LEVEL } from '../logic/upgrades';
 import type { CampRowView } from '../ui/CampRow';
 import { Frame, Tex } from './assetKeys';
 import { cooldownText } from './cards';
-import { getSkill, knownSkillIds, skillIds } from './skills';
+import { findableSkillIds, getSkill, knownSkillIds } from './skills';
 import { skillUpgradeInfo, TIER_MULTIPLIER, upgradeInfoFor } from './upgradeInfo';
 import { previewUpgrade } from './upgradePreview';
 import { getWeapon, usableWeapons } from './weapons';
@@ -119,6 +119,6 @@ function reviveOffer(save: SaveData): Offer {
 
 /** Three rotating skills, then potions and the revive token. */
 export function shopOffers(save: SaveData): Offer[] {
-  const stock = shopStock(save.shop.rotation, skillIds, save.skills.owned.map((s) => s.id));
+  const stock = shopStock(save.shop.rotation, findableSkillIds, save.skills.owned.map((s) => s.id));
   return [...stock.filter((id) => skillLevel(save, id) === 0).map((id) => skillOffer(save, id)), potionOffer(save), reviveOffer(save)];
 }

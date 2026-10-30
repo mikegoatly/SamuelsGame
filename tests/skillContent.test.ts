@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { skillGlyph } from '../src/content/inputGlyphs';
 import { items } from '../src/content/items';
 import { levels } from '../src/content/levels';
-import { arcaneShield, blinkStrike, chainLightning, clampSkillLevel, fireball, frostNova, getSkill, MAX_SKILL_LEVEL, skillCooldown, skillIds, skillList, skillParams, skills } from '../src/content/skills';
+import { arcaneShield, blinkStrike, chainLightning, clampSkillLevel, findableSkillIds, fireball, frostNova, getSkill, MAX_SKILL_LEVEL, skillCooldown, skillIds, skillList, skillParams, skills } from '../src/content/skills';
 import { enemies } from '../src/content/enemies';
 import { lootTables } from '../src/content/lootTables';
 import { FIREBALL } from '../src/logic/fireball';
@@ -60,6 +60,11 @@ describe('skill acquisition content', () => {
     const rewarded = levels.flatMap((l) => l.rewardSkillIds ?? []);
     expect(rewarded).not.toContain('frostNova');
     expect(rewarded).not.toContain('blinkStrike');
+  });
+
+  it("Bert's Pebble is only earned by beating Bert: never a random scroll or a camp offer", () => {
+    expect(findableSkillIds).not.toContain('bertsPebble');
+    expect(findableSkillIds).toEqual(skillIds.filter((id) => id !== 'bertsPebble'));
   });
 
   it('every skill has a scroll item', () => {
