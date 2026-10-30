@@ -74,18 +74,23 @@ export class EnemyFactory {
     return this.fadeIn(new Enemy(this.scene, x, y, def, level, this.context, extras), FADE_IN_MS, graceMs);
   }
 
+  /** Spawns a special monster class (Nab the thief) with the shared context and the usual fade-in. */
+  spawnWith<T extends Enemy>(create: (context: EnemyContext) => T): T {
+    return this.fadeIn(create(this.context), FADE_IN_MS);
+  }
+
   /** Spawns a def as a whole encounter: single monsters as themselves, packs as their members around the point (a houndmaster brings his hounds). */
   spawnGroup(def: EnemyDef, level: number, x: number, y: number, affix?: Affix): Enemy[] {
     const { pack } = def;
-    if (!pack) return [this.spawn(def, level, x, y, { affix }, SPAWN_GRACE_MS)];
+    if (!pack) return [this.spawn(def, level, x, y, { affix, roomMonster: true }, SPAWN_GRACE_MS)];
     const member = getEnemy(pack.member);
     const memberLevel = Math.max(1, level - (pack.levelDrop ?? 0));
     const count = packCount(pack.count, Math.random);
     const spots = member.custom === 'twin'
       ? [{ x: x - TWIN_GAP, y }, { x: x + TWIN_GAP, y }]
       : scatterAround({ x, y }, count, PACK_RADIUS, Math.random, this.blocked);
-    const leader = pack.leader ? this.spawn(def, level, x, y, { affix }, SPAWN_GRACE_MS) : undefined;
-    const members = spots.map((spot, i) => this.spawn(member, memberLevel, spot.x, spot.y, i === 0 && !leader ? { affix } : undefined, SPAWN_GRACE_MS));
+    const leader = pack.leader ? this.spawn(def, level, x, y, { affix, roomMonster: true }, SPAWN_GRACE_MS) : undefined;
+    const members = spots.map((spot, i) => this.spawn(member, memberLevel, spot.x, spot.y, i === 0 && !leader ? { affix, roomMonster: true } : { roomMonster: true }, SPAWN_GRACE_MS));
     if (leader) for (const hound of members) assignHound(leader, hound);
     if (member.custom === 'twin' && members.length === 2) linkTwins(members[0]!, members[1]!);
     return leader ? [leader, ...members] : members;

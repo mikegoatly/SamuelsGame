@@ -1,6 +1,7 @@
 import { weaponDamageAt, weaponFireRateAt } from '../logic/upgrades';
 import { coneAt, TWIST_LEVEL, type WeaponTwist } from '../logic/weaponTwists';
 import { Frame } from './assetKeys';
+import { heroes } from './heroes';
 
 export interface MeleeTuning {
   /** Cone angle of a swing, radians. */
@@ -56,6 +57,10 @@ export interface WeaponDef {
   burns?: boolean;
   /** Fires a short crescent bolt that hits everything in its arc (Bone Staff). */
   crescent?: boolean;
+  /** Bolts stick crystal shards in monsters that encase and then shatter (Crystal Scepter). */
+  scepter?: boolean;
+  /** Only this hero can pick it (other heroes never see it on the Loadout or in the Camp). */
+  heroOnly?: string;
   /** What level 5 adds. */
   twist?: WeaponTwist;
   /** Upgrade level of this copy (1 when unset). */
@@ -246,7 +251,24 @@ export const javelin: WeaponDef = {
   description: 'Slow throw that pierces every enemy in line',
 };
 
-export const weaponList: readonly WeaponDef[] = [apprenticeStaff, brokenWand, ironSword, goldenSword, twinDaggers, hammer, bow, fists, sludgeSlinger, boneStaff, javelin];
+/** Nab's stolen scepter: 8 per 280ms, and every 5th bolt on one monster shatters it for 2x more (40 DPS over the cycle, like the wand), freezing crowds on the way. */
+export const crystalScepter: WeaponDef = {
+  id: 'crystalScepter',
+  kind: 'ranged',
+  name: 'Crystal Scepter',
+  frame: Frame.scepter,
+  baseDamage: 8,
+  fireRateMs: 280,
+  speed: 300,
+  range: 230,
+  tint: 0x8fe8ff,
+  scepter: true,
+  heroOnly: 'nab',
+  twist: 'shardEncase',
+  description: '4 shards encase a monster, the next bolt shatters it',
+};
+
+export const weaponList: readonly WeaponDef[] = [apprenticeStaff, brokenWand, ironSword, goldenSword, twinDaggers, hammer, bow, fists, sludgeSlinger, boneStaff, javelin, crystalScepter];
 
 export const weapons: Record<string, WeaponDef> = Object.fromEntries(weaponList.map((weapon) => [weapon.id, weapon]));
 
@@ -254,6 +276,18 @@ export const weapons: Record<string, WeaponDef> = Object.fromEntries(weaponList.
 export const knownWeapons = (owned: readonly string[]): string[] => owned.filter((id) => Object.hasOwn(weapons, id));
 
 export const getWeapon = (id: string): WeaponDef => weapons[id] ?? apprenticeStaff;
+
+/** Owned weapons this hero may pick (another hero's own weapon, like Nab's Scepter, is left out). */
+export const usableWeapons = (owned: readonly string[], heroId: string): string[] =>
+  knownWeapons(owned).filter((id) => weapons[id]!.heroOnly === undefined || weapons[id]!.heroOnly === heroId);
+
+/** The weapon a hero really plays with: one that is not theirs falls back to their own signature weapon if owned, else the starting staff. */
+export function weaponFor(equipped: string, heroId: string, owned: readonly string[]): string {
+  const usable = usableWeapons(owned, heroId);
+  if (usable.includes(equipped)) return equipped;
+  const own = heroes[heroId]?.signatureWeaponId;
+  return own !== undefined && usable.includes(own) ? own : apprenticeStaff.id;
+}
 
 /** The weapon as it plays at an upgrade level: +12% damage and +5% fire rate per level, and its twist from level 5. */
 export const weaponAtLevel = (weapon: WeaponDef, level: number): WeaponDef => {

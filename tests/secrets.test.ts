@@ -21,7 +21,7 @@ describe('discoverSewer', () => {
   });
 
   it('repairs a found sewer whose hero is missing, and never queues a seen reveal again', () => {
-    const found = aSave({ secrets: { sewerFound: true, desertRunsWithoutGrate: 1 } });
+    const found = aSave({ secrets: { sewerFound: true, desertRunsWithoutGrate: 1, minesFound: false, nabPity: 0 } });
     expect(discoverSewer(found, noKit).heroes.unlocked).toContain(SEWER_HERO);
     const seen = aSave({ seen: ['hero:gloop'] });
     expect(discoverSewer(seen, noKit).pendingNotices).toEqual([]);
@@ -34,7 +34,7 @@ describe('discoverSewer', () => {
   });
 
   it('keeps everything else: pity counter, coins, selected hero', () => {
-    const base = aSave({ coins: 40, secrets: { sewerFound: false, desertRunsWithoutGrate: 2 } });
+    const base = aSave({ coins: 40, secrets: { sewerFound: false, desertRunsWithoutGrate: 2, minesFound: false, nabPity: 0 } });
     const save = discoverSewer(base, noKit);
     expect(save.coins).toBe(40);
     expect(save.secrets.desertRunsWithoutGrate).toBe(2);
@@ -48,12 +48,12 @@ describe('recordGrateRun', () => {
     [2, false, 3],
     [3, true, 0],
   ])('counter %i, grate %s -> %i', (before, grated, after) => {
-    const save = recordGrateRun(aSave({ secrets: { sewerFound: false, desertRunsWithoutGrate: before } }), grated);
+    const save = recordGrateRun(aSave({ secrets: { sewerFound: false, desertRunsWithoutGrate: before, minesFound: false, nabPity: 0 } }), grated);
     expect(save.secrets.desertRunsWithoutGrate).toBe(after);
   });
 
   it('does not touch the found flag', () => {
-    expect(recordGrateRun(aSave({ secrets: { sewerFound: true, desertRunsWithoutGrate: 0 } }), false).secrets.sewerFound).toBe(true);
+    expect(recordGrateRun(aSave({ secrets: { sewerFound: true, desertRunsWithoutGrate: 0, minesFound: false, nabPity: 0 } }), false).secrets.sewerFound).toBe(true);
   });
 });
 

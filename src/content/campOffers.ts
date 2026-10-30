@@ -10,7 +10,7 @@ import { cooldownText } from './cards';
 import { getSkill, knownSkillIds, skillIds } from './skills';
 import { skillUpgradeInfo, TIER_MULTIPLIER, upgradeInfoFor } from './upgradeInfo';
 import { previewUpgrade } from './upgradePreview';
-import { getWeapon, knownWeapons } from './weapons';
+import { getWeapon, usableWeapons } from './weapons';
 
 const GOOD = '#7dffb0';
 const BAD = '#ff8a8a';
@@ -54,7 +54,7 @@ function upgradeOffer(save: SaveData, target: UpgradeTarget, name: string, icon:
 /** Owned weapons then owned skills, each with its next-level preview and price. */
 export function upgradeOffers(save: SaveData): Offer[] {
   const offers: Offer[] = [];
-  for (const id of knownWeapons(save.weapons.owned)) {
+  for (const id of usableWeapons(save.weapons.owned, save.heroes.selected)) {
     const info = upgradeInfoFor('weapon', id);
     if (!info) continue;
     const weapon = getWeapon(id);

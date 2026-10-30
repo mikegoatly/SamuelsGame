@@ -28,7 +28,7 @@ export interface LevelConfig {
   survival?: boolean;
   /** Teaser levels are listed but cannot be entered. */
   comingSoon?: boolean;
-  /** Not listed at all until the player has found it (`secrets.sewerFound`, later `secrets.minesFound`): no card, no hint. */
+  /** Not listed at all until the player has found it (`secrets.sewerFound`, `secrets.minesFound`): no card, no hint. */
   hiddenUntilFound?: SecretId;
   /** Card subtitle for teaser levels. */
   tagline?: string;

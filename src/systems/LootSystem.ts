@@ -66,6 +66,12 @@ export class LootSystem {
     if (scroll) this.spawn(`scroll_${scroll}`, x, y);
   }
 
+  /** Collects an item straight into the run, as if it had been picked up (Nab's Snatch). */
+  grant(itemId: string): void {
+    const def = items[itemId];
+    if (def) this.apply(def);
+  }
+
   spawn(itemId: string, x: number, y: number): void {
     const def = items[itemId];
     if (!def) return;

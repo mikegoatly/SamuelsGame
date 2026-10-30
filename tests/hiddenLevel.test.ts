@@ -48,3 +48,22 @@ describe('the released sewer', () => {
     expect(offersHeroic({ ...sewer }, ['desert', 'sewer'])).toBe(true);
   });
 });
+
+describe('the hidden mines card', () => {
+  it('is listed after the palace only once the mines are found, independent of the sewer', () => {
+    const ids = (found: ('sewer' | 'mines')[]): string[] => visibleLevels(levels, ['ruins', 'desert', 'palace'], found).map((l) => l.id);
+    expect(ids([])).not.toContain('mines');
+    expect(ids(['sewer'])).not.toContain('mines');
+    expect(ids(['mines'])).toContain('mines');
+    expect(ids(['mines'])).not.toContain('sewer');
+    const all = ids(['sewer', 'mines']);
+    expect(all.indexOf('mines')).toBe(all.indexOf('palace') + 1);
+  });
+
+  it('is listed once found and playable, with the mines music and Bert as its boss', () => {
+    const mines = levels.find((l) => l.id === 'mines')!;
+    expect(mines).toMatchObject({ name: 'Crystal Mines', hiddenUntilFound: 'mines', recommendedLevel: 14, monsterLevelRange: [13, 16], music: 'music-mines' });
+    expect(isLevelPlayable(mines)).toBe(true);
+    expect(mines.bossId).toBe('bert');
+  });
+});

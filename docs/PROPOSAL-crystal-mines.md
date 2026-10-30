@@ -1,6 +1,6 @@
 # Proposal: The Crystal Mines (second hidden level), Nab and Bert
 
-Status: **design agreed, ready for C1** (2026-10-29)
+Status: **C1 built** (2026-10-29); C2 next
 
 Decided by the user: endgame tier; Nab on Desert/Palace from Lv 11; Hookjaw Spider instead of a Gem Mimic;
 Crystal Scepter is Nab's signature weapon and only Nab's; Bert's Pebble is the normal-clear reward, as a skill;
@@ -128,3 +128,17 @@ Heroic first clear: gems + the **Crystal Crown** (head accessory).
 | **C3** | Bert, Bert's Pebble, Heroic + Crystal Crown, balance pass |
 
 C1 splits across two builders: discovery (Nab NPC, gate, save) vs hero (Snatch, Scepter).
+
+## 9. Made during C1 build
+
+- Nab comes as one of the **first four** combat rooms clears (random), so a run that falls early still had its chance.
+- **Pity** counts fresh eligible runs that reach a room without him, and resets only when he actually turns up.
+- Hits within **350ms** are one hit (a pierce, a cone or a skill burst cannot open the gate at once). Ally bites, DoTs,
+  slows, stuns and Scepter shards never count. Left alone for **20s** he slips away ("Nab got away!").
+- He walks at 62 px/s, +18 per hit (still slower than a dash after two hits). Each of the three hits drops a random gem.
+- The mines are a **coming-soon stub**: Follow banks the run and opens Level Select on the mines card (as the sewer did in S1).
+- The grate prompt became a shared **`SecretPrompt`** (sewer or mines text). `hiddenUntilFound` now names its secret.
+- **Scepter numbers:** 8 per 280ms, range 230; shatter +2x the bolt; up to 4 spray shards within 56px; shards fade after 3s.
+  Spray shards never shatter, and without the level 5 twist they stop at 3 shards. Tier 2, blue gems.
+- **Snatch:** 1 coin (2 gold) per monster; the dash lasts 1.3x as long.
+- `?debug=mines` lists the card without finding it (like `?debug=sewer`).

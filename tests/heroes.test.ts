@@ -22,7 +22,7 @@ describe('hero content', () => {
   });
 
   it('every hero but the wizard has a hint, and an unlock rule unless it is found by discovery', () => {
-    const discovered = ['gloop'];
+    const discovered = ['gloop', 'nab'];
     const locked = heroList.filter((h) => h.id !== WIZARD).map((h) => h.id);
     expect([...unlockableHeroIds].sort()).toEqual(locked.filter((id) => !discovered.includes(id)).sort());
     for (const id of locked) expect(getHero(id).hint, id).toBeTruthy();
@@ -57,14 +57,26 @@ describe('hero content', () => {
 });
 
 describe('Gloop the Slime', () => {
-  it('is the last hero, with his own frame tint, hint and signature weapon', () => {
+  it('is a hidden hero, with his own frame tint, hint and signature weapon', () => {
     const gloop = getHero('gloop');
-    expect(heroList[heroList.length - 1]).toBe(gloop);
+    expect(gloop.hidden).toBe(true);
     expect(gloop.name).toBe('Gloop the Slime');
     expect(gloop.signatureWeaponId).toBe('sludgeSlinger');
     expect(gloop.passive.id).toBe('secondBlob');
     expect(gloop.passive.text).toBe('Once per level, a knockout hit shrinks him instead: back up at 30% HP.');
     expect(gloop.hint).toBe("Some friends live where the light doesn't reach.");
     expect(gloop.tint).not.toBeNull();
+  });
+});
+
+describe('Nab the gem thief', () => {
+  it('is the last hero: hidden, low HP, high speed, mid attack, Snatch and the Crystal Scepter', () => {
+    const nab = getHero('nab');
+    expect(heroList[heroList.length - 1]).toBe(nab);
+    expect(nab).toMatchObject({ name: 'Nab', hidden: true, signatureWeaponId: 'crystalScepter' });
+    expect(nab.passive.id).toBe('snatch');
+    expect([nab.stats.maxHp, nab.stats.moveSpeed, nab.stats.attackRate].map(ratingPips)).toEqual([1, 3, 2]);
+    expect(nab.tint).not.toBeNull();
+    expect(heroKit('nab')).toEqual({ weaponId: 'crystalScepter', skillId: undefined });
   });
 });

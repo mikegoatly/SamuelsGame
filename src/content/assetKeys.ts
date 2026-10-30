@@ -118,6 +118,8 @@ export const Frame = {
   slinger: 135,
   blob: 136,
   javelin: 137,
+  /** Placeholder Crystal Scepter: the blue-gem staff of the stock sheet (tinted per weapon). */
+  scepter: 130,
   wolf: 124,
   coin: 102,
   ring: 101,

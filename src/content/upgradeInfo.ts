@@ -37,6 +37,7 @@ export const weaponUpgradeInfo: Readonly<Record<string, UpgradeInfo>> = {
   sludgeSlinger: { gem: 'green', tier: 3, twist: 'Puddles also poison' },
   boneStaff: { gem: 'blue', tier: 2, twist: 'Crescent kills may rise as skeletons' },
   javelin: { gem: 'red', tier: 3, twist: 'The stuck javelin bursts' },
+  crystalScepter: { gem: 'blue', tier: 2, twist: 'Shatter shards can encase too' },
 };
 
 export const TIER_MULTIPLIER: Record<SkillTier, number> = { 1: 1, 2: 1.25, 3: 1.5 };

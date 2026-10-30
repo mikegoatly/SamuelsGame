@@ -70,6 +70,8 @@ export interface EnemyContext {
 export interface EnemyExtras {
   affix?: Affix;
   raised?: boolean;
+  /** Placed by the room's own waves (not summoned, split or raised mid-fight). */
+  roomMonster?: boolean;
   hp?: number;
   scale?: number;
 }
@@ -93,6 +95,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
   readonly mods: EnemyMods;
   readonly behaviour?: Behaviour;
   readonly raised: boolean;
+  readonly roomMonster: boolean;
   private readonly world?: EnemyWorld;
   private readonly corpseKey = nextCorpseKey++;
   private readonly small: boolean;
@@ -142,6 +145,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     this.level = level;
     this.maxHp = this.hp = extras.hp ?? enemyMaxHp(def.baseHp, level);
     this.raised = extras.raised === true;
+    this.roomMonster = extras.roomMonster === true;
     this.small = extras.hp !== undefined;
     this.world = context.world;
     this.setSize(10, 10).setOffset(3, 5).setDepth(5);
@@ -452,11 +456,11 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     return slowFactor(this.slow, this.clock.now) < 1;
   }
 
-  /** Walks toward the player, round walls and pillars when a straight line would snag (skipped by `usePath = false`). */
-  chase(time: number, speed = this.def.speed, usePath = true): void {
+  /** Walks toward the player (or `to`), round walls and pillars when a straight line would snag (skipped by `usePath = false`). */
+  chase(time: number, speed = this.def.speed, usePath = true, to: { x: number; y: number } = this.target): void {
     const walks = usePath && this.def.behaviour !== 'erratic';
     speed *= this.speedFactor;
-    const goal = this.navigator && walks ? this.navigator.aim(time, this, this.target, this.bodyRadius(), speed) : this.target;
+    const goal = this.navigator && walks ? this.navigator.aim(time, this, to, this.bodyRadius(), speed) : to;
     this.desired.set(goal.x - this.x, goal.y - this.y);
     if (this.desired.lengthSq() < 1) return;
     this.desired.normalize();
