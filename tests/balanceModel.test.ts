@@ -331,7 +331,7 @@ describe('balance model: Glitch scales with the hero', () => {
       const [minLevel, maxLevel] = glitchRoomRange(i + 1, GLITCH_THEME.encounters.length, hero, heroic);
       return { ...e, minLevel, maxLevel };
     });
-    const level = { ...glitch, bossId: 'stoneGuardian', bossLevel: glitchBossLevel(hero, heroic) };
+    const level = { ...glitch, bossId: 'missingTexture', bossLevel: glitchBossLevel(hero, heroic) };
     return estimateLevel(level, encounters, hero, gearedReference(hero), GLITCH_THEME);
   };
   const cases = [15, 25, 40].flatMap((hero) => [false, true].map((heroic) => [`hero ${hero}${heroic ? ' heroic' : ''}`, hero, heroic] as const));

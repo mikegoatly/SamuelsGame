@@ -14,8 +14,6 @@ export interface LevelConfig {
   /** Room intensity: waves, wave size, which new monster each room features and elite odds. */
   curve?: LevelCurve;
   bossId?: string;
-  /** Stand-in bosses: each run picks one (seeded) in place of `bossId`. */
-  bossPool?: readonly string[];
   /** Monster and boss levels follow the hero (`logic/glitch.ts`) instead of the fixed range. */
   scalesWithHero?: boolean;
   bossLevel?: number;

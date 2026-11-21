@@ -6,7 +6,7 @@ import { feel } from '../../systems/feel';
 import { playSfx } from '../../systems/sfx';
 import { groundEffects } from '../behaviours/ground';
 import type { Boss } from '../Boss';
-import type { BossFamily } from './BossFamily';
+import { pickLanding } from '../../logic/landing';
 
 const DANGER = 0xff2a2a;
 const DANGER_EDGE = 0xff5a5a;
@@ -20,6 +20,23 @@ const PUDDLE_MS = 4500;
 const LANDING_REACH = 4;
 const LANDING_GRACE_MS = 300;
 
+/** Where landings are claimed: Mother Sludge's family (so pieces spread out), or nothing at all for a lone copy of her. */
+export interface LandingClaims {
+  claimLanding(owner: Boss, want: { x: number; y: number }, r: number, until: number, free: (x: number, y: number) => boolean): { x: number; y: number };
+  releaseLanding(owner: Boss, x: number, y: number, r: number): boolean;
+}
+
+/** The Missing Texture copying Mother Sludge is alone, so her landings are never moved aside and nothing else covers a puddle. */
+export class SoloClaims implements LandingClaims {
+  claimLanding(_owner: Boss, want: { x: number; y: number }, r: number, _until: number, free: (x: number, y: number) => boolean): { x: number; y: number } {
+    return pickLanding(want, r, [], free);
+  }
+
+  releaseLanding(): boolean {
+    return false;
+  }
+}
+
 /** Mother Sludge's own moves: the hop-slam (growing shadow, leap, landing with a slow puddle) and the telegraphed fan of globs. */
 export class SludgeMoves {
   private shapes: Phaser.GameObjects.GameObject[] = [];
@@ -28,7 +45,7 @@ export class SludgeMoves {
   private aimed = false;
   private readonly baseScale: number;
 
-  constructor(private readonly boss: Boss, private readonly family: BossFamily, private readonly emergeSpot: (x: number, y: number) => { x: number; y: number }) {
+  constructor(private readonly boss: Boss, private readonly family: LandingClaims, private readonly emergeSpot: (x: number, y: number) => { x: number; y: number }) {
     this.baseScale = boss.def.scale ?? 1;
   }
 

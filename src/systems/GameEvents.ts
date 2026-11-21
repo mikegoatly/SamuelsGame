@@ -14,6 +14,8 @@ export interface GameEventMap {
   'room-started': [order: number, total: number];
   'room-cleared': [order: number, total: number];
   'boss-started': [];
+  /** The Missing Texture asks the Glitch screen effect for a burst. */
+  'glitch-announce': [leadMs?: number];
   'boss-spawned': [name: string, hp: number, maxHp: number];
   'boss-hp': [hp: number, maxHp: number];
   'boss-died': [x: number, y: number];

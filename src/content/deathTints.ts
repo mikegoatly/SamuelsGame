@@ -16,6 +16,7 @@ export const DEATH_TINTS: Record<string, number> = {
   darkMage: 0xc070ff,
   assassin: 0x7a6a9a,
   madKing: 0xffd060,
+  missingTexture: 0xff40e0,
   rat: 0x9a7a5a,
   ratSwarm: 0x9a7a5a,
   bombBeetle: 0xd84a3a,

@@ -102,4 +102,33 @@ describe('GlitchBursts', () => {
     expect(on / total).toBeLessThan(0.36);
     expect(on / total).toBeGreaterThan(0.2);
   });
+
+  describe('while held (a floor warning is showing)', () => {
+    it('ignores requests', () => {
+      const bursts = new GlitchBursts(sequenceRng(0.99, 0.5));
+      bursts.active(0);
+      bursts.hold(true);
+      bursts.request(100, 0);
+      expect(bursts.active(200)).toBe(false);
+    });
+
+    it('postpones a natural burst until released', () => {
+      const bursts = new GlitchBursts(sequenceRng(0.5));
+      bursts.active(0);
+      bursts.hold(true);
+      for (let t = 0; t < 30_000; t += 100) expect(bursts.active(t)).toBe(false);
+      bursts.hold(false);
+      let on = false;
+      for (let t = 30_000; t < 31_000; t += 100) on ||= bursts.active(t);
+      expect(on).toBe(true);
+    });
+
+    it('lets a running burst finish', () => {
+      const bursts = new GlitchBursts(sequenceRng(0.99, 0.5));
+      bursts.request(0, 0);
+      expect(bursts.active(10)).toBe(true);
+      bursts.hold(true);
+      expect(bursts.active(500)).toBe(true);
+    });
+  });
 });

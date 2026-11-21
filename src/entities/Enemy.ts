@@ -101,7 +101,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
   private readonly small: boolean;
   private readonly navigator?: Navigator;
   private readonly label: Phaser.GameObjects.Text;
-  private readonly baseTint: number | null;
+  protected baseTint: number | null;
   private readonly wobblePhase = Math.random() * Math.PI * 2;
   private readonly desired = new Phaser.Math.Vector2();
   private lastHit: HitSource = 'basic';

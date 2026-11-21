@@ -8,6 +8,7 @@ import { Frame, Tex } from './assetKeys';
 import { madKingBrain, sandRatBrain, stoneGuardianBrain } from './bosses';
 import { bertBoss } from './bert';
 import { sludgeBoss } from './motherSludge';
+import { missingTexture } from './missingTexture';
 import { newMonsters } from './monsters';
 
 export type CustomKind = 'beetle' | 'archer' | 'wisp' | 'rat' | 'necromancer' | 'shark' | 'imp' | 'turret' | 'devil' | 'priest' | 'jester' | 'gargoyle' | 'twin' | 'houndmaster' | 'hound' | 'blob' | 'spitter' | 'toad' | 'gator' | 'shroom' | 'miner' | 'mole' | 'shard' | 'spider';
@@ -268,6 +269,6 @@ export const madKing: EnemyDef = {
   boltSpeed: 85,
 };
 
-export const enemies: EnemyDef[] = [slime, bat, cyclops, spider, ghost, stoneGuardian, scorpion, bandit, mummy, vulture, sandRat, palaceGuard, royalArcher, darkMage, assassin, madKing, ...newMonsters, ...sludgeBoss, ...bertBoss];
+export const enemies: EnemyDef[] = [slime, bat, cyclops, spider, ghost, stoneGuardian, scorpion, bandit, mummy, vulture, sandRat, palaceGuard, royalArcher, darkMage, assassin, madKing, ...newMonsters, ...sludgeBoss, ...bertBoss, missingTexture];
 
 export const getEnemy = (id: string): EnemyDef => enemies.find((e) => e.id === id) ?? slime;

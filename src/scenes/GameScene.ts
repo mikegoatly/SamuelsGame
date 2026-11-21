@@ -62,7 +62,6 @@ import { getHero } from '../content/heroes';
 import { GrateSystem } from '../systems/GrateSystem';
 import { GlitchTileSystem } from '../systems/GlitchTileSystem';
 import { GlitchFxSystem } from '../systems/glitch/GlitchFxSystem';
-import { pickGlitchBoss } from '../logic/glitch';
 import { SECRET_INFO } from './secretInfo';
 import { isLevelPlayable } from '../logic/levelRules';
 import { countsForPity } from '../logic/grate';
@@ -138,7 +137,6 @@ export class GameScene extends Phaser.Scene {
       glitchFound: save.secrets.glitchFound,
       forceGlitch: FORCE_GLITCH,
     });
-    if (this.level.bossPool) this.level = { ...this.level, bossId: pickGlitchBoss(this.level.bossPool, this.runMap.seed) };
     const map = buildLevelMap(this, this.level, installRunMap(this, this.level, this.runMap));
     const { walls, playerStart } = map;
     const projectiles = createProjectilePool(this);

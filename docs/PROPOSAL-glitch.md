@@ -1,6 +1,6 @@
 # Proposal: Glitch (third hidden level)
 
-Status: **G1 built** (2026-11-21); G2 (Missing Texture boss) next
+Status: **G1 and G2 built** (2026-11-21); G3 (Glitch the Glitcher, Glitch weapon, polish) next
 
 Decided by the user:
 - The player sprite **never glitches** (readability).
@@ -75,25 +75,42 @@ Endgame, post-Heroic content.
   (`logic/glitchBursts.ts`) on the `GameClock`, so pause stops it. HUD scene is unaffected except the text gag.
 - Extra tiles (checker, seam) go in a generated sheet under `public/assets/extra/`.
 
-## 4. The boss: options
+## 4. The boss: the Missing Texture (G2)
 
-The boss should be the glitch itself, and the fight should teach one clear lesson.
+Chosen over a Corrupted Hero mirror and an "Error 404" pop-up window. A big magenta/black checker cube with a face.
+*Lesson: watch which boss it is copying, and find the real one.* Level: hero + 3 (min 18), as the stand-in.
 
-**A. The Missing Texture (recommended).** A big magenta/black checker cube with a face. *Lesson: watch which boss it
-is copying.*
-- Phase 1: **copies a real boss's moves** for ~8s at a time (Stone Guardian slam, Sand Rat burrow, Mad King's
-  attacks), wearing that boss's colours. Banner text says who it's copying, then it switches.
-- Phase 2 (<50%): splits into **3 copies**; only one has a face, the others are hollow outlines. Hit the real one and
-  the fakes pop.
-- Phase 3 (<20%): the arena itself glitches. Floor tiles drop out in telegraphed lines (checker first, then gone)
-  while it chases you.
-- Reuses existing boss moves heavily, so it's the cheapest to build.
+**Phase 1 (100-50%): copy cycle.**
+- It **copies a real boss** for 8s at a time, using that boss's own phase-1 attacks and wearing its colour (tint):
+  Stone Guardian (slam + burst), Sand Rat (burrow + spit), Mad King (lunge + spiral), Mother Sludge (hop + spit).
+  Bert is not copied (his fight is its own entity). **No summons** at any point: the fight is about the boss.
+- **Switching** (~1s): it stops, flickers between checker and the next colour, a banner above it reads
+  "COPYING: SAND RAT..." and a glitch burst fires. No attacks during the switch (a breather). Never the same copy
+  twice in a row. A switch waits for the current attack to finish, so no telegraph is ever left hanging.
 
-**B. The Corrupted Hero.** A glitched copy of the hero you're playing, using your own weapon and skills against you.
-Very cool, but every hero needs a mirror version, so it's the most work and hard to balance.
+**Phase 2 (50-20%): three of it.**
+- Splits into **3**: the real one (face, frame 3/4) and **two fakes** (hollow checker outline, no face, frame 5), all
+  wearing the current copy's colour. The copy cycle carries on, 6s per copy.
+- The real one and the fakes still use each copy's **phase-1** attacks here; phase-2 sets wait for phase 3.
+- Fakes only use the copy's **projectile** attacks (burst, spit, spiral, seek) at **half damage**; no slams, lunges,
+  burrows or hops. Player shots pass through fakes with a small pixel puff ("miss").
+- Hitting the real one **3 times** pops both fakes (pixel shatter). They re-form 12s later while still in phase 2.
 
-**C. Error 404.** A giant floating error window that throws pop-up windows (projectiles) and has a "close" X
-button that's its weak spot. Very funny, very new, but no moves to reuse.
+**Phase 3 (below 20%): the floor breaks.**
+- Fakes gone for good. The arena floor glitches: every ~4s a **band** (a row or column of tiles, 2 tiles thick)
+  turns into flickering checker for **1.2s** (the warning), then drops out for **2.5s** and re-forms.
+- Falling in: 10% of max HP and a push to the nearest safe floor (like the cracked floor). At most ~40% of the
+  arena is ever out at once, and the safe floor always stays connected. A band never drops under the player without
+  the full warning.
+- The copy cycle continues (6s per copy, phase-2 attack sets).
+
+**Death:** it shatters into a cloud of pixels, and "ERROR: BOSS NOT FOUND" floats up. Normal reward drop (the Glitch
+weapon arrives in G3).
+
+**Reduce flashes:** steady colour change on switch instead of flicker, fewer shatter pixels, the warning band is a
+steady checker instead of flickering.
+
+**Balance:** boss fight inside the `balanceModel` boss band for Glitch (5-120s), tuned through its HP and copy timing.
 
 ## 5. Rewards
 

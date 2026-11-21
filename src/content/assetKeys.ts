@@ -210,8 +210,8 @@ export const MinesFrame = {
 /** Mines frames appended to the tile sheet as a row after the weapon strip, in order from tile frame 144. */
 export const MINES_IN_TILES: readonly number[] = [MinesFrame.nabIdle, MinesFrame.nabRun, MinesFrame.nabHit, MinesFrame.nabWave, MinesFrame.scepter, MinesFrame.scepterBolt];
 
-/** Frames of the Glitch sheet: the hero (unused until G3), the missing-texture tile and a corrupt tile variant. */
-export const GlitchFrame = { hero: 0, missingTexture: 1, corruptTile: 2 } as const;
+/** Frames of the Glitch sheet: the hero (unused until G3), the missing-texture tile, a corrupt tile variant, and the Missing Texture boss (idle, hurt/angry) and its hollow fake outline. */
+export const GlitchFrame = { hero: 0, missingTexture: 1, corruptTile: 2, bossIdle: 3, bossHurt: 4, fakeHollow: 5 } as const;
 
 /** Frames of Bert's 32px sheet. Plate left/right are screen sides (left plate sits on Bert's own right shoulder). */
 export const BertFrame = {

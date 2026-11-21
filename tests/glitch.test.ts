@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { chooseRunMap, type RunMapInput } from '../src/logic/runSeed';
-import { GLITCH_CHANCE, glitchBossLevel, glitchRoomRange, isGlitchUnlocked, pickGlitchBoss, shouldPlaceGlitch, type GlitchTileInput } from '../src/logic/glitch';
+import { GLITCH_CHANCE, glitchBossLevel, glitchRoomRange, isGlitchUnlocked, shouldPlaceGlitch, type GlitchTileInput } from '../src/logic/glitch';
 
 const ALL = ['ruins', 'desert', 'palace'];
 const input = (over: Partial<GlitchTileInput> = {}): GlitchTileInput => ({
@@ -75,15 +75,6 @@ describe('glitch monster levels', () => {
     [20, true, 24],
   ])('boss at hero %i heroic %s is level %i', (hero, heroic, expected) => {
     expect(glitchBossLevel(hero, heroic)).toBe(expected);
-  });
-});
-
-describe('pickGlitchBoss', () => {
-  const pool = ['stoneGuardian', 'sandRat', 'madKing'];
-  it('is the same boss for the same seed and varies across seeds', () => {
-    expect(pickGlitchBoss(pool, 12345)).toBe(pickGlitchBoss(pool, 12345));
-    const seen = new Set(Array.from({ length: 60 }, (_, i) => pickGlitchBoss(pool, i * 7919 + 1)));
-    expect([...seen].sort()).toEqual([...pool].sort());
   });
 });
 

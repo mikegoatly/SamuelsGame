@@ -4,7 +4,6 @@ import { glitch } from '../src/content/levels/glitch';
 import { GLITCH_CURVE, GLITCH_POOL } from '../src/content/levels/glitchMonsters';
 import { getLevel, levels } from '../src/content/levels';
 import { infoOf } from '../src/content/levels/curve';
-import { GLITCH_BOSS_POOL } from '../src/logic/glitch';
 import { glitchPool, GLITCH_ROOMS, threat } from '../src/logic/glitchPool';
 import { isLevelPlayable, isLevelUnlocked, visibleLevels } from '../src/logic/levelRules';
 import { mulberry32 } from '../src/logic/rng';
@@ -83,10 +82,9 @@ describe('the Glitch level', () => {
     expect(visibleLevels(levels, [], ['glitch']).map((l) => l.id)).toContain('glitch');
   });
 
-  it('stands in a random standard boss until it has its own', () => {
-    expect(glitch.bossPool).toEqual(GLITCH_BOSS_POOL);
-    for (const id of GLITCH_BOSS_POOL) expect(enemies.find((e) => e.id === id)?.boss).toBe(true);
-    expect(GLITCH_BOSS_POOL).toContain(glitch.bossId);
+  it('ends with the Missing Texture, a real boss', () => {
+    expect(glitch.bossId).toBe('missingTexture');
+    expect(enemies.find((e) => e.id === 'missingTexture')).toMatchObject({ boss: true, name: 'Missing Texture' });
   });
 });
 

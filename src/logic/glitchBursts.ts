@@ -18,6 +18,8 @@ export class GlitchBursts {
   private end = -1;
   private lastEnd = -Infinity;
   private ready = false;
+  private held = false;
+  private began = false;
 
   constructor(
     private readonly rng: () => number,
@@ -34,6 +36,7 @@ export class GlitchBursts {
   }
 
   private schedule(from: number): void {
+    this.began = false;
     this.start = from + this.gap();
     this.end = this.start + this.length();
   }
@@ -49,8 +52,22 @@ export class GlitchBursts {
     }
   }
 
+  /** While held (a floor warning must stay readable) no new burst begins, requested or natural; one already running finishes. */
+  hold(on: boolean): void {
+    this.held = on;
+  }
+
   active(now: number): boolean {
     this.advance(now);
+    if (now >= this.start && !this.began) {
+      if (this.held) {
+        const length = this.end - this.start;
+        this.start = now + 100;
+        this.end = this.start + length;
+        return false;
+      }
+      this.began = true;
+    }
     return now >= this.start;
   }
 
@@ -64,9 +81,10 @@ export class GlitchBursts {
   /** Ask for a burst `leadMs` from now (a wave spawning, a monster about to teleport). Ignored while one is running or just ended. */
   request(now: number, leadMs: number = TELEGRAPH_LEAD_MS): void {
     this.advance(now);
-    if (now >= this.start || now - this.lastEnd < REQUEST_COOLDOWN_MS) return;
+    if (this.held || now >= this.start || now - this.lastEnd < REQUEST_COOLDOWN_MS) return;
     const at = now + leadMs;
     if (at >= this.start && at < this.end) return;
+    this.began = false;
     this.start = at;
     this.end = at + REQUEST_LENGTH_MS.min + this.rng() * (REQUEST_LENGTH_MS.max - REQUEST_LENGTH_MS.min);
   }

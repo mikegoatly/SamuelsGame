@@ -11,6 +11,7 @@ import { Graveyard } from '../logic/graveyard';
 import { findClearSpot, packCount, scatterAround } from '../logic/pack';
 import { bodyClear } from '../logic/lineOfSight';
 import { blockedByRects } from '../logic/spawnAvoid';
+import { FloorGlitch } from './glitch/FloorGlitch';
 import { insetRect, rectContains, type Point, type Rect } from '../logic/geometry';
 import { pickEmergePoint, pickRectSpawn, pickThrone } from '../logic/spawnPoints';
 
@@ -99,6 +100,8 @@ export class EnemyFactory {
   spawnBoss(def: EnemyDef, level: number, x: number, y: number, area: BossArea): Enemy {
     if (def.id === 'bert') return this.fadeIn(new Bert(this.scene, x, y, def, level, this.context, area.rect), BOSS_FADE_IN_MS);
     const hooks: BossHooks = {
+      playerBolts: this.world.bolts,
+      floorGlitch: () => new FloorGlitch({ scene: this.scene, player: this.context.target, enemies: this.group, shots: this.context.shots, clock: this.context.clock, isSolid: area.isBlocked }, area.rect, this.context.events),
       piece: (id, lvl, px, py, hp, family, pieceId) => this.fadeIn(new Boss(this.scene, px, py, getEnemy(id), lvl, this.context, hooks, { family, id: pieceId, hp }), PIECE_FADE_IN_MS, PIECE_GRACE_MS),
       summon: (id: string, lvl: number, sx: number, sy: number) => {
         const at = this.minionSpot(area, sx, sy);

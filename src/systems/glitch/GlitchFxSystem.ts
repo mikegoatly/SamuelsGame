@@ -5,6 +5,7 @@ import { GlitchBursts, TELEGRAPH_LEAD_MS } from '../../logic/glitchBursts';
 import { feel } from '../feel';
 import type { GameEvents } from '../GameEvents';
 import type { SkillWorld } from '../skills/types';
+import { floorWarning } from './floorWarning';
 import { CleanCamera } from './CleanCamera';
 import { CorruptTiles } from './CorruptTiles';
 import { MonsterGlitch } from './MonsterGlitch';
@@ -55,6 +56,8 @@ export class GlitchFxSystem {
     }
 
     const onWave = (): void => this.announce(0);
+    const onAnnounce = (leadMs?: number): void => this.announce(leadMs);
+    events.on('glitch-announce', onAnnounce);
     events.on('wave-started', onWave);
     events.on('room-started', onWave);
     const onPause = (): void => {
@@ -85,6 +88,7 @@ export class GlitchFxSystem {
 
   private update(): void {
     const now = this.world.clock.now;
+    this.bursts.hold(floorWarning.active);
     const active = this.bursts.active(now);
     if (active && !this.wasActive && !feel.isLocked && !this.world.player.dead) this.tiles.burst(now);
     this.wasActive = active;

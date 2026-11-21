@@ -4,11 +4,12 @@ import type { EnemyDef } from '../content/enemies';
 import { damageToPlayer } from '../logic/combat';
 import { spiralVolley } from '../logic/aim';
 import { spreadDirections } from '../logic/enemyAi';
-import { bossPhase, newBossState, stepBoss, summonCount, type BossAction, type BossBrainConfig, type BossState } from '../logic/bossBrain';
+import { bossPhase, newBossState, stepBoss, summonCount, type BossAction, type BossBrainConfig, type BossMode, type BossState } from '../logic/bossBrain';
 import { feel } from '../systems/feel';
 import { playSfx } from '../systems/sfx';
 import { BossFamily, type PieceSpawner } from './boss/BossFamily';
-import { SludgeMoves } from './boss/moves';
+import { SludgeMoves, SoloClaims } from './boss/moves';
+import { MissingTexture } from './boss/missingTexture/MissingTexture';
 import { Enemy, type EnemyContext, type HitSource } from './Enemy';
 import type { ShotStyle } from './EnemyProjectile';
 import type { Player } from './Player';
@@ -33,6 +34,9 @@ export interface BossHooks {
   aliveCount(enemyId: string): number;
   /** Spawns one piece of Mother Sludge's family with its share of the health. */
   piece: PieceSpawner;
+  /** The Missing Texture only: the player's shots (for the puff as they pass through a fake) and the broken floor of its last phase. */
+  playerBolts?: Phaser.Physics.Arcade.Group;
+  floorGlitch?: () => { start(): void; stop(): void };
 }
 
 /** A piece of a family: which family, its id in it, and the health it was born with. */
@@ -50,7 +54,7 @@ const SLIDE_MAX = 160;
 
 /** Generic boss body: the pure state machine in `logic/bossBrain` (data-driven per boss) decides, this class performs. */
 export class Boss extends Enemy {
-  private readonly config: BossBrainConfig;
+  private config: BossBrainConfig;
   private brain: BossState;
   private burstSpin = 0;
   private telegraph: Phaser.GameObjects.Shape[] = [];
@@ -64,6 +68,8 @@ export class Boss extends Enemy {
   /** Mother Sludge's family (undefined for every other boss); the mother is piece 1. */
   private readonly family?: BossFamily;
   private readonly moves?: SludgeMoves;
+  /** The Missing Texture's copy cycle, fakes and floor (undefined for every other boss). */
+  private readonly missing?: MissingTexture;
   pieceId = 0;
   /** Game-clock time the pending split happens (0 when none): the piece stands still and wobbles until then. */
   splitAt = 0;
@@ -88,7 +94,27 @@ export class Boss extends Enemy {
       this.angry = def.tier > 0;
       this.family.add(this);
     }
+    if (def.id === 'missingTexture') {
+      this.moves = new SludgeMoves(this, new SoloClaims(), hooks.emergeSpot);
+      this.missing = new MissingTexture(this, hooks);
+    }
     if (!piece) this.events.emit('boss-spawned', def.name ?? def.id, this.hp, this.maxHp);
+  }
+
+  get mode(): BossMode {
+    return this.brain.mode;
+  }
+
+  /** Swaps the attack set the state machine runs (the Missing Texture changing copy); timers start fresh. */
+  applyBrain(config: BossBrainConfig): void {
+    this.config = config;
+    this.brain = newBossState(config, this.clock.now);
+  }
+
+  /** The colour the body wears when nothing else tints it (null: the plain art). */
+  setBodyTint(tint: number | null): void {
+    this.baseTint = tint;
+    this.applyBaseTint();
   }
 
   /** Free to be paired for a merge: walking, not mid-attack or splitting. */
@@ -124,7 +150,10 @@ export class Boss extends Enemy {
   override takeHit(amount: number, directionX: number, directionY: number, knockback = 1, source: HitSource = 'basic'): void {
     if (!this.targetable) return;
     super.takeHit(amount, directionX, directionY, knockback, source);
-    if (this.alive) this.announceHp(true);
+    if (this.alive) {
+      this.announceHp(true);
+      this.missing?.onHit();
+    }
   }
 
   private announceHp(hit: boolean): void {
@@ -160,6 +189,10 @@ export class Boss extends Enemy {
       return;
     }
     if (this.family && this.actAsPiece(time)) return;
+    if (this.missing?.update(time)) {
+      this.setVelocity(0, 0);
+      return;
+    }
     const step = stepBoss(this.config, this.brain, time, this.hp / this.maxHp);
     this.brain = step.state;
     for (const action of step.actions) this.perform(action);
@@ -242,6 +275,7 @@ export class Boss extends Enemy {
     this.clearTelegraph();
     this.stopDust();
     this.lastPiece = this.family ? this.family.pieceDied(this) : true;
+    this.missing?.onDeath();
     if (!this.lastPiece) {
       feel.shake(120, 0.005);
       playSfx(this.scene, 'squelch');
@@ -465,6 +499,7 @@ export class Boss extends Enemy {
   }
 
   override destroy(fromScene?: boolean): void {
+    this.missing?.destroy();
     this.stopDust();
     this.clearTelegraph();
     super.destroy(fromScene);
