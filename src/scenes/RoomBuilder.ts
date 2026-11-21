@@ -67,6 +67,7 @@ export const ENVIRONMENT_TINT: Record<Environment, EnvironmentTint> = {
   palace: { ground: 0xffffff, walls: 0xc4c8d8, checker: 0xd0c0ee },
   sewer: { ground: SEWER_TINT.ground, walls: SEWER_TINT.walls },
   mines: { ground: MINES_TINT.ground, walls: MINES_TINT.walls },
+  glitch: uniform(null),
   unknown: uniform(null),
 };
 

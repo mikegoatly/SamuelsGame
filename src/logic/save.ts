@@ -8,8 +8,8 @@ import { getAccessory, crownFor, type AccessorySlot } from '../content/accessori
 import { isHeroicUnlocked, type LevelMode } from './heroic';
 import { emptySlots, equipInSlot, firstEmptySlot, sanitizeSlots, type Loadout } from './loadout';
 
-/** v13: `secrets.minesFound` and `secrets.nabPity` (the Crystal Mines, Nab). v12: unlocked heroes own their signature weapon (the Knight's Iron Sword, the Necromancer's Bone Staff); nothing is removed, so a Golden Sword stays owned and equipped. v11: `secrets`. v10: `survival`. v9: `levels.heroic`, `levels.mode`, `accessories`. v8: `heroes` + `stats`. v7: `gems` replace `charms`; `potions`, `revive`, `shop`, `weapons.levels` added. v6: `skills` + `loadout` replace `powers` and `weapons.equipped`. v5: `seen` + `itemCards`; v4: volumes + reduceShake; v2: `settings`. Older saves load through the same tolerant parse. */
-export const SAVE_VERSION = 13;
+/** v14: `secrets.glitchFound` (Glitch). v13: `secrets.minesFound` and `secrets.nabPity` (the Crystal Mines, Nab). v12: unlocked heroes own their signature weapon (the Knight's Iron Sword, the Necromancer's Bone Staff); nothing is removed, so a Golden Sword stays owned and equipped. v11: `secrets`. v10: `survival`. v9: `levels.heroic`, `levels.mode`, `accessories`. v8: `heroes` + `stats`. v7: `gems` replace `charms`; `potions`, `revive`, `shop`, `weapons.levels` added. v6: `skills` + `loadout` replace `powers` and `weapons.equipped`. v5: `seen` + `itemCards`; v4: volumes + reduceShake; v2: `settings`. Older saves load through the same tolerant parse. */
+export const SAVE_VERSION = 14;
 /** First version where every unlocked hero already owns their signature weapon. */
 const KIT_WEAPONS_VERSION = 12;
 /** Gems a level's first Heroic clear pays: one full 3-to-4 item upgrade of every colour. */
@@ -55,6 +55,7 @@ export interface Secrets {
   minesFound: boolean;
   /** Pity counter: eligible runs in a row on which Nab never turned up. */
   nabPity: number;
+  glitchFound: boolean;
 }
 
 export interface SaveData {
@@ -106,7 +107,7 @@ export function defaultSave(): SaveData {
     survival: { bestMs: 0 },
     heroes: { unlocked: [WIZARD], selected: WIZARD },
     stats: { totalKills: 0, goldPeak: 0, bossKillsByHero: {} },
-    secrets: { sewerFound: false, desertRunsWithoutGrate: 0, minesFound: false, nabPity: 0 },
+    secrets: { sewerFound: false, desertRunsWithoutGrate: 0, minesFound: false, nabPity: 0, glitchFound: false },
     settings: defaultSettings(),
     seen: [],
   };
@@ -206,6 +207,7 @@ function parseSecrets(value: unknown): Secrets {
     desertRunsWithoutGrate: wholeNumber(raw.desertRunsWithoutGrate, 0, 0, MAX_PITY_RUNS),
     minesFound: raw.minesFound === true,
     nabPity: wholeNumber(raw.nabPity, 0, 0, MAX_PITY_RUNS),
+    glitchFound: raw.glitchFound === true,
   };
 }
 

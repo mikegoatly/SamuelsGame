@@ -5,6 +5,7 @@ import { RogueFrame } from '../../content/sewerFrames';
 import type { ChannelPlan } from '../layout/channels';
 import type { DecorPlan } from '../layout/decor';
 import type { BossHazard, HazardPlan } from '../hazard/plan';
+import type { LookId } from './roomLooks';
 import { DESERT_PRESET, MINES_PRESET, PALACE_PRESET, RUINS_PRESET, SEWER_PRESET, type LayoutPreset, type RandomPlan } from '../layoutPresets';
 
 export interface Encounter {
@@ -37,7 +38,7 @@ export interface MapTheme {
   bossHazard?: BossHazard;
   /** Adds `throne` objects to the boss arena (boss teleport destinations). */
   thrones?: boolean;
-  /** Which sheet the tile frames above index; the map lists a second tileset for 'rogue' (default Tiny Dungeon). */
+  /** Which sheet the tile frames above index; the map lists a second tileset for 'rogue' (default Tiny Dungeon; mixed themes list both). */
   sheet?: 'rogue';
   /** Sludge channels across the combat rooms (each gets a flush hazard) and a moat round the boss island. */
   channels?: ChannelPlan;
@@ -45,7 +46,13 @@ export interface MapTheme {
   decor?: DecorPlan;
   /** The boss chamber's corners are walled off into an ellipse (a round cavern). */
   roundBoss?: boolean;
+  /** Mixed-theme map: each combat room borrows the floor, walls and cover of one of these (seeded order); the theme's own look fills corridors, the start room and the boss arena. */
+  looks?: Record<LookId, Look>;
 }
+
+/** What makes a room look like one level: its tile frames and which sheet they come from. */
+export type Look = Pick<MapTheme, 'floor' | 'wall' | 'cover' | 'sheet'>;
+const lookOf = ({ floor, wall, cover, sheet }: MapTheme): Look => ({ floor, wall, cover, sheet });
 
 export const RUINS_THEME: MapTheme = {
   id: 'ruins',
@@ -174,4 +181,21 @@ export const MINES_THEME: MapTheme = {
   },
 };
 
-export const THEMES: readonly MapTheme[] = [RUINS_THEME, DESERT_THEME, PALACE_THEME, SEWER_THEME, MINES_THEME];
+/** Waves are the level curve's; monster levels follow the hero (see logic/glitch.ts), so these only fill the map's room objects. */
+const GLITCH_ENCOUNTERS: Encounter[] = Array.from({ length: 6 }, (_, i) => ({ waves: 2, minLevel: 15 + Math.floor(i / 3), maxLevel: 16 + Math.floor(i / 3) }));
+
+/** The hidden Glitch level: six combat rooms, each dressed as a different level, hard seams where they meet. No hazards yet. */
+export const GLITCH_THEME: MapTheme = {
+  id: 'glitch',
+  seed: 4040404,
+  preset: MINES_PRESET,
+  random: { gridCols: 5, gridRows: 3, shapes: ['plain', 'plain', 'ell', 'pillared', 'split'], sideChance: 0.6 },
+  floor: { base: Frame.floor, variants: [{ frame: Frame.floorRubble, chance: 0.08 }, { frame: Frame.floorPebbles, chance: 0.08 }] },
+  wall: { base: Frame.wall, alt: Frame.wallAlt, altChance: 0.5, accent: Frame.wallWindow, accentChance: 0.05 },
+  cover: [Frame.pillar, Frame.boulder],
+  encounters: GLITCH_ENCOUNTERS,
+  quicksandPerRoom: 0,
+  looks: { ruins: lookOf(RUINS_THEME), desert: lookOf(DESERT_THEME), palace: lookOf(PALACE_THEME), sewer: lookOf(SEWER_THEME), mines: lookOf(MINES_THEME) },
+};
+
+export const THEMES: readonly MapTheme[] = [RUINS_THEME, DESERT_THEME, PALACE_THEME, SEWER_THEME, MINES_THEME, GLITCH_THEME];

@@ -1,5 +1,5 @@
 import { RARITY_COLOR, type ItemDef } from './items';
-import { Frame, MinesFrame, Tex } from './assetKeys';
+import { Frame, GlitchFrame, MinesFrame, Tex } from './assetKeys';
 import { playerMaxHp } from '../logic/combat';
 import { gemCardText, type CardData } from '../logic/itemCards';
 import { skillCooldown, type SkillDef } from './skills';
@@ -38,6 +38,16 @@ export const minesCard: CardData = {
   tint: null,
   icon: Tex.mines,
   lines: ['A new level now waits on the level select screen.', 'Nab is your friend now (sort of).'],
+};
+
+export const glitchCard: CardData = {
+  title: 'Glitch',
+  subtitle: 'Glitch discovered!',
+  color: '#ff70e0',
+  frame: GlitchFrame.missingTexture,
+  tint: null,
+  icon: Tex.glitch,
+  lines: ['A new level now waits on the level select screen.', 'Something is very wrong with the floor...'],
 };
 
 export const levelUpCard = (level: number): CardData => ({

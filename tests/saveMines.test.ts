@@ -9,7 +9,7 @@ const known = (id: string): boolean => Object.hasOwn(heroes, id);
 describe('migration to version 13 (the Crystal Mines)', () => {
   it('is version 13 with the mines not found and no pity yet', () => {
     expect(SAVE_VERSION).toBeGreaterThanOrEqual(13);
-    expect(defaultSave().secrets).toEqual({ sewerFound: false, desertRunsWithoutGrate: 0, minesFound: false, nabPity: 0 });
+    expect(defaultSave().secrets).toEqual({ sewerFound: false, desertRunsWithoutGrate: 0, minesFound: false, nabPity: 0, glitchFound: false });
   });
 
   it.each([1, 8, 11, 12])('a v%i save keeps its data and gains the mines secrets', (version) => {
@@ -17,17 +17,17 @@ describe('migration to version 13 (the Crystal Mines)', () => {
     expect(migrated.version).toBe(SAVE_VERSION);
     expect(migrated.coins).toBe(9);
     expect(migrated.levels.cleared).toEqual(['ruins', 'desert']);
-    expect(migrated.secrets).toEqual({ sewerFound: true, desertRunsWithoutGrate: 2, minesFound: false, nabPity: 0 });
+    expect(migrated.secrets).toEqual({ sewerFound: true, desertRunsWithoutGrate: 2, minesFound: false, nabPity: 0, glitchFound: false });
   });
 
   it('round-trips found mines and the pity counter', () => {
-    const save = aSave({ secrets: { sewerFound: false, desertRunsWithoutGrate: 0, minesFound: true, nabPity: 2 } });
+    const save = aSave({ secrets: { sewerFound: false, desertRunsWithoutGrate: 0, minesFound: true, nabPity: 2, glitchFound: false } });
     expect(parseSave(serialize(save))).toEqual(save);
   });
 
   it.each([
-    [{ minesFound: 'yes', nabPity: 'x' }, { minesFound: false, nabPity: 0 }],
-    [{ minesFound: 1, nabPity: -3 }, { minesFound: false, nabPity: 0 }],
+    [{ minesFound: 'yes', nabPity: 'x' }, { minesFound: false, nabPity: 0, glitchFound: false }],
+    [{ minesFound: 1, nabPity: -3 }, { minesFound: false, nabPity: 0, glitchFound: false }],
     [{ minesFound: true, nabPity: 2.7 }, { minesFound: true, nabPity: 2 }],
     [{ minesFound: true, nabPity: NaN }, { minesFound: true, nabPity: 0 }],
     [{ nabPity: 1e9 }, { minesFound: false, nabPity: 99 }],

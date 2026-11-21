@@ -2,7 +2,7 @@ import type { SecretId } from '../../logic/secrets';
 import type { LevelRange } from '../../logic/waves';
 import type { LevelCurve } from '../../logic/waveMix';
 
-export type Environment = 'ruins' | 'desert' | 'palace' | 'sewer' | 'mines' | 'arena' | 'unknown';
+export type Environment = 'ruins' | 'desert' | 'palace' | 'sewer' | 'mines' | 'arena' | 'glitch' | 'unknown';
 
 export interface LevelConfig {
   id: string;
@@ -14,6 +14,10 @@ export interface LevelConfig {
   /** Room intensity: waves, wave size, which new monster each room features and elite odds. */
   curve?: LevelCurve;
   bossId?: string;
+  /** Stand-in bosses: each run picks one (seeded) in place of `bossId`. */
+  bossPool?: readonly string[];
+  /** Monster and boss levels follow the hero (`logic/glitch.ts`) instead of the fixed range. */
+  scalesWithHero?: boolean;
   bossLevel?: number;
   rewardWeaponId?: string;
   /** False: the reward weapon is only granted, never swapped in over the player's current weapon (the sewer's Javelin). */
@@ -28,7 +32,7 @@ export interface LevelConfig {
   survival?: boolean;
   /** Teaser levels are listed but cannot be entered. */
   comingSoon?: boolean;
-  /** Not listed at all until the player has found it (`secrets.sewerFound`, `secrets.minesFound`): no card, no hint. */
+  /** Not listed at all until the player has found it (`secrets.sewerFound`, `secrets.minesFound`, `secrets.glitchFound`): no card, no hint. */
   hiddenUntilFound?: SecretId;
   /** Card subtitle for teaser levels. */
   tagline?: string;

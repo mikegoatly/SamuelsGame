@@ -610,7 +610,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
       tint: this.def.tint ?? 0xd8d8e8,
       emitting: false,
     });
-    emitter.setDepth(8).explode(this.def.boss ? 40 : 10);
+    emitter.setDepth(7).explode(this.def.boss ? 40 : 10);
     this.scene.time.delayedCall(500, () => emitter.destroy());
   }
 

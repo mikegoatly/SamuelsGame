@@ -6,9 +6,9 @@ export type { TmjMap };
 
 export const hasRandomMap = (levelId: string): boolean => THEMES.some((t) => t.id === levelId);
 
-/** A full Tiled map (the same JSON shape as the committed `.tmj` files) for `levelId`, fully determined by `seed` and the side-room plan. */
-export function buildRandomMap(levelId: string, seed: number, side?: SidePlan): TmjMap {
+/** A full Tiled map (the same JSON shape as the committed `.tmj` files) for `levelId`, fully determined by `seed`, the side-room plan and whether it hides the glitch tile. */
+export function buildRandomMap(levelId: string, seed: number, side?: SidePlan, glitch = false): TmjMap {
   const theme = THEMES.find((t) => t.id === levelId);
   if (!theme) throw new Error(`No random map for level "${levelId}"`);
-  return buildRandomTmj(theme, seed, side);
+  return buildRandomTmj(theme, seed, side, glitch);
 }

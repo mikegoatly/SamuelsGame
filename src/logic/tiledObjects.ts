@@ -22,6 +22,8 @@ export interface RoomSpec {
   minLevel: number;
   maxLevel: number;
   rect: Rect;
+  /** Glitch maps: which level's floor and walls dress this room. */
+  look?: string;
 }
 
 export interface DoorSpec {
@@ -77,6 +79,8 @@ export interface LevelObjects {
   treasures: Point[];
   /** Sewer grates in random desert side rooms; empty everywhere else. */
   grates: Point[];
+  /** The glitch tile of a random map (at most one). */
+  glitches: Point[];
   exit: Point | null;
 }
 
@@ -99,6 +103,7 @@ function toRoom(object: TiledObject): RoomSpec {
     minLevel: Math.min(a, b),
     maxLevel: Math.max(a, b),
     rect: rectOf(object),
+    ...(typeof props.look === 'string' ? { look: props.look } : {}),
   };
 }
 
@@ -139,6 +144,7 @@ export function parseLevelObjects(map: TiledMapLike): LevelObjects {
     }),
     treasures: ofType('treasure').map(pointOf),
     grates: ofType('grate').map(pointOf),
+    glitches: ofType('glitch').map(pointOf),
     exit: exit ? pointOf(exit) : null,
   };
 }

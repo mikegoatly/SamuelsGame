@@ -9,9 +9,9 @@ import { musicOf } from '../systems/MusicPlayer';
 import { CHARMS_NOTICE, levelMode, setLevelMode } from '../logic/save';
 import { revealNextHero } from './heroReveal';
 import { CHARMS_CARD } from './NoticeScene';
-import { minesCard, sewerCard } from '../content/cards';
 import type { CardData } from '../logic/itemCards';
-import { foundSecrets, MINES_NOTICE, SEWER_NOTICE } from '../logic/secrets';
+import { foundSecrets } from '../logic/secrets';
+import { SECRET_INFO } from './secretInfo';
 import { lastInputDevice } from '../systems/inputDevice';
 import { saveSystem } from '../systems/SaveSystem';
 import { LevelCard } from '../ui/LevelCard';
@@ -31,8 +31,7 @@ export const CROWDED_CARDS = 6;
 /** One-time cards shown over this screen, in order. */
 const NOTICES: readonly [id: string, card: CardData][] = [
   [CHARMS_NOTICE, CHARMS_CARD],
-  [SEWER_NOTICE, sewerCard],
-  [MINES_NOTICE, minesCard],
+  ...Object.values(SECRET_INFO).map((s): [string, CardData] => [s.notice, s.card]),
 ];
 const SWITCH_HINT = { keyboard: 'Tab or H: switch Normal / Heroic', gamepad: 'Y or X: switch Normal / Heroic', touch: 'Tap the Normal / Heroic tag to switch' } as const;
 

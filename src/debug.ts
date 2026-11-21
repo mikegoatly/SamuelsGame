@@ -16,6 +16,8 @@ export const BERT_DEBUG = flags.includes('bert');
 export const FORCE_NAB = flags.includes('nab');
 /** Dev-only (`?debug=mines`, combine as `?debug=mines,godmode`): the Crystal Mines show on Level Select without being discovered first. */
 export const MINES_DEBUG = flags.includes('mines');
+/** Dev-only (`?debug=glitch`): Glitch shows on Level Select without being found, and every random map hides the glitch tile (any hero, any clears). */
+export const FORCE_GLITCH = flags.includes('glitch');
 export const GOD_DAMAGE_MULTIPLIER = 10;
 
 export function exposeForDebug(game: Phaser.Game): void {

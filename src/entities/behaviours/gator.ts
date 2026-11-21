@@ -55,7 +55,7 @@ export const gator: BehaviourFactory = (host, world) => {
   };
   const splash = (x: number, y: number, count: number): void => {
     const emitter = host.scene.add.particles(x, y, Tex.puff, { speed: { min: 30, max: 90 }, lifespan: 420, scale: { start: 1.4, end: 0 }, tint: MUD, emitting: false });
-    emitter.setDepth(8).explode(count);
+    emitter.setDepth(7).explode(count);
     ground.expire(520, emitter);
   };
   const submerge = (): void => {

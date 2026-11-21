@@ -25,6 +25,8 @@ export const Tex = {
   mines: 'mines-extra',
   /** Bert the Crystal Golem (public/assets/extra/bert.png), 32px frames, one row. */
   bert: 'bert',
+  /** Glitch sheet (public/assets/extra/glitch-extra.png), 16px frames: see `GlitchFrame`. */
+  glitch: 'glitch-extra',
   /** Hand-drawn wearable crowns (tools/add_accessory_frames.py), 16px frames, one per column. */
   accessories: 'accessories-extra',
   /** Hand-drawn floor props (tools/add_prop_frames.py), 16px frames. */
@@ -56,6 +58,7 @@ export const Music = {
   bossPalace: 'music-boss-palace',
   boss: 'music-boss',
   mines: 'music-mines',
+  glitch: 'music-glitch',
 } as const;
 
 export const MapKey = {
@@ -64,6 +67,7 @@ export const MapKey = {
   palace: 'palace',
   sewer: 'sewer',
   mines: 'mines',
+  glitch: 'glitch',
 } as const;
 
 /** Music cache key -> file under assets/. */
@@ -75,6 +79,7 @@ export const MUSIC_FILES: Record<string, string> = {
   [Music.bossPalace]: 'music/boss-palace.mp3',
   [Music.boss]: 'music/boss.mp3',
   [Music.mines]: 'music/mines.mp3',
+  [Music.glitch]: 'music/glitch.mp3',
 };
 
 /** Pixel explosion atlas frames (Kenney Explosion Pack). */
@@ -204,6 +209,9 @@ export const MinesFrame = {
 
 /** Mines frames appended to the tile sheet as a row after the weapon strip, in order from tile frame 144. */
 export const MINES_IN_TILES: readonly number[] = [MinesFrame.nabIdle, MinesFrame.nabRun, MinesFrame.nabHit, MinesFrame.nabWave, MinesFrame.scepter, MinesFrame.scepterBolt];
+
+/** Frames of the Glitch sheet: the hero (unused until G3), the missing-texture tile and a corrupt tile variant. */
+export const GlitchFrame = { hero: 0, missingTexture: 1, corruptTile: 2 } as const;
 
 /** Frames of Bert's 32px sheet. Plate left/right are screen sides (left plate sits on Bert's own right shoulder). */
 export const BertFrame = {

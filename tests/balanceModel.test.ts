@@ -10,7 +10,9 @@ import { DWARF_GOLD, NECROMANCER_KILLS, ROGUE_TIME_MS } from '../src/logic/unloc
 import { upgradeCost } from '../src/logic/upgrades';
 import { TIER_MULTIPLIER } from '../src/content/upgradeInfo';
 import { totalGems, type Gems } from '../src/logic/gems';
-import { DESERT_THEME, MINES_THEME, PALACE_THEME, RUINS_THEME, SEWER_THEME } from '../src/logic/map/mapThemes';
+import { glitch } from '../src/content/levels/glitch';
+import { glitchBossLevel, glitchRoomRange } from '../src/logic/glitch';
+import { DESERT_THEME, GLITCH_THEME, MINES_THEME, PALACE_THEME, RUINS_THEME, SEWER_THEME } from '../src/logic/map/mapThemes';
 import { estimateLevel, estimateRoom, gearedReference, heroicVariant, REFERENCE, type LevelEstimate } from './balanceModel';
 
 const CASES = [
@@ -320,5 +322,45 @@ describe('balance model: Heroic curve', () => {
     const variant = heroicVariant(level, theme.encounters, hero);
     const rooms = pcts(estimateLevel(variant.level, variant.encounters, hero, gearedReference(hero), theme));
     for (let i = 1; i < rooms.length; i++) expect(rooms[i]! - rooms[i - 1]!, `room ${i + 1}`).toBeLessThanOrEqual(20);
+  });
+});
+
+describe('balance model: Glitch scales with the hero', () => {
+  const glitchRun = (hero: number, heroic: boolean) => {
+    const encounters = GLITCH_THEME.encounters.map((e, i) => {
+      const [minLevel, maxLevel] = glitchRoomRange(i + 1, GLITCH_THEME.encounters.length, hero, heroic);
+      return { ...e, minLevel, maxLevel };
+    });
+    const level = { ...glitch, bossId: 'stoneGuardian', bossLevel: glitchBossLevel(hero, heroic) };
+    return estimateLevel(level, encounters, hero, gearedReference(hero), GLITCH_THEME);
+  };
+  const cases = [15, 25, 40].flatMap((hero) => [false, true].map((heroic) => [`hero ${hero}${heroic ? ' heroic' : ''}`, hero, heroic] as const));
+
+  it.each(cases)('%s: no room is crushing or trivial, none spikes, and the level has teeth', (_, hero, heroic) => {
+    const rooms = pcts(glitchRun(hero, heroic));
+    for (const pct of rooms) {
+      expect(pct).toBeLessThan(65);
+      expect(pct).toBeGreaterThan(2.5);
+    }
+    for (let i = 1; i < rooms.length; i++) expect(rooms[i]! - rooms[i - 1]!, `room ${i + 1}`).toBeLessThanOrEqual(20);
+    expect(mean(rooms)).toBeGreaterThan(8);
+  });
+
+  it.each(cases)('%s: the run is a few minutes and the boss fight is reasonable', (_, hero, heroic) => {
+    const run = glitchRun(hero, heroic);
+    expect(run.bossSeconds).toBeGreaterThan(5);
+    expect(run.bossSeconds).toBeLessThan(120);
+    expect(run.runSeconds / 60).toBeGreaterThan(1.5);
+    expect(run.runSeconds / 60).toBeLessThan(8);
+  });
+
+  it.each([15, 25, 40])('hero %i: sits near its Heroic neighbours (no easier than the desert, not over 1.3x the mines)', (hero) => {
+    const heroicMean = (level: typeof desert, theme: typeof DESERT_THEME): number => {
+      const v = heroicVariant(level, theme.encounters, hero);
+      return mean(pcts(estimateLevel(v.level, v.encounters, hero, gearedReference(hero), theme)));
+    };
+    const g = mean(pcts(glitchRun(hero, false)));
+    expect(g).toBeGreaterThan(heroicMean(desert, DESERT_THEME));
+    expect(g).toBeLessThan(heroicMean(mines, MINES_THEME) * 1.3);
   });
 });

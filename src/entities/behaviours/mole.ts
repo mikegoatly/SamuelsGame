@@ -26,7 +26,7 @@ export const mole: BehaviourFactory = (host, world) => {
 
   const burst = (count: number): void => {
     const emitter = host.scene.add.particles(host.x, host.y, Tex.puff, { speed: { min: 30, max: 100 }, lifespan: 450, scale: { start: 1.5, end: 0 }, tint: DIRT, emitting: false });
-    emitter.setDepth(8).explode(count);
+    emitter.setDepth(7).explode(count);
     host.scene.time.delayedCall(550, () => emitter.destroy());
   };
   const dive = (): void => {

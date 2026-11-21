@@ -8,7 +8,7 @@ export const tilesOf = (r: Rect): [number, number][] => Array.from({ length: r.w
 export const seedsFor = (count: number): number[] => Array.from({ length: count }, (_, i) => i * 7919 + 1);
 export const keyOf = (x: number, y: number): string => `${x},${y}`;
 
-export const randomWorld = (theme: MapTheme, seed: number, side?: SidePlan) => buildRandomWorld(theme, seed, side);
+export const randomWorld = (theme: MapTheme, seed: number, side?: SidePlan, glitch = false) => buildRandomWorld(theme, seed, side, glitch);
 export type RandomWorld = ReturnType<typeof randomWorld>;
 
 /** Tiles walkers can stand on: floor minus cover, interior walls and every hazard footprint. */

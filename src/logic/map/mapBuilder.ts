@@ -10,7 +10,11 @@ import type { Rect } from '../geometry';
 import { placeActiveHazards, type PlacedHazard } from '../hazard/placement';
 import { SPIKE_CYCLE } from '../spikes';
 import { mulberry32, randInt } from '../rng';
-import type { MapTheme } from './mapThemes';
+import type { Look, MapTheme } from './mapThemes';
+import { lookIndexAt, roomLooks, type LookId } from './roomLooks';
+import { placeGlitchTile } from '../layout/glitchTile';
+import type { Point } from '../geometry';
+import { spawnAvoidRects } from '../spawnAvoid';
 
 const WALL_RING = 2;
 const SHEET_ROWS = 11;
@@ -38,7 +42,9 @@ interface TiledObject {
   properties?: Prop[];
 }
 
-const gid = (frame: number, theme: MapTheme): number => frame + (theme.sheet === 'rogue' ? ROGUE_FIRST_GID : 1);
+const gid = (frame: number, look: Pick<Look, 'sheet'>): number => frame + (look.sheet === 'rogue' ? ROGUE_FIRST_GID : 1);
+/** The look of the tile at (x, y): a mixed theme's room look, else the theme's own. */
+type LookAt = (x: number, y: number) => Look;
 const grid = (layout: DungeonLayout): number[][] => Array.from({ length: layout.rows }, () => new Array<number>(layout.cols).fill(0));
 const px = (tiles: number): number => tiles * TILE_SIZE;
 
@@ -49,7 +55,7 @@ function nearWall(floor: boolean[][], x: number, y: number, ring: number): boole
   return false;
 }
 
-function paintGround(layout: DungeonLayout, floor: boolean[][], rng: () => number, theme: MapTheme): number[][] {
+function paintGround(layout: DungeonLayout, floor: boolean[][], rng: () => number, lookAt: LookAt): number[][] {
   const ground = grid(layout);
   const pillarAt = new Set(layout.pillars.map((p) => `${p.x},${p.y}`));
   const nearPillar = (x: number, y: number): boolean => [-1, 0, 1].some((dy) => [-1, 0, 1].some((dx) => pillarAt.has(`${x + dx},${y + dy}`)));
@@ -57,7 +63,8 @@ function paintGround(layout: DungeonLayout, floor: boolean[][], rng: () => numbe
     row.forEach((isFloor, x) => {
       if (!isFloor) return;
       const roll = rng() + (nearPillar(x, y) ? -0.25 : 0);
-      ground[y]![x] = gid(floorFrame(theme.floor, roll), theme);
+      const look = lookAt(x, y);
+      ground[y]![x] = gid(floorFrame(look.floor, roll), look);
     }),
   );
   return ground;
@@ -75,19 +82,20 @@ function floorFrame({ base, variants }: MapTheme['floor'], roll: number): number
 /** Position-hashed pick so cover variety costs no randomness (keeps single-tile themes byte-stable). */
 const coverFrame = (cover: readonly number[], x: number, y: number): number => cover[Math.abs((x * 73856093) ^ (y * 19349663)) % cover.length]!;
 
-function paintWalls(layout: DungeonLayout, floor: boolean[][], rng: () => number, theme: MapTheme): number[][] {
-  const { wall } = theme;
+function paintWalls(layout: DungeonLayout, floor: boolean[][], rng: () => number, lookAt: LookAt): number[][] {
   const walls = grid(layout);
   floor.forEach((row, y) =>
     row.forEach((isFloor, x) => {
       if (isFloor || !nearWall(floor, x, y, WALL_RING)) return;
+      const look = lookAt(x, y);
+      const { wall } = look;
       const edge = nearWall(floor, x, y, 1);
       const alt = wall.alt[randInt(rng, 0, wall.alt.length - 1)]!;
-      walls[y]![x] = gid(edge ? (rng() < wall.accentChance ? wall.accent : wall.base) : rng() < wall.altChance ? alt : wall.base, theme);
+      walls[y]![x] = gid(edge ? (rng() < wall.accentChance ? wall.accent : wall.base) : rng() < wall.altChance ? alt : wall.base, look);
     }),
   );
-  for (const b of layout.blocks) if (!walls[b.y]![b.x]) walls[b.y]![b.x] = gid(wall.base, theme);
-  for (const p of layout.pillars) walls[p.y]![p.x] = gid(coverFrame(theme.cover, p.x, p.y), theme);
+  for (const b of layout.blocks) if (!walls[b.y]![b.x]) walls[b.y]![b.x] = gid(lookAt(b.x, b.y).wall.base, lookAt(b.x, b.y));
+  for (const p of layout.pillars) walls[p.y]![p.x] = gid(coverFrame(lookAt(p.x, p.y).cover, p.x, p.y), lookAt(p.x, p.y));
   return walls;
 }
 
@@ -95,7 +103,7 @@ const rectPx = (r: Rect): Pick<TiledObject, 'x' | 'y' | 'width' | 'height'> => (
 const ints = (props: Record<string, number | string>): Prop[] =>
   Object.entries(props).map(([name, value]) => ({ name, type: typeof value === 'number' ? 'int' : 'string', value }));
 
-function buildObjects(layout: DungeonLayout, hazards: Rect[], spikes: Rect[], active: PlacedHazard[], channels: Channel[], decor: Decor[], theme: MapTheme): TiledObject[] {
+function buildObjects(layout: DungeonLayout, hazards: Rect[], spikes: Rect[], active: PlacedHazard[], channels: Channel[], decor: Decor[], looks: readonly LookId[], glitch: Point | null, theme: MapTheme): TiledObject[] {
   let nextId = 1;
   const make = (name: string, type: string, area: Pick<TiledObject, 'x' | 'y' | 'width' | 'height'>, props: Record<string, number | string> = {}, point = false): TiledObject => ({
     id: nextId++,
@@ -118,7 +126,8 @@ function buildObjects(layout: DungeonLayout, hazards: Rect[], spikes: Rect[], ac
   const combat = layout.rooms.filter((room) => room.kind === 'combat');
   return [
     make('playerStart', 'playerStart', at(start), {}, true),
-    ...combat.map((room, i) => make(`room${room.index}`, 'room', rectPx(room.rect), { order: room.index, encounter: `${theme.id}-room-${room.index}`, ...theme.encounters[i]! })),
+    ...combat.map((room, i) => make(`room${room.index}`, 'room', rectPx(room.rect), { order: room.index, encounter: `${theme.id}-room-${room.index}`, ...theme.encounters[i]!, ...(looks[i] ? { look: looks[i] } : {}) })),
+    ...(glitch ? [make('glitch1', 'glitch', { x: px(glitch.x) + TILE_SIZE / 2, y: px(glitch.y) + TILE_SIZE / 2, width: 0, height: 0 }, {}, true)] : []),
     ...layout.doors.filter((d) => d.room > 0).map((d, i) => make(`door${i + 1}`, 'door', rectPx(d.rect), { room: d.room })),
     ...(side ? [layout.grate ? make('grate1', 'grate', at(side), {}, true) : make('treasure1', 'treasure', at(side), {}, true)] : []),
     ...hazards.map((r, i) => make(`quicksand${i + 1}`, 'hazard', rectPx(r), { kind: 'quicksand' })),
@@ -142,6 +151,7 @@ const HAZARD_SEED_MIX = 0x5bd1e995;
 const CHANNEL_SEED_MIX = 0x7f4a7c15;
 const FLUSH_SEED_MIX = 0x3c6ef372;
 const DECOR_SEED_MIX = 0x2c1b3c6d;
+const GLITCH_SEED_MIX = 0x3243f6a8;
 
 /** One flush per sludge segment of each combat channel; every segment of a channel shares its phase so the whole channel surges at once. */
 function flushHazards(channels: readonly Channel[], rng: () => number): PlacedHazard[] {
@@ -172,13 +182,19 @@ function paintSludge(layout: DungeonLayout, channels: readonly Channel[], theme:
   return data;
 }
 
-function assemble(theme: MapTheme, seed: number, rng: () => number, unshaped: DungeonLayout) {
+function assemble(theme: MapTheme, seed: number, rng: () => number, unshaped: DungeonLayout, withGlitch = false) {
   const base = theme.roundBoss ? roundBossRoom(unshaped) : unshaped;
   const channels = theme.channels ? placeChannels(base, mulberry32(seed ^ CHANNEL_SEED_MIX), theme.channels) : [];
   const layout = channels.length > 0 ? clearChannels(base, channels) : base;
   const floor = floorMask(layout);
-  const ground = paintGround(layout, floor, rng, theme);
-  const walls = paintWalls(layout, floor, rng, theme);
+  const combatRects = layout.rooms.filter((room) => room.kind === 'combat').map((room) => room.rect);
+  const looks = theme.looks ? roomLooks(seed, combatRects.length) : [];
+  const lookAt: LookAt = (x, y) => {
+    const room = theme.looks ? lookIndexAt(combatRects, x, y) : -1;
+    return room >= 0 ? theme.looks![looks[room]!] : theme;
+  };
+  const ground = paintGround(layout, floor, rng, lookAt);
+  const walls = paintWalls(layout, floor, rng, lookAt);
   const hazards = placeHazards(layout, rng, theme.quicksandPerRoom);
   const spikes = placeSpikeTraps(layout, rng, theme.spikePairsPerRoom ?? 0, hazards);
   const bridges = channels.flatMap((c) => c.bridges);
@@ -186,7 +202,8 @@ function assemble(theme: MapTheme, seed: number, rng: () => number, unshaped: Du
   const active = [...placed, ...flushHazards(channels, mulberry32(seed ^ FLUSH_SEED_MIX))];
   const footprints = [...hazards, ...spikes, ...placed.flatMap((h) => (h.kind === 'gasPipe' || h.kind === 'minecart' ? [h.rect] : h.blocks))];
   const decor = theme.decor ? placeDecor(layout, channels, footprints, mulberry32(seed ^ DECOR_SEED_MIX), theme.decor) : [];
-  return { layout, ground, walls, quicksand: hazards, spikes, active, channels, decor, sludge: paintSludge(layout, channels, theme) };
+  const glitch = withGlitch ? placeGlitchTile(layout, [...footprints, ...spawnAvoidRects({ hazards: [...hazards, ...spikes].map((rect) => ({ kind: 'floor', rect })), active: placed })], mulberry32(seed ^ GLITCH_SEED_MIX)) : null;
+  return { layout, ground, walls, quicksand: hazards, spikes, active, channels, decor, looks, glitch, sludge: paintSludge(layout, channels, theme) };
 }
 
 /** The committed classic map: the theme's own seed and fixed serpentine preset. */
@@ -196,15 +213,15 @@ export function buildWorld(theme: MapTheme) {
 }
 
 /** A fresh map for `seed`: random route, room shapes and optional (or forced) side room, same rooms and encounters as the classic one. */
-export function buildRandomWorld(theme: MapTheme, seed: number, side?: SidePlan) {
+export function buildRandomWorld(theme: MapTheme, seed: number, side?: SidePlan, glitch = false) {
   const rng = mulberry32(seed);
-  return assemble(theme, seed, rng, generateRandomLayout(rng, theme.preset, theme.random, side));
+  return assemble(theme, seed, rng, generateRandomLayout(rng, theme.preset, theme.random, side), glitch);
 }
 
 type World = ReturnType<typeof buildWorld>;
 
-function toTmj({ layout, ground, walls, quicksand, spikes, active, channels, decor, sludge }: World, theme: MapTheme) {
-  const objects = buildObjects(layout, quicksand, spikes, active, channels, decor, theme);
+function toTmj({ layout, ground, walls, quicksand, spikes, active, channels, decor, looks, glitch, sludge }: World, theme: MapTheme) {
+  const objects = buildObjects(layout, quicksand, spikes, active, channels, decor, looks, glitch, theme);
   return {
     compressionlevel: -1,
     type: 'map',
@@ -233,7 +250,7 @@ function toTmj({ layout, ground, walls, quicksand, spikes, active, channels, dec
         margin: 0,
         spacing: 0,
       },
-      ...(theme.sheet === 'rogue'
+      ...(theme.sheet === 'rogue' || theme.looks
         ? [
             {
               firstgid: ROGUE_FIRST_GID,
@@ -263,4 +280,4 @@ function toTmj({ layout, ground, walls, quicksand, spikes, active, channels, dec
 export type TmjMap = ReturnType<typeof toTmj>;
 
 export const buildTmj = (theme: MapTheme): TmjMap => toTmj(buildWorld(theme), theme);
-export const buildRandomTmj = (theme: MapTheme, seed: number, side?: SidePlan): TmjMap => toTmj(buildRandomWorld(theme, seed, side), theme);
+export const buildRandomTmj = (theme: MapTheme, seed: number, side?: SidePlan, glitch = false): TmjMap => toTmj(buildRandomWorld(theme, seed, side, glitch), theme);

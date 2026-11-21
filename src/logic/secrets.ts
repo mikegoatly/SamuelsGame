@@ -4,7 +4,7 @@ import { NAB_HERO, nextRunsWithoutNab } from './nab';
 import { MAX_PITY, type SaveData, type Secrets } from './save';
 
 /** Hidden levels that stay off Level Select until found. */
-export type SecretId = 'sewer' | 'mines';
+export type SecretId = 'sewer' | 'mines' | 'glitch';
 
 /** The hero who lives down the grate. */
 export const SEWER_HERO = 'gloop';
@@ -26,7 +26,7 @@ export const SEWER_NOTICE = 'secret:sewer';
 export const queueSewerNotice = (save: SaveData): SaveData =>
   save.seen.includes(SEWER_NOTICE) || save.pendingNotices.includes(SEWER_NOTICE) ? save : { ...save, pendingNotices: [...save.pendingNotices, SEWER_NOTICE] };
 
-export const foundSecrets = (secrets: Secrets): SecretId[] => [...(secrets.sewerFound ? ['sewer' as const] : []), ...(secrets.minesFound ? ['mines' as const] : [])];
+export const foundSecrets = (secrets: Secrets): SecretId[] => [...(secrets.sewerFound ? ['sewer' as const] : []), ...(secrets.minesFound ? ['mines' as const] : []), ...(secrets.glitchFound ? ['glitch' as const] : [])];
 
 /** The gem thief who leads the way into the mines. */
 export const MINES_HERO = NAB_HERO;
@@ -45,3 +45,12 @@ export const recordNabRun = (save: SaveData, appeared: boolean): SaveData => ({
 /** Following Nab: the discovery card waits for the next menu screen (once). */
 export const queueMinesNotice = (save: SaveData): SaveData =>
   save.seen.includes(MINES_NOTICE) || save.pendingNotices.includes(MINES_NOTICE) ? save : { ...save, pendingNotices: [...save.pendingNotices, MINES_NOTICE] };
+
+export const GLITCH_NOTICE = 'secret:glitch';
+
+/** Reaching the glitch tile: the Glitch card appears (no hero yet). Safe to repeat. */
+export const discoverGlitch = (save: SaveData): SaveData => ({ ...save, secrets: { ...save.secrets, glitchFound: true } });
+
+/** Falling in: the discovery card waits for the next menu screen (once). */
+export const queueGlitchNotice = (save: SaveData): SaveData =>
+  save.seen.includes(GLITCH_NOTICE) || save.pendingNotices.includes(GLITCH_NOTICE) ? save : { ...save, pendingNotices: [...save.pendingNotices, GLITCH_NOTICE] };

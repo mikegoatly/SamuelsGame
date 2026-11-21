@@ -15,6 +15,7 @@ import { MUTE_EVENT } from '../systems/audioSettings';
 import { feel } from '../systems/feel';
 import { saveSystem } from '../systems/SaveSystem';
 import { BossIntro } from '../ui/BossIntro';
+import { GLITCH_HUD_KEY, HudGlitch } from '../fx/HudGlitch';
 import { gameText } from '../ui/gameText';
 import { DamageVignette } from '../ui/DamageVignette';
 import { PotionSlot } from '../ui/PotionSlot';
@@ -79,6 +80,7 @@ export class HudScene extends Phaser.Scene {
   private weaponText!: Phaser.GameObjects.Text;
   private vignette!: DamageVignette;
   private intro!: BossIntro;
+  private glitch?: HudGlitch;
 
   constructor() {
     super('Hud');
@@ -91,6 +93,7 @@ export class HudScene extends Phaser.Scene {
     this.beatBest = false;
     this.barY = WAVE_BAR.y;
     this.boss = null;
+    this.glitch = undefined;
     const { events, progression, player, director, loot, skills, roomTotal, heroic, bossName, bossTagline } = data;
     this.bossTicks = data.bossTicks ?? [0.5];
     this.skillBar = new SkillBar(this, skills);
@@ -137,6 +140,10 @@ export class HudScene extends Phaser.Scene {
     this.hp = { value: player.hp, max: player.maxHp };
     this.showProgress(progression.progress, progression.xpForNextLevel);
 
+    if (this.registry.get(GLITCH_HUD_KEY) === true) {
+      this.glitch = new HudGlitch(() => [{ text: this.levelText, level: true }, { text: this.hpText }, { text: this.waveText }, { text: this.coinText }]);
+    }
+
     events.on('burning-changed', (burning) => this.burnText.setVisible(burning));
     events.on('hp-changed', (value, max) => {
       this.hp = { value, max };
@@ -167,6 +174,7 @@ export class HudScene extends Phaser.Scene {
   }
 
   update(_time: number, delta: number): void {
+    this.glitch?.update(delta);
     this.vignette.update(delta, this.hp.value / this.hp.max, saveSystem.data.settings.reduceShake);
     this.touchView.update();
     this.drawWaveBar();

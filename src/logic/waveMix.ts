@@ -6,6 +6,8 @@ import { pickWeighted } from './weighted';
 export interface PoolEntry {
   enemyId: string;
   weight: number;
+  /** Held back until this room (a pool-wide ramp; `curve.intro` does the same for one monster per room). */
+  fromRoom?: number;
 }
 
 /** What the planner needs to know about a monster. */
@@ -63,7 +65,7 @@ export const eliteChance = (curve: LevelCurve, order: number): number => {
 export function availablePool(pool: readonly PoolEntry[], curve: LevelCurve, order: number): PoolEntry[] {
   return pool.filter((entry) => {
     const debut = curve.intro.indexOf(entry.enemyId);
-    return debut < 0 || debut + 1 <= order;
+    return order >= (entry.fromRoom ?? 1) && (debut < 0 || debut + 1 <= order);
   });
 }
 

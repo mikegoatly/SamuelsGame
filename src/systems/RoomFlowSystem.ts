@@ -4,6 +4,7 @@ import type { LevelConfig } from '../content/levels';
 import { curveOf, infoOf } from '../content/levels/curve';
 import type { Player } from '../entities/Player';
 import { insetRect, rectCenter, rectContains } from '../logic/geometry';
+import { glitchBossLevel, glitchRoomRange } from '../logic/glitch';
 import { heroicBossLevel, heroicRoomRange, normalBossLevel } from '../logic/heroic';
 import { findRoomAt } from '../logic/roomFlow';
 import type { LevelObjects, RoomSpec } from '../logic/tiledObjects';
@@ -37,6 +38,8 @@ export interface RoomFlowOptions {
   isBlocked: (x: number, y: number) => boolean;
   /** Heroic run: monster levels follow this fixed hero level. */
   heroicLevel?: number;
+  /** Levels that scale with the hero from the start (Glitch): monster and boss levels come from the hero's level when the run began. */
+  scaleLevel?: { heroLevel: number; heroic: boolean };
 }
 
 /** Relic-Hunters style flow: stepping into a room seals its doors and spawns waves; clearing it opens them again. */
@@ -112,7 +115,8 @@ export class RoomFlowSystem implements LevelDirector {
     const curve = curveOf(level);
     const { heroicLevel } = this.o;
     const normal = [room.minLevel, room.maxLevel] as const;
-    const levels = heroicLevel === undefined ? normal : heroicRoomRange(normal, level.monsterLevelRange, heroicLevel);
+    const { scaleLevel } = this.o;
+    const levels = scaleLevel ? glitchRoomRange(room.order, this.totalRooms, scaleLevel.heroLevel, scaleLevel.heroic) : heroicLevel === undefined ? normal : heroicRoomRange(normal, level.monsterLevelRange, heroicLevel);
     return new WaveScheduler({
       order: room.order,
       totalWaves: wavesInRoom(curve, room.order),
@@ -156,7 +160,8 @@ export class RoomFlowSystem implements LevelDirector {
     const centre = rectCenter(arena.rect);
     const spawnX = arena.rect.x + arena.rect.w * 0.3;
     const normalBoss = normalBossLevel(this.o.level);
-    const bossLevel = this.o.heroicLevel === undefined ? normalBoss : heroicBossLevel(normalBoss, this.o.heroicLevel);
+    const { scaleLevel } = this.o;
+    const bossLevel = scaleLevel ? glitchBossLevel(scaleLevel.heroLevel, scaleLevel.heroic) : this.o.heroicLevel === undefined ? normalBoss : heroicBossLevel(normalBoss, this.o.heroicLevel);
     this.o.scene.time.delayedCall(BOSS_SPAWN_DELAY_MS, () => {
       if (!this.stopped) this.o.factory.spawnBoss(bossDef, bossLevel, spawnX, centre.y, { rect: arena.rect, thrones: this.o.world.thrones, isBlocked: this.o.isBlocked });
     });

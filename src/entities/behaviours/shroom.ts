@@ -19,7 +19,7 @@ export const shroom: BehaviourFactory = (host, world) => {
 
   const spores = (): void => {
     const emitter = host.scene.add.particles(host.x, host.y - 4, Tex.puff, { speed: { min: 15, max: 45 }, lifespan: 500, scale: { start: 0.9, end: 0 }, tint: SPORE, emitting: false });
-    emitter.setDepth(8).explode(10);
+    emitter.setDepth(7).explode(10);
     groundEffects(host.scene, host.clock).expire(600, emitter);
   };
 

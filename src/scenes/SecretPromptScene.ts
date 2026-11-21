@@ -19,6 +19,7 @@ interface PromptText {
 
 const PROMPTS: Record<SecretId, PromptText> = {
   sewer: { title: 'Sewer grate', question: 'A rusty grate. Climb down into the sewer?', yes: 'Climb down', border: 0x7dd86a, titleColor: '#7dd86a' },
+  glitch: { title: 'Broken floor', question: 'The floor is... broken? Fall through?', yes: 'Fall in', border: 0xff40d0, titleColor: '#ff80e8' },
   mines: { title: "Nab's gate", question: 'Follow Nab into the mines?', yes: 'Follow', border: 0xb98cff, titleColor: '#c8a8ff' },
 };
 

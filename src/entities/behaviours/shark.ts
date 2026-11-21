@@ -10,7 +10,7 @@ const SAND = 0xd8b070;
 
 function sandBurst(host: { scene: Phaser.Scene }, x: number, y: number, count = 16): void {
   const emitter = host.scene.add.particles(x, y, Tex.puff, { speed: { min: 30, max: 100 }, lifespan: 450, scale: { start: 1.6, end: 0 }, tint: SAND, emitting: false });
-  emitter.setDepth(8).explode(count);
+  emitter.setDepth(7).explode(count);
   host.scene.time.delayedCall(550, () => emitter.destroy());
 }
 

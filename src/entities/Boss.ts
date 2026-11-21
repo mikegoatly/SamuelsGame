@@ -402,7 +402,7 @@ export class Boss extends Enemy {
 
   private sandBurst(x: number, y: number): void {
     const emitter = this.scene.add.particles(x, y, Tex.puff, { speed: { min: 30, max: 110 }, lifespan: 500, scale: { start: 1.8, end: 0 }, tint: DUST, emitting: false });
-    emitter.setDepth(8).explode(24);
+    emitter.setDepth(7).explode(24);
     this.scene.time.delayedCall(600, () => emitter.destroy());
   }
 

@@ -175,6 +175,7 @@ const music: Array<[string, string]> = [
   ['Montage.mp3', 'music/palace.mp3'],
   ['Hard Rock.mp3', 'music/boss-palace.mp3'],
   ['Synth.mp3', 'music/mines.mp3'],
+  ['Kevin MacLeod (Royalty Free Music) - Jazz/Cool Blast.mp3', 'music/glitch.mp3'],
 ];
 
 if (!existsSync(kenneyDir)) {

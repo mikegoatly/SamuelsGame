@@ -57,13 +57,16 @@ import { installRunMap, removeRunMap } from './runMap';
 import { TreasureSystem } from '../systems/TreasureSystem';
 import { chooseRunMap, parseSeed, type RunMap } from '../logic/runSeed';
 import { hasRandomMap } from '../logic/map';
-import { FORCE_GRATE, FORCE_NAB } from '../debug';
-import { getHero, heroKit } from '../content/heroes';
-import { minesCard, sewerCard } from '../content/cards';
+import { FORCE_GLITCH, FORCE_GRATE, FORCE_NAB } from '../debug';
+import { getHero } from '../content/heroes';
 import { GrateSystem } from '../systems/GrateSystem';
+import { GlitchTileSystem } from '../systems/GlitchTileSystem';
+import { GlitchFxSystem } from '../systems/glitch/GlitchFxSystem';
+import { pickGlitchBoss } from '../logic/glitch';
+import { SECRET_INFO } from './secretInfo';
 import { isLevelPlayable } from '../logic/levelRules';
 import { countsForPity } from '../logic/grate';
-import { discoverMines, discoverSewer, MINES_NOTICE, queueMinesNotice, queueSewerNotice, recordGrateRun, recordNabRun, SEWER_NOTICE, type SecretId } from '../logic/secrets';
+import { recordGrateRun, recordNabRun, type SecretId } from '../logic/secrets';
 import { chooseNabPlan, nabMissCounts } from '../logic/nab';
 import { NabSystem } from '../systems/NabSystem';
 import { ScepterSystem } from '../systems/ScepterSystem';
@@ -79,8 +82,6 @@ export interface GameSceneData {
 
 const devSeed = (): number | undefined => (import.meta.env.DEV ? parseSeed(new URLSearchParams(window.location.search).get('seed')) : undefined);
 
-/** Where Climb down / Follow lead: the secret level on Normal with the same hero and loadout, or its Level Select card while it is a teaser. */
-const SECRET_LEVEL: Record<SecretId, string> = { sewer: 'sewer', mines: 'mines' };
 const BUTTON_START = 9;
 const REWARD_FADE_MS = 600;
 const BOSS_XP_BONUS = 100;
@@ -133,7 +134,11 @@ export class GameScene extends Phaser.Scene {
       sewerFound: save.secrets.sewerFound,
       runsWithoutGrate: save.secrets.desertRunsWithoutGrate,
       forceGrate: FORCE_GRATE,
+      heroicCleared: save.levels.heroic.cleared,
+      glitchFound: save.secrets.glitchFound,
+      forceGlitch: FORCE_GLITCH,
     });
+    if (this.level.bossPool) this.level = { ...this.level, bossId: pickGlitchBoss(this.level.bossPool, this.runMap.seed) };
     const map = buildLevelMap(this, this.level, installRunMap(this, this.level, this.runMap));
     const { walls, playerStart } = map;
     const projectiles = createProjectilePool(this);
@@ -227,6 +232,7 @@ export class GameScene extends Phaser.Scene {
     this.setUpReward(map, player, events);
     if (map.world && map.world.treasures.length > 0) new TreasureSystem(this, player, loot, this.level, map.world.treasures);
     if (map.world && map.world.grates.length > 0) new GrateSystem(this, player, this.clock, map.world.grates, () => this.canPromptSecret(), () => this.openSecretPrompt('sewer'));
+    if (map.world && map.world.glitches.length > 0) new GlitchTileSystem(this, player, this.clock, map.world.glitches, () => this.canPromptSecret(), () => this.openSecretPrompt('glitch'));
 
     this.physics.world.setBounds(0, 0, walls.width, walls.height);
     const camera = this.cameras.main;
@@ -234,6 +240,7 @@ export class GameScene extends Phaser.Scene {
     camera.setZoom(CAMERA_ZOOM);
     camera.startFollow(player, true, 0.15, 0.15);
     camera.fadeIn(250);
+    if (this.level.environment === 'glitch') new GlitchFxSystem({ scene: this, player, enemies, shots, clock: this.clock, isSolid }, events);
     if (this.level.environment === 'mines') feel.cave();
 
     this.scene.launch('Hud', { events, progression, player, director, loot, skills, roomTotal: map.world?.rooms.length, heroic: this.heroic, survivalBestMs: this.survival ? save.survival.bestMs : undefined, bossName: this.level.bossId ? getEnemy(this.level.bossId).name : undefined, bossTagline: this.level.bossId ? getEnemy(this.level.bossId).tip : undefined, bossTicks: this.level.bossId ? getEnemy(this.level.bossId).barTicks : undefined });
@@ -326,18 +333,18 @@ export class GameScene extends Phaser.Scene {
   /** The secret prompt's answer. Either way the secret is discovered (its hero unlocks); going in then leaves the run like a quit. */
   resolveSecret(secret: SecretId, go: boolean): void {
     this.scene.stop('SecretPrompt');
-    const sewer = secret === 'sewer';
-    const first = sewer ? !saveSystem.data.secrets.sewerFound : !saveSystem.data.secrets.minesFound;
-    saveSystem.update((save) => (sewer ? discoverSewer(save, heroKit) : discoverMines(save, heroKit)));
+    const info = SECRET_INFO[secret];
+    const first = !info.found(saveSystem.data);
+    saveSystem.update(info.discover);
     if (go) {
-      if (first) saveSystem.update(sewer ? queueSewerNotice : queueMinesNotice);
-      const level = getLevel(SECRET_LEVEL[secret]);
+      if (first) saveSystem.update(info.queueNotice);
+      const level = getLevel(info.level);
       if (isLevelPlayable(level)) this.leaveRun('Game', { levelId: level.id, heroic: false });
       else this.leaveRun('LevelSelect', { focusLevelId: level.id });
       return;
     }
-    if (!sewer) this.nab?.close();
-    if (first) this.cards.request(sewer ? SEWER_NOTICE : MINES_NOTICE, sewer ? sewerCard : minesCard);
+    if (secret === 'mines') this.nab?.close();
+    if (first) this.cards.request(info.notice, info.card);
     this.controls.swallowUntilReleased();
     this.resumeGame();
     this.time.delayedCall(0, () => this.cards.flush());
@@ -407,6 +414,7 @@ export class GameScene extends Phaser.Scene {
       doors,
       isBlocked: blockedByRects(spawnAvoidRects(world), (x, y) => solidAt(walls, [(px, py) => walls.getTileAtWorldXY(px, py)], x, y)),
       heroicLevel: this.heroic ? this.progression.level : undefined,
+      scaleLevel: this.level.scalesWithHero ? { heroLevel: this.progression.level, heroic: this.heroic } : undefined,
     });
   }
 

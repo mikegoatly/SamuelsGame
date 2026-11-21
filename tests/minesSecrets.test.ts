@@ -5,7 +5,7 @@ import { discoverMines, foundSecrets, MINES_HERO, MINES_NOTICE, queueMinesNotice
 import { aSave } from './builders';
 
 const noKit = (): undefined => undefined;
-const secrets = (over: object = {}) => ({ sewerFound: false, desertRunsWithoutGrate: 0, minesFound: false, nabPity: 0, ...over });
+const secrets = (over: object = {}) => ({ sewerFound: false, desertRunsWithoutGrate: 0, minesFound: false, nabPity: 0, glitchFound: false, ...over });
 
 describe('discoverMines', () => {
   it('marks the mines found, unlocks Nab and queues his reveal', () => {

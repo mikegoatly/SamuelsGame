@@ -6,6 +6,8 @@ import { rectCenter, type Rect } from '../logic/geometry';
 import { parseLevelObjects, type TiledMapLike } from '../logic/tiledObjects';
 import { DoorLayer } from '../systems/DoorLayer';
 import { ENVIRONMENT_TINT, type LevelMap } from './RoomBuilder';
+import { usesBarDoors } from '../logic/map/doorTile';
+import { tintGlitchRooms } from './glitchRooms';
 import { animateSludge, drawDecor } from './sewerTerrain';
 
 const TILESET_NAME = 'tiny-dungeon';
@@ -22,7 +24,8 @@ export function buildTiledMap(scene: Phaser.Scene, level: LevelConfig, mapKey = 
   const sludge = map.layers.some((l) => l.name === 'sludge') ? map.createLayer('sludge', sets, 0, 0)! : null;
   const walls = map.createLayer('walls', sets, 0, 0)!;
   walls.setCollisionByExclusion([-1]);
-  const doorSet = rogue ?? tileset;
+  const bars = rogue !== null && usesBarDoors(level.environment, true);
+  const doorSet = bars ? rogue : tileset;
   const doorTiles = map.createBlankLayer('doors', doorSet, 0, 0, map.width, map.height)!.setDepth(1);
   const tint = ENVIRONMENT_TINT[level.environment];
   if (tint.ground !== null) ground.setTint(tint.ground);
@@ -34,7 +37,8 @@ export function buildTiledMap(scene: Phaser.Scene, level: LevelConfig, mapKey = 
   }
 
   const world = parseLevelObjects(scene.cache.tilemap.get(mapKey).data as TiledMapLike);
-  const doors = new DoorLayer(doorTiles, world.doors, rogue ? rogue.firstgid + RogueFrame.bars : FIRST_GID + Frame.doorClosed);
+  const doors = new DoorLayer(doorTiles, world.doors, bars ? rogue.firstgid + RogueFrame.bars : FIRST_GID + Frame.doorClosed);
+  if (level.environment === 'glitch') tintGlitchRooms(ground, walls, world);
   const quicksand = world.hazards.filter((h) => h.kind === 'quicksand').map((h) => h.rect);
   const channels = world.hazards.filter((h) => h.kind === 'channel').map((h) => h.rect);
   for (const rect of quicksand) drawQuicksand(scene, rect);
