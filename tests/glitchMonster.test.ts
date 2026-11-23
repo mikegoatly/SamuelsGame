@@ -73,12 +73,12 @@ describe('GlitchMonster teleport', () => {
     for (let t = 0; t < 60_000; t += 100) expect(g.step(t, { allowed: false, pick: () => spot })).toBeNull();
   });
 
-  it('is rare: only a few teleports a minute', () => {
+  it('is rare: about once every 25-40 seconds', () => {
     const g = new GlitchMonster(mulberry32(5));
     let count = 0;
     for (let t = 0; t < 120_000; t += 50) if (g.step(t, allowed)?.type === 'teleport') count++;
-    expect(count).toBeGreaterThanOrEqual(4);
-    expect(count).toBeLessThanOrEqual(16);
+    expect(count).toBeGreaterThanOrEqual(2);
+    expect(count).toBeLessThanOrEqual(6);
   });
 
   it('stays put when no spot is found', () => {

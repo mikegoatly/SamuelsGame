@@ -42,6 +42,8 @@ conclusion does not depend on them (see the ablation).
 | Bow | Ranger | 44 | 0.82 | 0.91 | ok |
 | Javelin | — | 28.6 | 1.17 | 1.23 | ok (edge) |
 | Crystal Scepter | Nab | 40 | 1.03 | 1.00 | ok (shatter averaged; freeze and spray not modelled) |
+| Pixel Pulse | Glitch the Glitcher | 30 | 1.15 | 1.18 | ok (tier 2; pierces everything in line, no burn) |
+| Glitch Gun | - (Glitch reward) | 51.4 | 0.79 | 0.84 | ok (tier 3; random twist per shot: pierce, split, heavy x1.8, fan of 3; averaged) |
 | Sludge Slinger | Gloop | 25 | **1.84** | **1.44** | too weak* |
 | Apprentice Staff | Wizard, Necromancer | 18.8 | **3.10** | **2.02** | too weak* |
 
@@ -111,3 +113,8 @@ worst desert rooms. Decide after the sword change, which already removes the "ea
 - Staff, slinger and wand aim stay unchanged for now. Revisit after this lands.
 - **Crystal Scepter crowd note:** the level 5 twist's spray shards may encase only ordinary monsters. Elites and bosses are never locked by spray (a direct 4th bolt can still encase an elite; bosses only slow). Keeps a shatter in a pack from freezing a whole room including its elite.
 - **Nab's Snatch** pays only for real room monsters (not bosses, boss pieces, summons, spawner minions, splits or raised allies), so it cannot be farmed from a summoner.
+
+### Glitch weapons (G3)
+
+- **Pixel Pulse** (tier 2): 18 damage per 600ms = 30 DPS, bolts pass through every enemy in line. Level 5 fires three at once.
+- **Glitch Gun** (tier 3): 12 damage per 280ms = 42.9 DPS; each shot rolls one of four equally likely twists (`src/logic/glitchGun.ts`), the heavy one at x1.8, so 51.4 DPS averaged on one target. Heavy is best on one target, pierce/split/fan in crowds, so no twist is strictly best (tested). Level 5: every shot pierces one more enemy. The model counts an average of 1.35 enemies per shot in a crowd.

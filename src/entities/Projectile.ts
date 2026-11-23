@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import { Tex } from '../content/assetKeys';
 import type { WeaponDef } from '../content/weapons';
-import { BoltHits, PIERCE_EXTRA_ENEMIES } from '../logic/weaponTwists';
+import { BoltHits, PIERCE_ALL, PIERCE_EXTRA_ENEMIES } from '../logic/weaponTwists';
 
 /** Per-shot overrides: twist children and sword slash waves reuse the bolt pool with their own reach, damage and look. */
 export interface BoltOptions {
@@ -17,6 +17,10 @@ export interface BoltOptions {
   scale?: { x: number; y: number };
   /** Draw as this Tiny Dungeon frame (an arrow, a thrown dagger) instead of the glowing bolt. */
   frame?: number;
+  /** Overrides the weapon's bolt colour (the Glitch Gun's rolled twist). */
+  tint?: number;
+  /** Overrides whether the bolt splits on its last hit. */
+  splits?: boolean;
   /** A kill by this shot may raise a lesser skeleton (Bone Staff level 5). */
   raises?: boolean;
 }
@@ -27,6 +31,8 @@ export class Projectile extends Phaser.Physics.Arcade.Sprite {
   hits = new BoltHits(0);
   splits = false;
   raises = false;
+  /** The Glitch Gun's rolled colour, handed on to split children. */
+  rolledTint?: number;
   private range = 0;
   private readonly spawn = new Phaser.Math.Vector2();
 
@@ -38,13 +44,15 @@ export class Projectile extends Phaser.Physics.Arcade.Sprite {
     this.weapon = weapon;
     this.damageScale = options.damageScale ?? 1;
     this.range = options.range ?? weapon.range;
-    const pierce = options.pierce ?? (weapon.activeTwist === 'pierce' ? PIERCE_EXTRA_ENEMIES : 0);
+    const pierce = options.pierce ?? (weapon.pierceAll ? PIERCE_ALL : weapon.activeTwist === 'pierce' ? PIERCE_EXTRA_ENEMIES : 0);
     this.hits = new BoltHits(pierce, options.skip);
     this.raises = options.raises ?? false;
-    this.splits = weapon.activeTwist === 'split' && !options.child;
+    this.splits = options.splits ?? (weapon.activeTwist === 'split' && !options.child);
     this.enableBody(true, x, y, true, true);
     if (weapon.tint === null) this.clearTint();
     else this.setTint(weapon.tint);
+    this.rolledTint = options.tint;
+    if (options.tint !== undefined) this.setTint(options.tint);
     this.spawn.set(x, y);
     const frame = options.frame ?? weapon.projectileFrame;
     if (frame === undefined) this.setTexture(Tex.bolt);

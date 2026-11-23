@@ -1,4 +1,5 @@
 import { BOW } from '../logic/bowDraw';
+import { glitchDpsFactor } from '../logic/glitchGun';
 import { scepterDpsFactor } from '../logic/scepter';
 import type { WeaponDef } from './weapons';
 
@@ -8,5 +9,5 @@ export function weaponDps(weapon: WeaponDef): number {
   const combo = weapon.melee?.cycle && weapon.melee.finisher;
   const { length } = weapon.melee?.cycle ?? { length: 1 };
   const perSwing = combo ? (weapon.baseDamage * (length - 1 + weapon.melee!.finisher!.damage)) / length : weapon.baseDamage;
-  return ((perSwing * 1000) / weapon.fireRateMs) * (weapon.scepter ? scepterDpsFactor() : 1);
+  return ((perSwing * 1000) / weapon.fireRateMs) * (weapon.scepter ? scepterDpsFactor() : 1) * (weapon.glitchGun ? glitchDpsFactor() : 1);
 }

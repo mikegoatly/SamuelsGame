@@ -18,5 +18,5 @@ interface SecretInfo {
 export const SECRET_INFO: Record<SecretId, SecretInfo> = {
   sewer: { level: 'sewer', found: (s) => s.secrets.sewerFound, discover: (s) => discoverSewer(s, heroKit), queueNotice: queueSewerNotice, notice: SEWER_NOTICE, card: sewerCard },
   mines: { level: 'mines', found: (s) => s.secrets.minesFound, discover: (s) => discoverMines(s, heroKit), queueNotice: queueMinesNotice, notice: MINES_NOTICE, card: minesCard },
-  glitch: { level: 'glitch', found: (s) => s.secrets.glitchFound, discover: discoverGlitch, queueNotice: queueGlitchNotice, notice: GLITCH_NOTICE, card: glitchCard },
+  glitch: { level: 'glitch', found: (s) => s.secrets.glitchFound, discover: (s) => discoverGlitch(s, heroKit), queueNotice: queueGlitchNotice, notice: GLITCH_NOTICE, card: glitchCard },
 };

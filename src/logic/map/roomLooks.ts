@@ -1,4 +1,6 @@
 import type { Rect } from '../geometry';
+import type { ActiveHazardKind } from '../hazard/kinds';
+import type { HazardPlan } from '../hazard/plan';
 import { mulberry32 } from '../rng';
 
 /** Levels whose floor and wall look a Glitch room can borrow. */
@@ -23,3 +25,24 @@ export function roomLooks(seed: number, count: number): LookId[] {
 /** Index of the first room (tile rects) whose floor or wall ring holds tile (x, y); -1 for corridors and everything else. */
 export const lookIndexAt = (rooms: readonly Rect[], x: number, y: number): number =>
   rooms.findIndex((r) => x >= r.x - LOOK_MARGIN && x < r.x + r.w + LOOK_MARGIN && y >= r.y - LOOK_MARGIN && y < r.y + r.h + LOOK_MARGIN);
+
+/** The one simple hazard a room keeps from the level whose look it borrowed. */
+export const BORROWED_HAZARDS: Record<LookId, ActiveHazardKind | 'quicksand'> = {
+  ruins: 'crackedFloor',
+  desert: 'quicksand',
+  palace: 'arrowWall',
+  sewer: 'gasPipe',
+  mines: 'minecart',
+};
+
+/** Hazard plan for the active hazards and the rooms that get a quicksand patch. Rooms are numbered by `LayoutRoom.index`, which is 1 for the first combat room because index 0 is the start room (the same numbering `HazardPlan` and `placeHazards` use); `look i` belongs to combat room `i + 1`. */
+export function borrowedHazards(looks: readonly LookId[]): { plan: HazardPlan; quicksandRooms: number[] } {
+  const plan: Partial<Record<ActiveHazardKind, number[]>> = {};
+  const quicksandRooms: number[] = [];
+  looks.forEach((look, i) => {
+    const kind = BORROWED_HAZARDS[look];
+    if (kind === 'quicksand') return void quicksandRooms.push(i + 1);
+    (plan[kind] ??= looks.map(() => 0))[i] = 1;
+  });
+  return { plan, quicksandRooms };
+}

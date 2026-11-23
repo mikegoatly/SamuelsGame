@@ -127,6 +127,8 @@ export const Frame = {
   nab: 144,
   scepter: 148,
   scepterBolt: 149,
+  /** The Glitcher: Glitch-sheet frame 0 copied into the tile sheet at load (see PreloadScene), so every hero lookup in Tex.tiles works. */
+  glitcher: 150,
   wolf: 124,
   coin: 102,
   ring: 101,

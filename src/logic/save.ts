@@ -1,3 +1,5 @@
+import { unlockHeroes } from './heroSave';
+import { GLITCH_HERO } from './secrets';
 import { MAX_LEVEL, type PlayerProgress } from './progression';
 import { xpToNextLevel } from './xp';
 import { CHARM_TO_GEM, GEM_COLOURS, LEGACY_CARD_IDS, noGems, totalGems, type GemColour, type Gems } from './gems';
@@ -268,8 +270,14 @@ export function parseSave(json: string | null | undefined, legacyRewards: Legacy
   save.seen = strings(raw.seen).map((id) => LEGACY_CARD_IDS[id] ?? id);
   const converted = !(typeof raw.version === 'number' && raw.version >= GEMS_VERSION) && totalGems(save.gems) > 0 && !save.seen.includes(CHARMS_NOTICE);
   save.pendingNotices = [...new Set([...strings(raw.pendingNotices).filter((id) => !save.seen.includes(id)), ...(converted ? [CHARMS_NOTICE] : [])])];
-  const parsed = parseSkills(save, raw, legacyRewards, isKnownSkill, resolveWeapon);
+  const parsed = glitcherRepair(parseSkills(save, raw, legacyRewards, isKnownSkill, resolveWeapon), isKnownHero, signatureWeaponOf);
   return typeof raw.version === 'number' && raw.version >= KIT_WEAPONS_VERSION ? parsed : grantSignatureWeapons(parsed, signatureWeaponOf);
+}
+
+/** Load-time repair: a save that found Glitch before the Glitcher existed (v14 and earlier) gets him now, with his weapon owned (not equipped) and his reveal card queued once. */
+function glitcherRepair(save: SaveData, isKnownHero: (id: string) => boolean, signatureWeaponOf: (heroId: string) => string | undefined): SaveData {
+  if (!save.secrets.glitchFound || !isKnownHero(GLITCH_HERO)) return save;
+  return unlockHeroes(save, [GLITCH_HERO], (id) => ({ weaponId: signatureWeaponOf(id) }));
 }
 
 /** Migration: owns the signature weapon of every unlocked hero without equipping it or touching what is already owned. */

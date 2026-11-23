@@ -172,7 +172,22 @@ export const nab: HeroDef = {
   hidden: true,
 };
 
-export const heroList: readonly HeroDef[] = [wizard, knight, rogue, dwarf, ranger, monk, necromancer, secret, gloop, nab];
+export const glitcher: HeroDef = {
+  id: 'glitcher',
+  className: 'Robot',
+  name: 'Glitch the Glitcher',
+  frame: Frame.glitcher,
+  tint: null,
+  color: '#6fa8ff',
+  bio: 'A tiny robot that survived the crash. Beep!',
+  stats: mods(RATING.high, RATING.low, RATING.mid, 1.1),
+  passive: { id: 'phaseGlitch', name: 'Phase Glitch', text: 'When a shot hits him, enemy shots pass through him for 1.2 seconds.' },
+  signatureWeaponId: 'pixelPulse',
+  hint: 'Some things only show up when the game breaks.',
+  hidden: true,
+};
+
+export const heroList: readonly HeroDef[] = [wizard, knight, rogue, dwarf, ranger, monk, necromancer, secret, gloop, nab, glitcher];
 
 export const heroes: Record<string, HeroDef> = Object.fromEntries(heroList.map((hero) => [hero.id, hero]));
 

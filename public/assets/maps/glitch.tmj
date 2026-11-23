@@ -11,7 +11,7 @@
  "tilewidth": 16,
  "tileheight": 16,
  "nextlayerid": 4,
- "nextobjectid": 23,
+ "nextobjectid": 29,
  "tilesets": [
   {
    "firstgid": 1,
@@ -582,6 +582,204 @@
     },
     {
      "id": 21,
+     "name": "quicksand1",
+     "type": "hazard",
+     "x": 2208,
+     "y": 208,
+     "width": 64,
+     "height": 32,
+     "rotation": 0,
+     "visible": true,
+     "properties": [
+      {
+       "name": "kind",
+       "type": "string",
+       "value": "quicksand"
+      }
+     ]
+    },
+    {
+     "id": 22,
+     "name": "minecart1",
+     "type": "hazard",
+     "x": 464,
+     "y": 80,
+     "width": 16,
+     "height": 208,
+     "rotation": 0,
+     "visible": true,
+     "properties": [
+      {
+       "name": "kind",
+       "type": "string",
+       "value": "minecart"
+      },
+      {
+       "name": "room",
+       "type": "int",
+       "value": 1
+      },
+      {
+       "name": "offset",
+       "type": "int",
+       "value": 3400
+      }
+     ]
+    },
+    {
+     "id": 23,
+     "name": "crackedFloor2",
+     "type": "hazard",
+     "x": 960,
+     "y": 80,
+     "width": 32,
+     "height": 32,
+     "rotation": 0,
+     "visible": true,
+     "properties": [
+      {
+       "name": "kind",
+       "type": "string",
+       "value": "crackedFloor"
+      },
+      {
+       "name": "room",
+       "type": "int",
+       "value": 2
+      },
+      {
+       "name": "offset",
+       "type": "int",
+       "value": 200
+      }
+     ]
+    },
+    {
+     "id": 24,
+     "name": "gasPipe3",
+     "type": "hazard",
+     "x": 1376,
+     "y": 256,
+     "width": 48,
+     "height": 48,
+     "rotation": 0,
+     "visible": true,
+     "properties": [
+      {
+       "name": "kind",
+       "type": "string",
+       "value": "gasPipe"
+      },
+      {
+       "name": "room",
+       "type": "int",
+       "value": 3
+      },
+      {
+       "name": "offset",
+       "type": "int",
+       "value": 3500
+      },
+      {
+       "name": "radius",
+       "type": "int",
+       "value": 26
+      },
+      {
+       "name": "dir",
+       "type": "int",
+       "value": 270
+      },
+      {
+       "name": "pipeX",
+       "type": "int",
+       "value": 1400
+      },
+      {
+       "name": "pipeY",
+       "type": "int",
+       "value": 312
+      }
+     ]
+    },
+    {
+     "id": 25,
+     "name": "arrowWall4",
+     "type": "hazard",
+     "x": 1776,
+     "y": 112,
+     "width": 16,
+     "height": 16,
+     "rotation": 0,
+     "visible": true,
+     "properties": [
+      {
+       "name": "kind",
+       "type": "string",
+       "value": "arrowWall"
+      },
+      {
+       "name": "room",
+       "type": "int",
+       "value": 4
+      },
+      {
+       "name": "offset",
+       "type": "int",
+       "value": 1600
+      },
+      {
+       "name": "emitX",
+       "type": "int",
+       "value": 2024
+      },
+      {
+       "name": "dir",
+       "type": "int",
+       "value": 180
+      },
+      {
+       "name": "stripY",
+       "type": "int",
+       "value": 80
+      },
+      {
+       "name": "stripH",
+       "type": "int",
+       "value": 64
+      }
+     ]
+    },
+    {
+     "id": 26,
+     "name": "minecart5",
+     "type": "hazard",
+     "x": 2208,
+     "y": 416,
+     "width": 16,
+     "height": 208,
+     "rotation": 0,
+     "visible": true,
+     "properties": [
+      {
+       "name": "kind",
+       "type": "string",
+       "value": "minecart"
+      },
+      {
+       "name": "room",
+       "type": "int",
+       "value": 6
+      },
+      {
+       "name": "offset",
+       "type": "int",
+       "value": 1100
+      }
+     ]
+    },
+    {
+     "id": 27,
      "name": "bossArena",
      "type": "bossArena",
      "x": 1328,
@@ -599,7 +797,7 @@
      ]
     },
     {
-     "id": 22,
+     "id": 28,
      "name": "exit",
      "type": "exit",
      "x": 1360,

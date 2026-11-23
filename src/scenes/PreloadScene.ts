@@ -1,7 +1,8 @@
 import Phaser from 'phaser';
 import { gameText } from '../ui/gameText';
-import { Frame, MINES_IN_TILES, MinesFrame, SHEET_COLS, SKILL_ICON_SOURCES, TILE_SIZE, Tex } from '../content/assetKeys';
+import { Frame, GlitchFrame, MINES_IN_TILES, MinesFrame, SHEET_COLS, SKILL_ICON_SOURCES, TILE_SIZE, Tex } from '../content/assetKeys';
 import { ROGUE_SPACING } from '../content/sewerFrames';
+import { GLITCH_WEAPON_SOURCE_FRAMES, GlitchWeaponTile } from '../content/glitchWeaponFrames';
 import { PROMPT_SIZE } from '../content/inputGlyphs';
 import { skillList } from '../content/skills';
 import { SFX_DEFS, sfxKey, type SfxId } from '../content/sfxDefs';
@@ -69,6 +70,13 @@ export class PreloadScene extends Phaser.Scene {
       const sx = (frame % SHEET_COLS) * TILE_SIZE;
       const sy = Math.floor(frame / SHEET_COLS) * TILE_SIZE;
       canvas.context.drawImage(mines, sx, sy, TILE_SIZE, TILE_SIZE, i * TILE_SIZE, (rows + 1) * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+    });
+    const glitch = this.textures.get(Tex.glitch).getSourceImage() as HTMLImageElement;
+    const heroSlot = Frame.glitcher - (rows + 1) * SHEET_COLS;
+    canvas.context.drawImage(glitch, GlitchFrame.hero * TILE_SIZE, 0, TILE_SIZE, TILE_SIZE, heroSlot * TILE_SIZE, (rows + 1) * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+    GLITCH_WEAPON_SOURCE_FRAMES.forEach((frame, i) => {
+      const slot = GlitchWeaponTile.pixelPulse + i - (rows + 1) * SHEET_COLS;
+      canvas.context.drawImage(glitch, frame * TILE_SIZE, 0, TILE_SIZE, TILE_SIZE, slot * TILE_SIZE, (rows + 1) * TILE_SIZE, TILE_SIZE, TILE_SIZE);
     });
     canvas.refresh();
     for (let i = 0; i < (rows + 2) * SHEET_COLS; i++) canvas.add(i, 0, (i % SHEET_COLS) * TILE_SIZE, Math.floor(i / SHEET_COLS) * TILE_SIZE, TILE_SIZE, TILE_SIZE);

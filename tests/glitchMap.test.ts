@@ -4,7 +4,7 @@ import { rectContains } from '../src/logic/geometry';
 import { hasRandomMap, buildRandomMap } from '../src/logic/map';
 import { ROGUE_FIRST_GID } from '../src/logic/map/mapBuilder';
 import { DESERT_THEME, GLITCH_THEME, RUINS_THEME, THEMES } from '../src/logic/map/mapThemes';
-import { LOOK_IDS, lookIndexAt, roomLooks } from '../src/logic/map/roomLooks';
+import { BORROWED_HAZARDS, borrowedHazards, LOOK_IDS, lookIndexAt, roomLooks } from '../src/logic/map/roomLooks';
 import { spawnAvoidRects } from '../src/logic/spawnAvoid';
 import { parseLevelObjects } from '../src/logic/tiledObjects';
 import { placeGlitchTile } from '../src/logic/layout/glitchTile';
@@ -72,13 +72,33 @@ describe('the Glitch theme', () => {
     expect([...gids].some((g) => g < ROGUE_FIRST_GID)).toBe(true);
   });
 
-  it('has no hazards or quicksand yet', () => {
-    const world = glitchWorld(SEEDS[1]!);
-    expect([...world.active, ...world.quicksand, ...world.spikes, ...world.channels]).toEqual([]);
+  it('keeps one simple hazard of the borrowed level in most rooms, none in the arena and none borrowed from a look without one', () => {
+    let rooms = 0;
+    let hazardous = 0;
+    for (const seed of SEEDS) {
+      const world = glitchWorld(seed);
+      const looks = roomLooks(seed, 6);
+      world.layout.rooms.filter((r) => r.kind === 'combat').forEach((room, i) => {
+        const want = BORROWED_HAZARDS[looks[i]!];
+        rooms++;
+        const inRoom = world.active.filter((h) => h.room === room.index).map((h) => h.kind);
+        const sand = world.quicksand.filter((q) => rectContains(room.rect, { x: q.x, y: q.y })).length;
+        if (want === 'quicksand' ? sand > 0 : inRoom.includes(want as never)) hazardous++;
+        if (want !== 'quicksand') expect(sand, `seed ${seed} room ${room.index}`).toBe(0);
+      });
+      expect(world.active.filter((h) => h.room === world.layout.rooms[world.layout.rooms.length - 1]!.index)).toEqual([]);
+      expect(world.spikes).toEqual([]);
+    }
+    expect(hazardous / rooms).toBeGreaterThan(0.9);
+  });
+
+  it('wakes each hazard with its own room', () => {
+    const parsed = parseLevelObjects(buildRandomMap('glitch', SEEDS[2]!));
+    const orders = new Set(parsed.rooms.map((r) => r.order));
+    for (const h of parsed.active) expect(orders.has(h.room), h.kind).toBe(true);
   });
 
   it('leaves the other themes without looks', () => {
-    expect(roomLooks).toBeDefined();
     expect(RUINS_THEME.looks).toBeUndefined();
     expect(parseLevelObjects(buildRandomMap('ruins', 5)).rooms.every((r) => r.look === undefined)).toBe(true);
   });
@@ -160,5 +180,30 @@ describe('Glitch doors', () => {
     ['ruins', false, false],
   ])('%s with rogue tileset %s -> bars %s', (env, hasRogue, bars) => {
     expect(usesBarDoors(env, hasRogue)).toBe(bars);
+  });
+});
+
+describe('room numbering of the borrowed hazards', () => {
+  it('combat rooms are indexed 1 to 6 in play order (room 0 is the start), so look i is room i + 1', () => {
+    for (const seed of SEEDS) {
+      const { rooms } = glitchWorld(seed).layout;
+      expect(rooms[0]!.kind).toBe('start');
+      expect(rooms.filter((r) => r.kind === 'combat').map((r) => r.index)).toEqual([1, 2, 3, 4, 5, 6]);
+    }
+  });
+});
+
+describe('borrowedHazards', () => {
+  it('maps each room to its look hazard (1-based room index), quicksand separately', () => {
+    const { plan, quicksandRooms } = borrowedHazards(['ruins', 'desert', 'palace', 'sewer', 'mines', 'desert']);
+    expect(plan.crackedFloor).toEqual([1, 0, 0, 0, 0, 0]);
+    expect(plan.arrowWall).toEqual([0, 0, 1, 0, 0, 0]);
+    expect(plan.gasPipe).toEqual([0, 0, 0, 1, 0, 0]);
+    expect(plan.minecart).toEqual([0, 0, 0, 0, 1, 0]);
+    expect(quicksandRooms).toEqual([2, 6]);
+  });
+
+  it('has an entry for every look', () => {
+    for (const id of LOOK_IDS) expect(BORROWED_HAZARDS[id]).toBeTruthy();
   });
 });

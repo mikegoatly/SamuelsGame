@@ -1,6 +1,7 @@
 import { weaponDps } from '../src/content/weaponDps';
 import { brokenWand, type WeaponDef } from '../src/content/weapons';
 import { BOW } from '../src/logic/bowDraw';
+import { glitchTargets } from '../src/logic/glitchGun';
 import { BURN } from '../src/logic/burning';
 
 /** Each factor is relative to the Broken Wand, which the model was calibrated on: the wand's profile is exactly neutral. */
@@ -64,9 +65,10 @@ function averageKnockback(weapon: WeaponDef): number {
 
 function targetsOf(weapon: WeaponDef): number {
   if (weapon.crescent) return CRESCENT_TARGETS;
+  if (weapon.glitchGun) return glitchTargets();
   if (weapon.lob) return LOB_TARGETS;
   if (weapon.melee) return 1 + CONE_TARGETS_PER_RAD * weapon.melee.arc;
-  const pierce = weapon.javelin ? JAVELIN_PIERCE : weapon.charge ? BOW.fullPierce : 1;
+  const pierce = weapon.javelin || weapon.pierceAll ? JAVELIN_PIERCE : weapon.charge ? BOW.fullPierce : 1;
   return 1 + PIERCE_TARGETS_PER_EXTRA * (pierce - 1);
 }
 

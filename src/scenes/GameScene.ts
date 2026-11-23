@@ -199,8 +199,8 @@ export class GameScene extends Phaser.Scene {
     if (player.effects.snatch) new SnatchSystem({ scene: this, player, enemies, shots, clock: this.clock, isSolid }, loot);
     this.physics.add.overlap(player, shots.group, (_, boltObj) => {
       const bolt = boltObj as EnemyProjectile;
-      if (!bolt.active) return;
-      player.takeDamage(bolt.damage, bolt.x, bolt.y, bolt.source);
+      if (!bolt.active || player.shotsPassThrough) return;
+      if (player.takeDamage(bolt.damage, bolt.x, bolt.y, bolt.source) === 'hurt') player.onShotLanded();
       bolt.kill();
     });
 

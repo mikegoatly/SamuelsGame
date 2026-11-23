@@ -1,7 +1,9 @@
-export type WeaponTwist = 'pierce' | 'split' | 'wave' | 'daggerThrow' | 'shockwave' | 'spread' | 'forceWave' | 'poisonPuddle' | 'stickBurst' | 'sweep' | 'boneRise' | 'shardEncase';
+export type WeaponTwist = 'pierce' | 'split' | 'wave' | 'daggerThrow' | 'shockwave' | 'spread' | 'forceWave' | 'poisonPuddle' | 'stickBurst' | 'sweep' | 'boneRise' | 'shardEncase' | 'pulseTrio';
 
 export const TWIST_LEVEL = 5;
 export const PIERCE_EXTRA_ENEMIES = 1;
+/** Pixel Pulse: passes through everything in its line. */
+export const PIERCE_ALL = 99;
 export const SPLIT_SPREAD = 0.55;
 export const SPLIT_DAMAGE_SCALE = 0.6;
 export const SPLIT_RANGE = 90;

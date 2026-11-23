@@ -2,7 +2,9 @@
 
 public/assets/extra/glitch-extra.png (12 columns of 16px tiles):
 0 Glitch the Glitcher (hero), 1 missing-texture floor tile, 2 corrupt tile variant (broken checker with scanline gaps),
-3 Missing Texture boss idle, 4 boss hurt/angry, 5 fake copy (hollow checker ring, no face).
+3 Missing Texture boss idle, 4 boss hurt/angry, 5 fake copy (hollow checker ring, no face),
+6 Pixel Pulse icon, 7 Pixel Pulse bolt, 8 Glitch Gun icon, 9 Glitch Gun bolt (white/grey, tinted per twist at runtime).
+Frames 6-9 are copied into the tile sheet at load (see src/content/glitchWeaponFrames.ts): weapons are drawn from Tex.tiles.
 Run: python tools/add_glitch_frames.py   (needs Pillow)
 """
 from pathlib import Path
@@ -20,6 +22,8 @@ COLOURS = {
     'x': (44, 42, 76, 255), 'T': (84, 70, 98, 255),                                    # screen, trousers
     'q': (96, 214, 222, 255), 'Q': (190, 244, 246, 255),                               # cyan accent
     'm': (206, 84, 170, 255), 'N': (240, 150, 215, 255),                               # magenta accent
+    'w': (250, 250, 255, 255), 'g': (196, 200, 214, 255), 'G': (128, 134, 158, 255),   # white / grey ramp
+    'C': (40, 150, 190, 255),                                                          # deep cyan
 }
 
 
@@ -119,7 +123,83 @@ BOSS_IDLE = cube(IDLE_FACE)
 BOSS_HURT = cube(ANGRY_FACE, dx=1)
 BOSS_FAKE = cube({}, hollow=True)
 
-FRAMES = [HERO, MISSING, CORRUPT, BOSS_IDLE, BOSS_HURT, BOSS_FAKE]
+# Weapons are drawn upright (tip up); the game rotates them to the aim.
+# Pixel Pulse: a little steel emitter wand topped with a square cyan lens.
+PULSE_ICON = parse([
+    '................',
+    '.....aaaaaa.....',
+    '.....aqQQqa.....',
+    '.....aQwwQa.....',
+    '.....aQwwQa.....',
+    '.....aqQQqa.....',
+    '.....aaaaaa.....',
+    '......aEEa......',
+    '......aegEa.....',
+    '......aeEEa.....',
+    '......aEEa......',
+    '......aegEa.....',
+    '......aEEa......',
+    '.....aaSSaa.....',
+    '.....aSBBSa.....',
+    '......aaaa......',
+])
+PULSE_BOLT = parse([
+    '................',
+    '................',
+    '......aaaa......',
+    '.....aqQQqa.....',
+    '.....aQwwQa.....',
+    '.....aQwwQa.....',
+    '.....aqQQqa.....',
+    '......aCCa......',
+    '......aqqa......',
+    '.......aa.......',
+    '......aCCa......',
+    '.......aa.......',
+    '................',
+    '................',
+    '................',
+    '................',
+])
+# Glitch Gun: a blocky grey blaster, muzzle up, with a magenta and a cyan glitch pixel.
+GUN_ICON = parse([
+    '.....aaaaaa.....',
+    '.....aggggga....',
+    '.....awwwgga....',
+    '.....aggggga....',
+    '.....aGGGGGa....',
+    '....aaggggGaa...',
+    '...agggmqmqgGa..',
+    '...agggqmqmgGa..',
+    '...agggmqmqgGa..',
+    '...aGgggggggGa..',
+    '...aaGGGGGGGaa..',
+    '....aaaaGgGaa...',
+    '.......aGgGa....',
+    '.......aGgGa....',
+    '.......aGGGa....',
+    '.......aaaaa....',
+])
+GUN_BOLT = parse([
+    '................',
+    '................',
+    '................',
+    '................',
+    '....aaaaaaaa....',
+    '....awwwwwga....',
+    '....awwwwwga....',
+    '....awwwwwga....',
+    '....awwwwwga....',
+    '....awwwwwga....',
+    '....agggggGa....',
+    '....aaaaaaaa....',
+    '................',
+    '................',
+    '................',
+    '................',
+])
+
+FRAMES = [HERO, MISSING, CORRUPT, BOSS_IDLE, BOSS_HURT, BOSS_FAKE, PULSE_ICON, PULSE_BOLT, GUN_ICON, GUN_BOLT]
 
 
 def sheet(frames, size, cols):

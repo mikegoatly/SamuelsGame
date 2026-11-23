@@ -101,3 +101,10 @@ describe('spawn-only monsters', () => {
     expect(ids).toContain('rat');
   });
 });
+
+describe('the Glitch reward', () => {
+  it('grants the Glitch Gun on the first Normal clear without swapping it in', () => {
+    expect(glitch.rewardWeaponId).toBe('glitchGun');
+    expect(glitch.rewardEquips).toBe(false);
+  });
+});

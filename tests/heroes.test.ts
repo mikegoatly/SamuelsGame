@@ -22,7 +22,7 @@ describe('hero content', () => {
   });
 
   it('every hero but the wizard has a hint, and an unlock rule unless it is found by discovery', () => {
-    const discovered = ['gloop', 'nab'];
+    const discovered = ['gloop', 'nab', 'glitcher'];
     const locked = heroList.filter((h) => h.id !== WIZARD).map((h) => h.id);
     expect([...unlockableHeroIds].sort()).toEqual(locked.filter((id) => !discovered.includes(id)).sort());
     for (const id of locked) expect(getHero(id).hint, id).toBeTruthy();
@@ -70,9 +70,9 @@ describe('Gloop the Slime', () => {
 });
 
 describe('Nab the gem thief', () => {
-  it('is the last hero: hidden, low HP, high speed, mid attack, Snatch and the Crystal Scepter', () => {
+  it('is the hero before the Glitcher: hidden, low HP, high speed, mid attack, Snatch and the Crystal Scepter', () => {
     const nab = getHero('nab');
-    expect(heroList[heroList.length - 1]).toBe(nab);
+    expect(heroList[heroList.length - 2]).toBe(nab);
     expect(nab).toMatchObject({ name: 'Nab', hidden: true, signatureWeaponId: 'crystalScepter' });
     expect(nab.passive.id).toBe('snatch');
     expect([nab.stats.maxHp, nab.stats.moveSpeed, nab.stats.attackRate].map(ratingPips)).toEqual([1, 3, 2]);

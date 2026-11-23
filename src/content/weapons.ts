@@ -1,6 +1,7 @@
 import { weaponDamageAt, weaponFireRateAt } from '../logic/upgrades';
 import { coneAt, TWIST_LEVEL, type WeaponTwist } from '../logic/weaponTwists';
 import { Frame } from './assetKeys';
+import { GlitchWeaponTile } from './glitchWeaponFrames';
 import { heroes } from './heroes';
 
 export interface MeleeTuning {
@@ -57,6 +58,10 @@ export interface WeaponDef {
   burns?: boolean;
   /** Fires a short crescent bolt that hits everything in its arc (Bone Staff). */
   crescent?: boolean;
+  /** Bolts pass through every enemy in their line (Pixel Pulse). */
+  pierceAll?: boolean;
+  /** Every shot rolls a random twist, shown by the bolt colour (Glitch Gun). */
+  glitchGun?: boolean;
   /** Bolts stick crystal shards in monsters that encase and then shatter (Crystal Scepter). */
   scepter?: boolean;
   /** Only this hero can pick it (other heroes never see it on the Loadout or in the Camp). */
@@ -269,7 +274,42 @@ export const crystalScepter: WeaponDef = {
   description: '4 shards encase a monster, the next bolt shatters it',
 };
 
-export const weaponList: readonly WeaponDef[] = [apprenticeStaff, brokenWand, ironSword, goldenSword, twinDaggers, hammer, bow, fists, sludgeSlinger, boneStaff, javelin, crystalScepter];
+/** Glitch the Glitcher's own weapon: square pixel bolts that pierce every enemy in a line (no burn): 18 per 600ms = 30 DPS, like the javelin without the fire. */
+export const pixelPulse: WeaponDef = {
+  id: 'pixelPulse',
+  kind: 'ranged',
+  name: 'Pixel Pulse',
+  frame: GlitchWeaponTile.pixelPulse,
+  projectileFrame: GlitchWeaponTile.pixelPulseBolt,
+  baseDamage: 18,
+  fireRateMs: 600,
+  speed: 260,
+  range: 220,
+  tint: null,
+  pierceAll: true,
+  heroOnly: 'glitcher',
+  twist: 'pulseTrio',
+  description: 'Square pulses that pass through every enemy in line',
+};
+
+/** The Glitch reward: each shot rolls a twist (pierce, split, heavy or a fan of three) shown by its colour. 12 per 280ms = 42.9 DPS, 51.4 averaged over the twists (tier 3, like the javelin). */
+export const glitchGun: WeaponDef = {
+  id: 'glitchGun',
+  kind: 'ranged',
+  name: 'Glitch Gun',
+  frame: GlitchWeaponTile.glitchGun,
+  projectileFrame: GlitchWeaponTile.glitchGunBolt,
+  baseDamage: 12,
+  fireRateMs: 280,
+  speed: 280,
+  range: 200,
+  tint: null,
+  glitchGun: true,
+  twist: 'pierce',
+  description: 'Every shot gets a random twist, shown by its colour',
+};
+
+export const weaponList: readonly WeaponDef[] = [apprenticeStaff, brokenWand, ironSword, goldenSword, twinDaggers, hammer, bow, fists, sludgeSlinger, boneStaff, javelin, crystalScepter, pixelPulse, glitchGun];
 
 export const weapons: Record<string, WeaponDef> = Object.fromEntries(weaponList.map((weapon) => [weapon.id, weapon]));
 

@@ -38,6 +38,8 @@ export const weaponUpgradeInfo: Readonly<Record<string, UpgradeInfo>> = {
   boneStaff: { gem: 'blue', tier: 2, twist: 'Crescent kills may rise as skeletons' },
   javelin: { gem: 'red', tier: 3, twist: 'The stuck javelin bursts' },
   crystalScepter: { gem: 'blue', tier: 2, twist: 'Shatter shards can encase too' },
+  pixelPulse: { gem: 'blue', tier: 2, twist: 'Fires three pulses at once' },
+  glitchGun: { gem: 'red', tier: 3, twist: 'Every shot pierces 1 more enemy' },
 };
 
 export const TIER_MULTIPLIER: Record<SkillTier, number> = { 1: 1, 2: 1.25, 3: 1.5 };

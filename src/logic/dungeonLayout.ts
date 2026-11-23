@@ -242,11 +242,11 @@ export function reachableRooms(layout: DungeonLayout, withPillars = false): Set<
 const PATCH_ATTEMPTS = 150;
 
 /** Quicksand patches (tile rects) in combat rooms: off the corridor strips and cover, in from the walls, never touching. */
-export function placeHazards(layout: DungeonLayout, rng: () => number, perRoom: number): Rect[] {
+export function placeHazards(layout: DungeonLayout, rng: () => number, perRoom: number, onlyRooms?: ReadonlySet<number>): Rect[] {
   if (perRoom <= 0) return [];
   const solid = solidTiles(layout);
   const patches: Rect[] = [];
-  for (const room of layout.rooms.filter((r) => r.kind === 'combat')) {
+  for (const room of layout.rooms.filter((r) => r.kind === 'combat' && (!onlyRooms || onlyRooms.has(r.index)))) {
     for (let n = 0; n < perRoom; n++) {
       for (let attempt = 0; attempt < PATCH_ATTEMPTS; attempt++) {
         const w = randInt(rng, 3, 4);

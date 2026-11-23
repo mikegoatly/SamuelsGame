@@ -48,8 +48,12 @@ export const queueMinesNotice = (save: SaveData): SaveData =>
 
 export const GLITCH_NOTICE = 'secret:glitch';
 
-/** Reaching the glitch tile: the Glitch card appears (no hero yet). Safe to repeat. */
-export const discoverGlitch = (save: SaveData): SaveData => ({ ...save, secrets: { ...save.secrets, glitchFound: true } });
+/** The little robot who lives in the glitch. */
+export const GLITCH_HERO = 'glitcher';
+
+/** Reaching the glitch tile: the Glitch card appears and the Glitcher unlocks (his reveal card queues once). Safe to repeat. */
+export const discoverGlitch = (save: SaveData, kitOf: (heroId: string) => HeroKit | undefined): SaveData =>
+  unlockHeroes({ ...save, secrets: { ...save.secrets, glitchFound: true } }, [GLITCH_HERO], kitOf);
 
 /** Falling in: the discovery card waits for the next menu screen (once). */
 export const queueGlitchNotice = (save: SaveData): SaveData =>

@@ -2,7 +2,7 @@ import type { Point } from './geometry';
 import { isFrontal, shieldedDamage } from './shield';
 import type { DamageSource } from './unlocks';
 
-export type PassiveId = 'quickCasting' | 'frontGuard' | 'daggerTrap' | 'prospector' | 'longShot' | 'stunStreak' | 'risenDead' | 'fortune' | 'secondBlob' | 'snatch';
+export type PassiveId = 'quickCasting' | 'frontGuard' | 'daggerTrap' | 'prospector' | 'longShot' | 'stunStreak' | 'risenDead' | 'fortune' | 'secondBlob' | 'snatch' | 'phaseGlitch';
 
 export interface PassiveEffects {
   /** Fraction of damage taken from the front that is blocked. */
@@ -29,6 +29,8 @@ export interface PassiveEffects {
   snatch: boolean;
   /** Multiplier on how long a dash lasts (so how far it goes). */
   dashScale: number;
+  /** Glitch the Glitcher: after an enemy projectile hits, enemy projectiles pass through for 1.2s. */
+  phaseGlitch: boolean;
 }
 
 /** Live risen skeletons at most. */
@@ -50,6 +52,7 @@ const NEUTRAL: PassiveEffects = {
   trail: false,
   snatch: false,
   dashScale: 1,
+  phaseGlitch: false,
 };
 
 const EFFECTS: Record<PassiveId, Partial<PassiveEffects>> = {
@@ -63,6 +66,7 @@ const EFFECTS: Record<PassiveId, Partial<PassiveEffects>> = {
   fortune: { luck: 0.5 },
   secondBlob: { secondBlob: true, trail: true },
   snatch: { snatch: true, dashScale: 1.3 },
+  phaseGlitch: { phaseGlitch: true },
 };
 
 export const passiveEffects = (id: PassiveId): PassiveEffects => ({ ...NEUTRAL, ...EFFECTS[id] });

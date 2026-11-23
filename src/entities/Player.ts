@@ -23,7 +23,9 @@ import type { InputController } from '../systems/InputController';
 import type { ProgressionSystem } from '../systems/ProgressionSystem';
 import { floatText } from '../systems/floatText';
 import { playSfx } from '../systems/sfx';
-import { CRESCENT } from '../logic/weaponTwists';
+import { rollGlitchTwist, GLITCH_SIDE_DAMAGE } from '../logic/glitchGun';
+import { PhaseGlitch } from '../logic/phaseGlitch';
+import { BOW_SPREAD, CRESCENT, PIERCE_EXTRA_ENEMIES, spreadAngles } from '../logic/weaponTwists';
 import { fireProjectile } from './Projectile';
 import { sendWave } from './waveShot';
 
@@ -89,6 +91,9 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   private drawWeapon: WeaponDef | undefined;
   private readonly onScenePause = (): void => this.cancelDraw();
   private readonly timers: PlayerTimers;
+  private readonly phase = new PhaseGlitch();
+  private phaseGhosts?: [Phaser.GameObjects.Image, Phaser.GameObjects.Image];
+  private phaseTinted = false;
 
   constructor(
     scene: Phaser.Scene,
@@ -146,6 +151,16 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
 
   get invulnerable(): boolean {
     return this.timers.invulnerable(this.clock.now);
+  }
+
+  /** Phase Glitch: enemy projectiles pass straight through (and keep flying) while this is true. */
+  get shotsPassThrough(): boolean {
+    return this.effects.phaseGlitch && this.phase.active(this.clock.now);
+  }
+
+  /** An enemy projectile just hurt the hero: Phase Glitch opens its 1.2s window. */
+  onShotLanded(): void {
+    if (this.effects.phaseGlitch) this.phase.start(this.clock.now);
   }
 
   /** What a basic attack hitting an enemy at (x, y) does beyond its damage: the ranger's crit, the monk's stun. */
@@ -281,6 +296,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this.wand.setVisible(false);
     this.offhand?.setVisible(false);
     this.head?.setVisible(false);
+    this.phaseGhosts?.forEach((g) => g.setVisible(false));
     this.events.emit('player-died');
   }
 
@@ -344,17 +360,32 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
       playSfx(this.scene, 'shoot');
       return;
     }
-    const bolt = fireProjectile(
-      this.projectiles,
-      this.x + this.aimDirection.x * 10,
-      this.y - 2 + this.aimDirection.y * 10,
-      this.aimDirection,
-      this.weapon,
-    );
-    if (bolt) {
+    const shot = this.fireBolts();
+    if (shot.fired) {
       playSfx(this.scene, 'shoot');
-      muzzleFlash(this.scene, this.x + this.aimDirection.x * 14, this.y - 2 + this.aimDirection.y * 14, this.aimDirection.angle());
+      muzzleFlash(this.scene, this.x + this.aimDirection.x * 14, this.y - 2 + this.aimDirection.y * 14, this.aimDirection.angle(), shot.tint);
     }
+  }
+
+  /** One shot of an ordinary bolt weapon: a fan of three for the Pixel Pulse's level 5 twist, or a rolled twist for the Glitch Gun. True when anything fired. */
+  private fireBolts(): { fired: boolean; tint?: number } {
+    const { weapon, aimDirection } = this;
+    const x = this.x + aimDirection.x * 10;
+    const y = this.y - 2 + aimDirection.y * 10;
+    const base = aimDirection.angle();
+    const roll = weapon.glitchGun ? rollGlitchTwist(Math.random) : undefined;
+    const fan = weapon.activeTwist === 'pulseTrio' || roll?.spread === true;
+    const pierce = roll ? roll.pierce + (weapon.activeTwist === 'pierce' ? PIERCE_EXTRA_ENEMIES : 0) : undefined;
+    let fired = false;
+    const angles = fan ? spreadAngles(base, BOW_SPREAD.count, BOW_SPREAD.angle) : [base];
+    angles.forEach((angle, i) => {
+      const side = fan && i !== Math.floor(angles.length / 2);
+      const direction = new Phaser.Math.Vector2(Math.cos(angle), Math.sin(angle));
+      const scale = (roll?.damageScale ?? 1) * (side ? (roll ? GLITCH_SIDE_DAMAGE : BOW_SPREAD.sideDamageScale) : 1);
+      const bolt = fireProjectile(this.projectiles, x, y, direction, weapon, { damageScale: scale, tint: roll?.tint, pierce, splits: roll ? roll.splits : undefined });
+      fired ||= bolt !== null;
+    });
+    return { fired, tint: roll?.tint };
   }
 
   private swingSword(time: number): void {
@@ -399,6 +430,30 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
       .setScale(1 + this.drawFraction * 0.25)
       .setAlpha(alpha);
     if (this.weapon.charge) this.drawFraction >= 1 ? this.wand.setTint(0xffe27a) : this.showWeapon();
+    this.updatePhaseLook(time, alpha);
+  }
+
+  /** Phase Glitch's look, the one deliberate exception to the hero never glitching: two offset cyan and magenta copies flicker around him (a steady cyan tint when flashes are reduced). Depth 10.5 keeps the copies on the clean camera. */
+  private updatePhaseLook(time: number, alpha: number): void {
+    const on = this.shotsPassThrough;
+    if (!on) {
+      if (this.phaseTinted) {
+        this.phaseTinted = false;
+        if (this.hero.tint !== null) this.setTint(this.hero.tint);
+        else this.clearTint();
+      }
+      this.phaseGhosts?.forEach((g) => g.setVisible(false));
+      return;
+    }
+    if (feel.reduced) {
+      this.setTint(0x9ff0ff);
+      this.phaseTinted = true;
+      this.phaseGhosts?.forEach((g) => g.setVisible(false));
+      return;
+    }
+    this.phaseGhosts ??= [0x60f0ff, 0xff60e0].map((tint) => this.scene.add.image(this.x, this.y, this.texture.key, this.frame.name).setDepth(10.5).setTint(tint)) as [Phaser.GameObjects.Image, Phaser.GameObjects.Image];
+    const swap = Math.floor(time / 60) % 2 === 0 ? 1 : -1;
+    this.phaseGhosts.forEach((g, i) => g.setTexture(this.texture.key, this.frame.name).setFlipX(this.flipX).setScale(this.scaleX, this.scaleY).setPosition(this.x + (i === 0 ? -2 : 2) * swap, this.y).setAlpha(0.55 * alpha).setVisible(true));
   }
 
   /** How far a punching weapon is thrust out at this moment. */
@@ -413,6 +468,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this.wand.destroy();
     this.offhand?.destroy();
     this.head?.destroy();
+    this.phaseGhosts?.forEach((g) => g.destroy());
     super.destroy(fromScene);
   }
 }

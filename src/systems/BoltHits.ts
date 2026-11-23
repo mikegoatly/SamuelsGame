@@ -31,7 +31,7 @@ export function registerBoltHits(scene: Phaser.Scene, pool: Phaser.Physics.Arcad
 function split(scene: Phaser.Scene, pool: Phaser.Physics.Arcade.Group, bolt: Projectile, enemy: Enemy, angle: number): void {
   for (const a of splitAngles(angle, SPLIT_SPREAD)) {
     const direction = new Phaser.Math.Vector2(Math.cos(a), Math.sin(a));
-    fireProjectile(pool, bolt.x, bolt.y, direction, bolt.weapon, { damageScale: SPLIT_DAMAGE_SCALE, range: SPLIT_RANGE, child: true, skip: [enemy] });
+    fireProjectile(pool, bolt.x, bolt.y, direction, bolt.weapon, { damageScale: SPLIT_DAMAGE_SCALE, range: SPLIT_RANGE, child: true, skip: [enemy], tint: bolt.rolledTint });
   }
   fxSplit(scene, bolt.x, bolt.y);
 }

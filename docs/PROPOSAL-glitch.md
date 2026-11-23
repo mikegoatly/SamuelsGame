@@ -1,6 +1,6 @@
 # Proposal: Glitch (third hidden level)
 
-Status: **G1 and G2 built** (2026-11-21); G3 (Glitch the Glitcher, Glitch weapon, polish) next
+Status: **G1-G3 built** (2026-11-23); awaiting Samuel's play-test
 
 Decided by the user:
 - The player sprite **never glitches** (readability).
@@ -139,6 +139,24 @@ Chosen by the user from two concepts (2026-11-21).
 - **Signature weapon, Pixel Pulse:** square pixel bolts that pierce every enemy in a line (Javelin-like, no burn),
   about 18 damage every 600ms.
 - The first Normal clear of the level still gives the separate **Glitch weapon**.
+- **Unlock:** discovering Glitch (either prompt answer) unlocks him with his reveal card, like Gloop and Nab. Saves
+  that already found Glitch before G3 get him on load (tolerant, tested).
+
+### 5b. The Glitch Gun (first Normal clear reward)
+
+A ranged weapon whose every shot rolls a random **twist** borrowed from another weapon's behaviour (e.g. pierce,
+burn, split, bounce, homing), shown by the bolt's colour so the player can see what each shot does. Built from
+existing projectile mechanics only; balanced through `weaponDps` / `BALANCE-weapons.md` like the other weapons
+(roughly endgame-tier average DPS; no twist may be strictly best). Art: icon and bolt frames in `glitch-extra.png`.
+
+### 5c. G3 polish
+
+- **Borrowed hazards:** each Glitch combat room keeps one simple hazard of the level whose look it borrowed (where
+  that level has one): ruins cracked floor, desert quicksand, palace arrow wall, sewer gas pipe (sludge channels
+  are map-wide, so they don't fit one room), mines minecart.
+- **Glitch Gun twists as built:** pierce (cyan), split (violet), heavy x1.8 (red), fan of three (yellow), equally
+  likely; 12 damage every 280ms, tier 3. Its muzzle flash takes the twist colour.
+- **Teleports rarer:** about once per 25-40s per monster (G1 measured ~15s, which felt frequent in full rooms).
 
 ## 6. Music
 

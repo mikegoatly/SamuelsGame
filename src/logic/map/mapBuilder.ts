@@ -11,7 +11,7 @@ import { placeActiveHazards, type PlacedHazard } from '../hazard/placement';
 import { SPIKE_CYCLE } from '../spikes';
 import { mulberry32, randInt } from '../rng';
 import type { Look, MapTheme } from './mapThemes';
-import { lookIndexAt, roomLooks, type LookId } from './roomLooks';
+import { borrowedHazards, lookIndexAt, roomLooks, type LookId } from './roomLooks';
 import { placeGlitchTile } from '../layout/glitchTile';
 import type { Point } from '../geometry';
 import { spawnAvoidRects } from '../spawnAvoid';
@@ -195,10 +195,12 @@ function assemble(theme: MapTheme, seed: number, rng: () => number, unshaped: Du
   };
   const ground = paintGround(layout, floor, rng, lookAt);
   const walls = paintWalls(layout, floor, rng, lookAt);
-  const hazards = placeHazards(layout, rng, theme.quicksandPerRoom);
+  // Look i dresses combat room i + 1 (LayoutRoom.index; room 0 is the start), the numbering HazardPlan and placeHazards use.
+  const borrowed = theme.looks ? borrowedHazards(looks) : null;
+  const hazards = borrowed ? placeHazards(layout, rng, 1, new Set(borrowed.quicksandRooms)) : placeHazards(layout, rng, theme.quicksandPerRoom);
   const spikes = placeSpikeTraps(layout, rng, theme.spikePairsPerRoom ?? 0, hazards);
   const bridges = channels.flatMap((c) => c.bridges);
-  const placed = placeActiveHazards(layout, mulberry32(seed ^ HAZARD_SEED_MIX), theme.hazards ?? {}, [...hazards, ...spikes, ...bridges], theme.bossHazard, channels.flatMap((c) => c.segments));
+  const placed = placeActiveHazards(layout, mulberry32(seed ^ HAZARD_SEED_MIX), borrowed?.plan ?? theme.hazards ?? {}, [...hazards, ...spikes, ...bridges], theme.bossHazard, channels.flatMap((c) => c.segments));
   const active = [...placed, ...flushHazards(channels, mulberry32(seed ^ FLUSH_SEED_MIX))];
   const footprints = [...hazards, ...spikes, ...placed.flatMap((h) => (h.kind === 'gasPipe' || h.kind === 'minecart' ? [h.rect] : h.blocks))];
   const decor = theme.decor ? placeDecor(layout, channels, footprints, mulberry32(seed ^ DECOR_SEED_MIX), theme.decor) : [];

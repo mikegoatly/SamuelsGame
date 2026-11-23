@@ -18,6 +18,9 @@ export const glitch: LevelConfig = {
   curve: GLITCH_CURVE,
   bossId: 'missingTexture',
   scalesWithHero: true,
+  rewardWeaponId: 'glitchGun',
+  /** Granted, never swapped in over the current weapon (like the sewer's Javelin). */
+  rewardEquips: false,
   hiddenUntilFound: FORCE_GLITCH ? undefined : 'glitch',
   mapKey: MapKey.glitch,
   music: Music.glitch,
