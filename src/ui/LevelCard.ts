@@ -4,6 +4,7 @@ import { Tex } from '../content/assetKeys';
 import type { Environment, LevelConfig } from '../content/levels';
 import { otherMode } from '../logic/accessoryWear';
 import { heroicRoomRange, type LevelMode } from '../logic/heroic';
+import { cardLines, cardRows, MERGED_HEIGHT } from '../logic/levelCardLayout';
 import { isUnderLevelled } from '../logic/levelRules';
 import { menuText } from './menuText';
 import type { MenuItem } from './MenuList';
@@ -110,31 +111,37 @@ export class LevelCard implements MenuItem {
     const left = x - width / 2 + 10;
     const alpha = state.unlocked ? 1 : 0.45;
     const top = y - height / 2;
-    const tight = height < TIGHT_HEIGHT;
-    const compact = height < 90;
-    const size = compact ? 14 : 16;
-    const rows = tight ? [8, 22, 37, 51] : compact ? [12, 30, 48, 65] : [14, 36, 56, 80];
+    const merged = height < MERGED_HEIGHT;
+    const size = 16;
+    const rows = cardRows(height);
     this.line(left, top + rows[0]!, level.name, size, '#ffffff').setAlpha(alpha);
     if (level.comingSoon) {
       this.line(left, top + rows[1]!, level.tagline ?? '', size, '#d8c8f0');
-      this.line(left, top + rows[3]!, 'Coming soon', size, '#9a9ab8');
+      this.line(left, top + rows[rows.length - 1]!, 'Coming soon', size, '#9a9ab8');
       return;
     }
     const lines = state.survivalLines;
     if (lines) {
-      const color = state.unlocked ? ['#c8c8e0', '#ffd84a', '#ffe066'] : ['#c8c8e0', '#ffd0a0', '#9a9ab8'];
-      lines.forEach((text, i) => this.line(left, top + rows[i + 1]!, text, size, color[i]!));
+      const colors = state.unlocked ? ['#c8c8e0', '#ffd84a', '#ffe066'] : ['#c8c8e0', '#ffd0a0', '#9a9ab8'];
+      const first = lines.length - (rows.length - 1);
+      cardLines(lines, height).forEach((text, i) => this.line(left, top + rows[i + 1]!, text, size, colors[first + i]!));
       return;
     }
-    this.line(left, top + rows[1]!, `${level.environment}, recommended Lv ${level.recommendedLevel}`, size, '#c8c8e0').setAlpha(alpha);
-    this.monsters(left, top + rows[2]!, size, alpha);
-    this.status(left, top + rows[3]!, size);
+    if (merged) {
+      this.monsters(left, top + rows[1]!, size, alpha, true);
+      this.status(left, top + rows[2]!, size);
+    } else {
+      this.line(left, top + rows[1]!, `${level.environment}, recommended Lv ${level.recommendedLevel}`, size, '#c8c8e0').setAlpha(alpha);
+      this.monsters(left, top + rows[2]!, size, alpha);
+      this.status(left, top + rows[3]!, size);
+    }
     this.drawChip();
   }
 
-  private monsters(x: number, y: number, size: number, alpha: number): void {
+  private monsters(x: number, y: number, size: number, alpha: number, withRecommended = false): void {
     const [low, high] = this.heroic ? heroicRoomRange(this.level.monsterLevelRange, this.level.monsterLevelRange, this.state.playerLevel) : this.level.monsterLevelRange;
-    this.line(x, y, `Monsters Lv ${low}-${high}`, size, this.heroic ? HEROIC_CSS : '#9a9ab8').setAlpha(alpha);
+    const text = withRecommended ? `Lv ${this.level.recommendedLevel}, monsters ${low}-${high}` : `Monsters Lv ${low}-${high}`;
+    this.line(x, y, text, size, this.heroic ? HEROIC_CSS : '#9a9ab8').setAlpha(alpha);
   }
 
   private drawChip(): void {
@@ -146,7 +153,9 @@ export class LevelCard implements MenuItem {
     const crown = this.state.heroicCleared ? crownFor(this.level.id) : undefined;
     if (crown) {
       const tight = this.height < TIGHT_HEIGHT;
-      this.parts.push(this.scene.add.image(this.x + this.width / 2 - (tight ? 14 : 20), this.y + this.height / 2 - (tight ? 12 : 20), Tex.accessories, crown.frame).setScale(tight ? 1.25 : 2));
+      const merged = this.height < MERGED_HEIGHT;
+      const at = merged ? { x: chip.x - CHIP.width / 2 - 14, y: chip.y } : { x: this.x + this.width / 2 - (tight ? 14 : 20), y: this.y + this.height / 2 - (tight ? 12 : 20) };
+      this.parts.push(this.scene.add.image(at.x, at.y, Tex.accessories, crown.frame).setScale(tight ? 1.25 : 2));
     }
   }
 

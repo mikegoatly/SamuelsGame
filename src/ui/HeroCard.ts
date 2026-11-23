@@ -11,6 +11,7 @@ const SELECTED_FILL = 0x4a4020;
 const LOCKED_STROKE = 0x4a4660;
 const SILHOUETTE = 0x15121f;
 const PIP = 6;
+const STAT_PITCH = 13;
 const PIP_GAP = 2;
 const STATS: readonly { label: string; read: (hero: HeroDef) => number }[] = [
   { label: 'HP', read: (hero) => hero.stats.maxHp },
@@ -49,13 +50,13 @@ export class HeroCard implements MenuItem {
       const offset = headOffset(hero.id, false);
       scene.add.image(sprite.x + offset.x * 2, sprite.y + offset.y * 2, Tex.accessories, crownFrame).setScale(2);
     }
-    if (unlocked) this.drawStats(left + 44, top + 24);
+    if (unlocked) this.drawStats(left + 44, top + 23);
     else gameText(scene, left + 44, top + height - 22, 'Locked', 16, { color: '#7878a0' }).setOrigin(0, 0.5);
   }
 
   private drawStats(x: number, y: number): void {
     STATS.forEach(({ label, read }, row) => {
-      const rowY = y + row * 12;
+      const rowY = y + row * STAT_PITCH;
       gameText(this.scene, x, rowY, label, 16, { color: '#b0b0c8' }).setOrigin(0, 0.5);
       const pips = ratingPips(read(this.hero));
       for (let i = 0; i < 3; i++) {

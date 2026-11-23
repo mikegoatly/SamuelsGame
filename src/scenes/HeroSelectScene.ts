@@ -20,8 +20,8 @@ export interface HeroSelectData {
 const COLUMNS = 5;
 const GAP = 6;
 const TOP = 34;
-const CARD_HEIGHT = 54;
-const PANEL_HEIGHT = 86;
+const CARD_HEIGHT = 58;
+const PANEL_HEIGHT = 76;
 const BUTTON_HEIGHT = 26;
 
 /** Between level select and the loadout: pick who plays. Locked heroes show a silhouette and a hint. Enter on a hero selects it and moves on to Continue; Skip keeps the last hero. */
@@ -98,15 +98,15 @@ export class HeroSelectScene extends MenuScene {
     };
     if (!unlocked) {
       line(0, '???', '#9a9ab8');
-      line(18, `"${hero.hint ?? 'A mystery.'}"`, '#ffe066');
-      line(40, 'Locked. Do something different to meet this hero.', '#7878a0');
+      line(16, `"${hero.hint ?? 'A mystery.'}"`, '#ffe066');
+      line(34, 'Locked. Do something different to meet this hero.', '#7878a0');
       return;
     }
     const weapon = getWeapon(hero.signatureWeaponId);
     line(0, `${hero.name}${hero.id === this.selected ? '  (selected)' : ''}`, '#ffe066');
-    line(18, `${hero.passive.name}: ${hero.passive.text}`);
-    line(40, `Signature weapon: ${weapon.name} (+10% damage)`, '#b0b0c8');
-    line(56, getHero(hero.id).bio, '#7878a0');
+    line(16, `${hero.passive.name}: ${hero.passive.text}`);
+    line(34, `Signature weapon: ${weapon.name} (+10% damage)`, '#b0b0c8');
+    line(50, getHero(hero.id).bio, '#7878a0');
   }
 
   private begin(saveChoice: boolean): void {

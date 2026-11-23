@@ -56,6 +56,12 @@ export class SettingsScene extends MenuScene {
   }
 
   private goBack(): void {
+    if (this.returnTo === 'Pause') {
+      this.scene.launch('Pause');
+      this.scene.bringToTop('Pause');
+      this.scene.stop();
+      return;
+    }
     this.scene.start(this.returnTo);
   }
 }

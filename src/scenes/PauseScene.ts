@@ -22,9 +22,16 @@ export class PauseScene extends MenuScene {
     const refresh = (muted: boolean): void => sound.setLabel(soundLabel(muted));
     this.game.events.on(MUTE_EVENT, refresh);
     this.events.once('shutdown', () => this.game.events.off(MUTE_EVENT, refresh));
-    const settings = new MenuButton(this, cx, height * 0.42 + 88, 200, 34, 'Settings', () => this.scene.start('Settings', { back: 'Pause' }));
+    const settings = new MenuButton(this, cx, height * 0.42 + 88, 200, 34, 'Settings', () => this.openSettings());
     const quit = new MenuButton(this, cx, height * 0.42 + 132, 200, 34, 'Quit to level select', () => game.quitToLevelSelect());
     this.menu = new MenuList(this, [resume, sound, settings, quit], { onBack: () => game.resumeGame() });
+  }
+
+  /** Settings is registered below Game/Hud, so it must be launched and raised to render over the paused run. */
+  private openSettings(): void {
+    this.scene.launch('Settings', { back: 'Pause' });
+    this.scene.bringToTop('Settings');
+    this.scene.stop();
   }
 }
 
