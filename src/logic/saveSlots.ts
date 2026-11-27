@@ -28,3 +28,8 @@ export function slotRowLabel(slot: number, summary: SlotSummary, active: boolean
   const body = summary.empty ? 'Empty - new game' : `Level ${summary.level}, ${summary.coins} coins`;
   return `Slot ${slot}: ${body}${active ? '  (playing)' : ''}`;
 }
+
+export function deleteQuestion(slot: number, summary: SlotSummary, active: boolean): string {
+  const what = summary.empty ? '' : ` (Level ${summary.level}, ${summary.coins} coins)`;
+  return `Delete Slot ${slot}${what}? It is gone for good.${active ? ' You will start a new game.' : ''}`;
+}

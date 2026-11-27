@@ -95,6 +95,36 @@ describe('save slots', () => {
     expect(saves.data.progress.level).toBe(1);
   });
 
+  it('deletes another slot without touching the playing one', () => {
+    const storage = fakeStorage({ 'samuels-game-save': serialize(progressed(5, 1)), 'samuels-game-save-2': serialize(progressed(6, 2)) });
+    const saves = system(storage);
+    expect(saves.deleteSlot(2)).toBe(true);
+    expect(storage.items.has('samuels-game-save-2')).toBe(false);
+    expect(saves.slotSummaries()[1]).toEqual({ empty: true });
+    expect(saves.activeSlot).toBe(1);
+    expect(saves.data.progress.level).toBe(5);
+    expect(storage.items.has('samuels-game-save')).toBe(true);
+  });
+
+  it('deleting the playing slot starts it fresh but keeps device settings', () => {
+    const storage = fakeStorage({ 'samuels-game-save': serialize(withSettings(progressed(5, 90), { musicVolume: 15, muted: true })) });
+    const saves = system(storage);
+    expect(saves.deleteSlot(1)).toBe(true);
+    expect(saves.activeSlot).toBe(1);
+    expect(saves.data.progress.level).toBe(1);
+    expect(saves.data.coins).toBe(0);
+    expect(saves.data.settings).toMatchObject({ musicVolume: 15, muted: true });
+    const reloaded = system(storage);
+    expect(reloaded.data.coins).toBe(0);
+    expect(reloaded.data.settings).toMatchObject({ musicVolume: 15, muted: true });
+  });
+
+  it.each([[0], [4], [1.5], [Number.NaN]])('refuses to delete invalid slot %s', (slot) => {
+    const storage = fakeStorage({ 'samuels-game-save': serialize(progressed(5, 1)) });
+    expect(system(storage).deleteSlot(slot)).toBe(false);
+    expect(storage.items.has('samuels-game-save')).toBe(true);
+  });
+
   it.each([[0], [4], [1.5], [Number.NaN]])('ignores invalid slot %s', (slot) => {
     const saves = system(fakeStorage());
     expect(saves.switchTo(slot)).toBe(false);
@@ -109,5 +139,6 @@ describe('save slots', () => {
     expect(saves.activeSlot).toBe(1);
     expect(() => saves.update((s) => s)).not.toThrow();
     expect(() => saves.reset()).not.toThrow();
+    expect(saves.deleteSlot(2)).toBe(false);
   });
 });

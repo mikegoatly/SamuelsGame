@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { SLOT_COUNT, SLOT_KEYS, ACTIVE_SLOT_KEY, parseActiveSlot, slotKey, summarizeSlot, slotRowLabel, EMPTY_SUMMARY } from '../src/logic/saveSlots';
+import { SLOT_COUNT, SLOT_KEYS, ACTIVE_SLOT_KEY, parseActiveSlot, slotKey, summarizeSlot, slotRowLabel, deleteQuestion, EMPTY_SUMMARY } from '../src/logic/saveSlots';
 import { aSave } from './builders';
 
 describe('slot keys', () => {
@@ -49,5 +49,15 @@ describe('slotRowLabel', () => {
     [3, EMPTY_SUMMARY, true, 'Slot 3: Empty - new game  (playing)'],
   ])('slot %i active=%s', (slot, summary, active, label) => {
     expect(slotRowLabel(slot, summary, active)).toBe(label);
+  });
+});
+
+describe('deleteQuestion', () => {
+  const filled = summarizeSlot(aSave({ progress: { level: 7, xp: 0 }, coins: 340 }));
+  it.each([
+    [2, filled, false, 'Delete Slot 2 (Level 7, 340 coins)? It is gone for good.'],
+    [1, filled, true, 'Delete Slot 1 (Level 7, 340 coins)? It is gone for good. You will start a new game.'],
+  ])('slot %i active=%s', (slot, summary, active, text) => {
+    expect(deleteQuestion(slot, summary, active)).toBe(text);
   });
 });

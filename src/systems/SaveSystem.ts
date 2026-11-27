@@ -70,6 +70,21 @@ export class SaveSystem {
     return true;
   }
 
+  /** Wipes a slot. The playing slot restarts as a fresh game that keeps this device's settings. False if it could not be wiped. */
+  deleteSlot(slot: number): boolean {
+    if (!isValidSlot(slot)) return false;
+    try {
+      this.storage()?.removeItem(slotKey(slot));
+    } catch {
+      return false;
+    }
+    if (slot === this.slot) {
+      this.current = { ...defaultSave(), settings: this.current.settings };
+      this.write();
+    }
+    return true;
+  }
+
   get data(): SaveData {
     return this.current;
   }
